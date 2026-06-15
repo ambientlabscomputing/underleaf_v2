@@ -8,7 +8,8 @@ type HttpConfig struct {
 }
 
 type Config struct {
-	Http HttpConfig `yaml:"http"`
+	Http   HttpConfig `yaml:"http"`
+	DBPath string     `yaml:"db_path"`
 }
 
 var defaultConfig Config
@@ -21,6 +22,7 @@ func init() {
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
 		},
+		DBPath: "orchestrator.db",
 	}
 }
 

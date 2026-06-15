@@ -6,12 +6,14 @@ help:
 build:
 	go build -o bin/orcli ./cmd/cli
 	go build -o bin/orch-server ./cmd/server
+	go build -o bin/migrate ./cmd/migrate
 
 ## install: Install the orchestrator binaries to  ~/.local/bin/
 install: build
-	chmod +x bin/orcli bin/orch-server
+	chmod +x bin/orcli bin/orch-server bin/migrate
 	mv bin/orcli $(HOME)/.local/bin/orcli
 	mv bin/orch-server $(HOME)/.local/bin/orch-server
+	mv bin/migrate $(HOME)/.local/bin/migrate
 
 ## fmt: Format the code using gofmt
 fmt:
