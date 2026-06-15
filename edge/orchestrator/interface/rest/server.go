@@ -4,33 +4,39 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
+
+	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/utils"
 )
 
-type OrchestratorRESTServer struct{}
+type OrchestratorRESTServer struct {
+	Service *service.AppService
+}
 
 func (s *OrchestratorRESTServer) Serve() {
-	// Initialize a new local multiplexer instance
-	mux := http.NewServeMux()
+	router := gin.Default()
 
-	// 1. Static Route with exact matching
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"OK"}`))
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
 
-	// Configure the production HTTP Server profile
+	v2 := router.Group("/v2")
+	s.RegisterNodeRoutes(v2, s.Service)
+
 	config := utils.GetConfig()
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", config.Http.Port),
-		Handler:      mux, // Inject the configured mux instance
+	addr := fmt.Sprintf(":%d", config.Http.Port)
+
+	srv := &http.Server{
+		Addr:         addr,
+		Handler:      router,
 		ReadTimeout:  utils.ParseDuration(config.Http.ReadTimeout),
 		WriteTimeout: utils.ParseDuration(config.Http.WriteTimeout),
 		IdleTimeout:  utils.ParseDuration(config.Http.IdleTimeout),
 	}
 
 	fmt.Printf("Server actively listening on http://localhost:%d\n", config.Http.Port)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		panic(fmt.Sprintf("Server failed to start: %v", err))
 	}
 }
