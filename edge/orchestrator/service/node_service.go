@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/types"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
 )
 
 type NodeService struct {
