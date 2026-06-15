@@ -1,32 +1,47 @@
 package utils
 
 import (
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
+	"fmt"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	grpc_private "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private"
 )
 
 const (
-	RequireNodeService = "RequireNodeService"
+	RequirePrivateClient = "RequirePrivateClient"
 )
 
+const privateSocketPath = "/tmp/undf-orch.sock"
+
 type DependencyManager struct {
-	NodeService *service.NodeService
+	PrivateClient grpc_private.OrchestratorPrivateClient
+	privateConn   *grpc.ClientConn
 }
 
 func DependencyManagerBuilder(deps ...string) *DependencyManager {
-	repo, err := repository.NewRepository()
-	if err := repo.Start(); err != nil {
-		panic("Failed to start repository: " + err.Error())
-	}
-	if err != nil {
-		panic("Failed to initialize repository: " + err.Error())
-	}
 	dm := &DependencyManager{}
 	for _, dep := range deps {
 		switch dep {
-		case RequireNodeService:
-			dm.NodeService = service.NewNodeService(repo)
+		case RequirePrivateClient:
+			conn, err := grpc.NewClient(
+				fmt.Sprintf("unix://%s", privateSocketPath),
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			)
+			if err != nil {
+				panic("Failed to connect to orchestrator: " + err.Error())
+			}
+			dm.privateConn = conn
+			dm.PrivateClient = grpc_private.NewOrchestratorPrivateClient(conn)
 		}
 	}
 	return dm
+}
+
+// Close releases any open gRPC connections held by the DependencyManager.
+func (dm *DependencyManager) Close() {
+	if dm.privateConn != nil {
+		dm.privateConn.Close()
+	}
 }

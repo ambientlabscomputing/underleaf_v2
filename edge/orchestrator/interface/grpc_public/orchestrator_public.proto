@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package orchestrator.public.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public";
+
+// OrchestratorPublic is the agent-facing gRPC service, served over TCP.
+service OrchestratorPublic {
+  rpc GetNodes(GetNodesRequest) returns (GetNodesResponse);
+}
+
+message GetNodesRequest {}
+
+message GetNodesResponse {
+  repeated Node nodes = 1;
+}
+
+message Node {
+  string id   = 1;
+  string name = 2;
+}

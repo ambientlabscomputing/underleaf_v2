@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package orchestrator.private.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private";
+
+// OrchestratorPrivate is the CLI-facing gRPC service, served over a unix socket.
+service OrchestratorPrivate {
+  rpc GetNodes(GetNodesRequest) returns (GetNodesResponse);
+}
+
+message GetNodesRequest {}
+
+message GetNodesResponse {
+  repeated Node nodes = 1;
+}
+
+message Node {
+  string id   = 1;
+  string name = 2;
+}

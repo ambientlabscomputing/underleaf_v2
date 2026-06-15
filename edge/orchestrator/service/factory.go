@@ -5,7 +5,17 @@ import (
 )
 
 func NewService() Service {
-	return &AppService{}
+	repo, err := repository.NewRepository()
+	if err != nil {
+		panic("Failed to initialize repository: " + err.Error())
+	}
+	if err := repo.Start(); err != nil {
+		panic("Failed to start repository: " + err.Error())
+	}
+	return &AppService{
+		Repository: repo,
+		nodes:      NewNodeService(repo),
+	}
 }
 
 // standalone for CLI commands that don't need the full service stack
