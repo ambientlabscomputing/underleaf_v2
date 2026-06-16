@@ -204,3 +204,33 @@ cloud
 edge
     |-orchestrator
         |- go.mod
+```
+
+## Tagging Policy
+
+Main branch is `develop`
+
+### Edge
+
+On push to develop:
+- build new "develop" release
+    - build new binaries (ufagent, ufagentd and orcli)
+    - overwrite "develop" release with new release
+    - add binaries to this new release
+- build new "develop" docker image
+    - build new Docker image tagged `underleaf:develop`
+    - push to `ghcr.io` (overwrite existing if any)
+
+On push to SemVer tag:
+- build new release for tag:
+    - build new binaries (ufagent, ufagentd and orcli)
+    - create new "[0-9].[0-9].[0-9]" release
+    - overwrite "latest" release with new release
+    - add binaries to these new releases
+- build new "latest", "[0-9]", "[0-9].[0-9]", "[0.9].[0-9][0-9]" docker images
+    - for example, if we push the tag `2.3.40`, we would build:
+        - `underleaf:latest`
+        - `underleaf:2`
+        - `underleaf:2.3`
+        - `underleaf:2.3.40`
+    - push to `ghcr.io` (overwrite existing if any)
