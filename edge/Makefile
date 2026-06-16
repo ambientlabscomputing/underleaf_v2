@@ -22,3 +22,13 @@ install: build
 ## fmt: Format the code using gofmt
 fmt:
 	go fmt ./...
+
+docker-build:
+	docker build -t underleaf:latest -f docker/Dockerfile .
+
+docker-run: docker-build
+	docker run -p 9090:80 -p 50100:50100 underleaf:latest
+
+docker-push:
+	docker tag underleaf:latest ghcr.io/ambientlabscomputing/underleaf:latest
+	docker push ghcr.io/ambientlabscomputing/underleaf:latest

@@ -17,11 +17,11 @@ type OrchestratorRESTServer struct {
 func (s *OrchestratorRESTServer) Serve() {
 	router := gin.Default()
 
-	router.GET("/health", func(c *gin.Context) {
+	router.GET("/api/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
 
-	v2 := router.Group("/v2")
+	v2 := router.Group("/api/v2")
 	s.RegisterNodeRoutes(v2, s.Service)
 
 	config := utils.GetConfig(utils.OrchestratorConfig)

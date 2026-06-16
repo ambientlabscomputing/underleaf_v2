@@ -1,14 +1,32 @@
 package main
 
 import (
-	grpc_private "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_private"
-	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_private"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/rest"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/ui"
+	"github.com/spf13/cobra"
 )
 
-func main() {
+var RootCmd = &cobra.Command{
+	Use:   "ufagentd",
+	Short: "Edge agent daemon for managing edge nodes and workloads",
+}
+
+var RunCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run the edge agent daemon",
+	Run: func(cmd *cobra.Command, args []string) {
+		Run()
+	},
+}
+
+func init() {
+	RootCmd.AddCommand(RunCmd)
+}
+
+func Run() {
 	svc := service.NewService().(*service.AppService)
 
 	// Initialize and start the gRPC public server (orchestrator/agent-agent communication)
@@ -26,4 +44,8 @@ func main() {
 
 	// Block main goroutine to keep servers running
 	select {}
+}
+
+func main() {
+	RootCmd.Execute()
 }
