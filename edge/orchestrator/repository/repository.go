@@ -6,13 +6,13 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository/migrations"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/migrator"
 )
 
 type Repository struct {
 	db       *sql.DB
-	Migrator *migrations.Migrator
+	Migrator *migrator.Migrator
 
 	// Add other repositories here
 	Nodes *NodeRepository
@@ -27,7 +27,7 @@ func NewRepository() (*Repository, error) {
 	nodeRepo := NewNodeRepository(db)
 	return &Repository{
 		db:       db,
-		Migrator: migrations.NewMigrator(db),
+		Migrator: migrator.NewMigrator(db),
 		Nodes:    nodeRepo,
 	}, nil
 }

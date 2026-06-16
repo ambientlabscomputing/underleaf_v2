@@ -1,6 +1,8 @@
 # RFD-1: Key User Flows
 
-Onboarding
+### Onboarding
+
+User flow
 
 ```mermaid
 flowchart TD
@@ -26,4 +28,20 @@ flowchart TD
 
     s500 --> END([Users's Underleaf 
     cluster is now set up])
+```
+
+System flow
+
+```mermaid
+sequenceDiagram
+    User->>ufagent: User runs ufagent start --manager
+    ufagent->>ufagentd: ufagent starts ufagentd
+    ufagentd-->>ufagent: ufagentd reports health
+    ufagent->>orchestrator-server: ufagent starts orchestrator-server
+    orchestrator-server-->>ufagent: orchestrator-server reports health
+    ufagent->>ufagentd: ufagent triggers ufagentd-orch server connection
+    ufagentd->>orchestrator-server: establish connection witih orch server
+    ufagentd-->>ufagent: ufagentd reports connection to orchestrator help health
+    ufagent-->>User: ufagent reports results back to user
+    User->>orchestrator-server: User can now access the UI and orcli
 ```

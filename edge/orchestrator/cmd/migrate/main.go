@@ -24,8 +24,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository/migrations"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/migrator"
 	"github.com/spf13/cobra"
 )
 
@@ -167,9 +167,9 @@ func runAutogenerate(msg string) error {
 	defer db.Close()
 
 	var stmts []string
-	for _, model := range migrations.Models {
-		desired := migrations.BuildTableMetaData(model)
-		diff, err := migrations.DiffTableMetaData(db, desired)
+	for _, model := range migrator.Models {
+		desired := migrator.BuildTableMetaData(model)
+		diff, err := migrator.DiffTableMetaData(db, desired)
 		if err != nil {
 			return fmt.Errorf("diff %T: %w", model, err)
 		}

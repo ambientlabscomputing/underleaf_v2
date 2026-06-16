@@ -1,5 +1,7 @@
 package migrations
 
+import "github.com/ambientlabscomputing/underleaf_v2/edge/shared/migrator"
+
 // migration0001 was generated with:
 //
 //	go run ./cmd/migrate provision --autogenerate -m "initial"
@@ -13,7 +15,7 @@ var migration0001 = []string{
 }
 
 func init() {
-	Migrations = append(Migrations, Migration{
+	migrator.Migrations = append(migrator.Migrations, migrator.Migration{
 		ID:  "0001_initial",
 		SQL: migration0001,
 	})
