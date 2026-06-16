@@ -1,21 +1,3 @@
-FROM golang:1.25 AS gobuilder
-
-WORKDIR /app
-
-# Copy module files first for layer caching
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy all source code
-COPY . .
-
-# Explicitly pull BuildKit's automatic platform arguments
-ARG TARGETOS
-ARG TARGETARCH
-
-# Compile the Go binary using target OS options
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o orch-server ./orchestrator/cmd/server
-
 FROM node:24-slim AS uibuilder
 
 # Set working directory
@@ -31,9 +13,12 @@ RUN npm run build
 
 FROM nginx:stable-alpine AS runner
 
+# Target architecture is injected by BuildKit
+ARG TARGETARCH
+
 # Copy the static build output to Nginx's web root
 COPY --from=uibuilder /app/dist /usr/share/nginx/html
-COPY --from=gobuilder /app/orch-server /usr/local/bin/orch-server
+COPY bin/orch-server-linux-${TARGETARCH} /usr/local/bin/orch-server
 
 # Copy custom Nginx configuration to handle SPA routing (optional but recommended)
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf

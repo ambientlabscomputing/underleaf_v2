@@ -42,9 +42,10 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          go build -ldflags="-s -w" -o bin/ufagent-${{ matrix.goos }}-${{ matrix.goarch }}  ./agent/cmd/ufagent
-          go build -ldflags="-s -w" -o bin/ufagentd-${{ matrix.goos }}-${{ matrix.goarch }} ./agent/cmd/ufagentd
-          go build -ldflags="-s -w" -o bin/orcli-${{ matrix.goos }}-${{ matrix.goarch }}    ./orchestrator/cmd/cli
+          go build -ldflags="-s -w" -o bin/ufagent-${{ matrix.goos }}-${{ matrix.goarch }}      ./agent/cmd/ufagent
+          go build -ldflags="-s -w" -o bin/ufagentd-${{ matrix.goos }}-${{ matrix.goarch }}     ./agent/cmd/ufagentd
+          go build -ldflags="-s -w" -o bin/orcli-${{ matrix.goos }}-${{ matrix.goarch }}         ./orchestrator/cmd/cli
+          go build -ldflags="-s -w" -o bin/orch-server-${{ matrix.goos }}-${{ matrix.goarch }} ./orchestrator/cmd/server
 
       - uses: actions/upload-artifact@v4
         with:
@@ -117,6 +118,7 @@ jobs:
   # ── Docker image ───────────────────────────────────────────────────────────
   build-push-docker:
     name: Build & push Docker image
+    needs: build-binaries
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -125,7 +127,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-qemu-action@v3
+      - name: Download linux binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: edge/bin
+          merge-multiple: true
+          pattern: binaries-linux-*
 
       - uses: docker/setup-buildx-action@v3
 
