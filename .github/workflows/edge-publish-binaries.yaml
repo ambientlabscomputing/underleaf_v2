@@ -74,8 +74,7 @@ jobs:
           gh release delete develop --yes --cleanup-tag 2>/dev/null || true
           gh release create develop artifacts/* \
             --title "develop" \
-            --notes "Latest develop build — commit ${{ github.sha }}" \
-            --prerelease
+            --notes "Latest develop build — commit ${{ github.sha }}"
 
   # ── semver release ─────────────────────────────────────────────────────────
   publish-semver:

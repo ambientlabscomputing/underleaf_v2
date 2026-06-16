@@ -32,3 +32,9 @@ docker-run: docker-build
 docker-push:
 	docker tag underleaf:latest ghcr.io/ambientlabscomputing/underleaf:latest
 	docker push ghcr.io/ambientlabscomputing/underleaf:latest
+
+install.sh:
+	./orchestrator_ui/public/tools/install.sh
+
+install.sh-dev:
+	./orchestrator_ui/public/tools/install.sh develop
