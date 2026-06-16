@@ -33,8 +33,17 @@ docker-push:
 	docker tag underleaf:latest ghcr.io/ambientlabscomputing/underleaf:latest
 	docker push ghcr.io/ambientlabscomputing/underleaf:latest
 
+## install.sh: run the Install script
 install.sh:
 	./orchestrator_ui/public/tools/install.sh
 
-install.sh-dev:
+## install.sh-dev: run the Install script in development mode
+install.sh-dev: dev-clean
 	./orchestrator_ui/public/tools/install.sh develop
+
+## dev-clean: Remove ufagentd launchd agent and underleaf Docker container (macOS dev reset)
+dev-clean:
+	-launchctl unload $(HOME)/Library/LaunchAgents/com.ambientlabs.ufagentd.plist 2>/dev/null
+	-rm -f $(HOME)/Library/LaunchAgents/com.ambientlabs.ufagentd.plist
+	-docker rm -f underleaf 2>/dev/null
+	@echo "Cleaned up launchd agent and Docker container."
