@@ -16,8 +16,8 @@ const (
 const privateSocketPath = "/tmp/undf-orch.sock"
 
 type DependencyManager struct {
-	PrivateClient grpc_private.OrchestratorPrivateClient
-	privateConn   *grpc.ClientConn
+	OrchestratorPrivateClient grpc_private.OrchestratorPrivateClient
+	privateConn               *grpc.ClientConn
 }
 
 func DependencyManagerBuilder(deps ...string) *DependencyManager {
@@ -33,7 +33,7 @@ func DependencyManagerBuilder(deps ...string) *DependencyManager {
 				panic("Failed to connect to orchestrator: " + err.Error())
 			}
 			dm.privateConn = conn
-			dm.PrivateClient = grpc_private.NewOrchestratorPrivateClient(conn)
+			dm.OrchestratorPrivateClient = grpc_private.NewOrchestratorPrivateClient(conn)
 		}
 	}
 	return dm

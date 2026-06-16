@@ -6,25 +6,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
 )
 
-type OrchestratorRESTServer struct {
+type AgentRESTServer struct {
 	Service *service.AppService
 }
 
-func (s *OrchestratorRESTServer) Serve() {
+func (s *AgentRESTServer) Serve() {
 	router := gin.Default()
 
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
 
-	v2 := router.Group("/v2")
-	s.RegisterNodeRoutes(v2, s.Service)
+	// v2 := router.Group("/v2")
 
-	config := utils.GetConfig(utils.OrchestratorConfig)
+	config := utils.GetConfig(utils.AgentConfig)
 	addr := fmt.Sprintf(":%d", config.Http.Port)
 
 	srv := &http.Server{

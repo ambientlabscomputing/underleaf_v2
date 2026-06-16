@@ -24,8 +24,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/utils"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/migrator"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -159,7 +159,7 @@ func writeMigrationFile(dir, id, varName, message string, stmts []string) (strin
 }
 
 func runAutogenerate(msg string) error {
-	cfg := utils.GetConfig()
+	cfg := utils.GetConfig(utils.OrchestratorConfig)
 	db, err := sql.Open("sqlite", cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open db %s: %w", cfg.DBPath, err)

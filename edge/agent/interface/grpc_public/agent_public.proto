@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package agent.public.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public";
+
+// AgentPublic is the orchestrator/agent-facing gRPC service, served over TCP.
+service AgentPublic {
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  string status = 1;
+}

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package agent.private.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_private";
+
+// AgentPrivate is the CLI-facing gRPC service, served over a unix socket.
+service AgentPrivate {
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  string status = 1;
+}

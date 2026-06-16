@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +15,7 @@ var LsCmd = &cobra.Command{
 		dep_mgr := utils.DependencyManagerBuilder(utils.RequirePrivateClient)
 		defer dep_mgr.Close()
 
-		resp, err := dep_mgr.PrivateClient.GetNodes(context.Background(), nil)
+		resp, err := dep_mgr.OrchestratorPrivateClient.GetNodes(context.Background(), nil)
 		if err != nil {
 			fmt.Printf("Error fetching nodes: %v\n", err)
 			return

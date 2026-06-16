@@ -1,3 +1,10 @@
-package ufagent
+package main
 
-// This is the main entry point for the ufagent binary, which is the CLI that manages the edge agent.
+import (
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/cli"
+)
+
+func main() {
+	o := cli.AgentCLI{}
+	o.Execute()
+}

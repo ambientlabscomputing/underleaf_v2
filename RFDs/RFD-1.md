@@ -37,7 +37,7 @@ sequenceDiagram
     User->>ufagent: User runs ufagent start --manager
     ufagent->>ufagentd: ufagent starts ufagentd
     ufagentd-->>ufagent: ufagentd reports health
-    ufagent->>orchestrator-server: ufagent starts orchestrator-server
+    ufagent->>orchestrator-server: ufagent starts orchestrator-server docker container
     orchestrator-server-->>ufagent: orchestrator-server reports health
     ufagent->>ufagentd: ufagent triggers ufagentd-orch server connection
     ufagentd->>orchestrator-server: establish connection witih orch server
