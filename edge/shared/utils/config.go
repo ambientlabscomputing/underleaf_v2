@@ -8,8 +8,9 @@ type HttpConfig struct {
 }
 
 type Config struct {
-	Http   HttpConfig `yaml:"http"`
-	DBPath string     `yaml:"db_path"`
+	Http                     HttpConfig `yaml:"http"`
+	DBPath                   string     `yaml:"db_path"`
+	ContainerSyncIntervalSec int        `yaml:"container_sync_interval_sec"`
 }
 
 var defaultOrchConfig Config
@@ -23,7 +24,8 @@ func init() {
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
 		},
-		DBPath: "orchestrator.db",
+		DBPath:                   "orchestrator.db",
+		ContainerSyncIntervalSec: 60,
 	}
 	defaultAgentConfig = Config{
 		Http: HttpConfig{
@@ -32,7 +34,8 @@ func init() {
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
 		},
-		DBPath: "agent.db",
+		DBPath:                   "agent.db",
+		ContainerSyncIntervalSec: 60,
 	}
 }
 

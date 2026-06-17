@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private"
@@ -66,6 +68,36 @@ func Run() {
 			return
 		}
 		fmt.Println("[health] warning: agent did not respond within startup window")
+	}()
+
+	// Start container sync task (periodic trigger for agent to ingest containers).
+	go func() {
+		intervalStr := os.Getenv("CONTAINER_SYNC_INTERVAL_SECS")
+		interval := 60 // default 60 seconds
+		if intervalStr != "" {
+			if parsed, err := strconv.Atoi(intervalStr); err == nil && parsed > 0 {
+				interval = parsed
+			}
+		}
+		if interval <= 0 {
+			fmt.Println("[sync] container sync disabled (interval <= 0)")
+			return
+		}
+		fmt.Printf("[sync] container sync task started (interval=%ds)\n", interval)
+
+		ticker := time.NewTicker(time.Duration(interval) * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			count, err := svc.Health().IngestAgentContainers(ctx)
+			cancel()
+			if err != nil {
+				fmt.Printf("[sync] container ingest failed: %v\n", err)
+			} else {
+				fmt.Printf("[sync] container ingest complete: %d container(s) synced\n", count)
+			}
+		}
 	}()
 
 	// Block main goroutine to keep servers running

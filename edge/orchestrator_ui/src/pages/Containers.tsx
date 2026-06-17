@@ -2,59 +2,79 @@ import HubIcon from '@mui/icons-material/Hub';
 import StorageIcon from '@mui/icons-material/Storage';
 
 import { AppDataGrid, PageShell, type GridColDef, type NavItem } from '../components';
-import { useNodes } from '../datastore';
-import type { Node } from '../api/services/NodesService';
+import { useContainers } from '../datastore';
+import type { Container } from '../api/services/ContainersService';
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
-const columns: GridColDef<Node>[] = [
+const columns: GridColDef<Container>[] = [
   {
-    field: 'id',
-    headerName: 'ID',
-    width: 240,
+    field: 'docker_id',
+    headerName: 'Docker ID',
+    width: 180,
     sortable: false,
+    valueFormatter: (value: string) => value?.substring(0, 12) || '',
   },
   {
-    field: 'name',
-    headerName: 'Name',
+    field: 'image',
+    headerName: 'Image',
     flex: 1,
-    minWidth: 160,
+    minWidth: 200,
+  },
+  {
+    field: 'status',
+    headerName: 'Status',
+    width: 120,
+  },
+  {
+    field: 'node_id',
+    headerName: 'Node',
+    width: 180,
+    sortable: false,
+    valueFormatter: (value: string) => value?.substring(0, 12) || '',
+  },
+  {
+    field: 'uptime',
+    headerName: 'Created',
+    width: 180,
+    sortable: false,
+    valueFormatter: (value: number) => new Date(value * 1000).toLocaleString(),
   },
 ];
 
 // ── Nav ───────────────────────────────────────────────────────────────────────
 
-export interface HomeProps {
+export interface ContainersProps {
   onNavigate?: (page: 'nodes' | 'containers') => void;
 }
 
-const buildNavItems = (onNavigate: HomeProps['onNavigate']): NavItem[] => [
+const buildNavItems = (onNavigate: ContainersProps['onNavigate']): NavItem[] => [
   {
     label: 'Nodes',
     icon: <HubIcon fontSize="small" />,
-    onClick: () => {},
-    selected: true,
+    onClick: () => onNavigate?.('nodes'),
+    selected: false,
   },
   {
     label: 'Containers',
     icon: <StorageIcon fontSize="small" />,
-    onClick: () => onNavigate?.('containers'),
-    selected: false,
+    onClick: () => {},
+    selected: true,
   },
 ];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export function Home({ onNavigate }: HomeProps) {
-  const { data: nodes = [], isPending, isError } = useNodes();
+export function Containers({ onNavigate }: ContainersProps) {
+  const { data: containers = [], isPending, isError } = useContainers();
 
   return (
     <PageShell title="Orchestrator" navItems={buildNavItems(onNavigate)}>
       <AppDataGrid
-        rows={nodes}
+        rows={containers}
         columns={columns}
         loading={isPending}
-        emptyMessage={isError ? 'Failed to load nodes.' : 'No nodes registered yet.'}
+        emptyMessage={isError ? 'Failed to load containers.' : 'No containers synced yet. Check agent status.'}
         sx={{ flex: 1 }}
       />
     </PageShell>

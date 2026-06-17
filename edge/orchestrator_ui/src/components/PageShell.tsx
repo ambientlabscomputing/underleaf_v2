@@ -12,7 +12,6 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import MenuIcon from '@mui/icons-material/Menu';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -100,21 +99,6 @@ export function PageShell({ title = 'Orchestrator', navItems = [], actions, chil
       >
         {/* Spacer to push content below AppBar */}
         <Toolbar variant="dense" />
-
-        {/* Collapse toggle at bottom of header area */}
-        <Box sx={{ display: 'flex', justifyContent: open ? 'flex-end' : 'center', px: 0.5, py: 0.5 }}>
-          <Tooltip label={open ? 'Collapse' : 'Expand'}>
-            <IconButton size="small" onClick={toggleDrawer} aria-label={open ? 'collapse drawer' : 'expand drawer'}>
-              <ChevronLeftIcon
-                fontSize="small"
-                sx={{
-                  transform: open ? 'rotate(0deg)' : 'rotate(180deg)',
-                  transition: 'transform 0.2s',
-                }}
-              />
-            </IconButton>
-          </Tooltip>
-        </Box>
 
         <Divider />
 

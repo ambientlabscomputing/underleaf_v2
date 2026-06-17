@@ -34,6 +34,7 @@ func (s *OrchestratorRESTServer) Serve() {
 
 	v2 := router.Group("/api/v2")
 	s.RegisterNodeRoutes(v2, s.Service)
+	s.RegisterContainerRoutes(v2, s.Service)
 
 	config := utils.GetConfig(utils.OrchestratorConfig)
 	addr := fmt.Sprintf(":%d", config.Http.Port)
