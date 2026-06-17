@@ -9,17 +9,18 @@ type Service interface {
 	Start() error
 	Stop() error
 	Nodes() *NodeService
+	Health() *HealthService
 }
 
 // This is the heavy full service implementation for the server
 type AppService struct {
 	Repository *repository.Repository
 	nodes      *NodeService
+	health     *HealthService
 }
 
-func (s *AppService) Nodes() *NodeService {
-	return s.nodes
-}
+func (s *AppService) Nodes() *NodeService    { return s.nodes }
+func (s *AppService) Health() *HealthService { return s.health }
 
 func (s *AppService) Start() error {
 	// implement start logic

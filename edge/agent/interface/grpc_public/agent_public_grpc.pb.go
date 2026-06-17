@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: agent/interface/grpc_public/agent_public.proto
+// source: agent_public.proto
 
 package grpc_public
 
@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	AgentPublic_GetStatus_FullMethodName = "/agent.public.v1.AgentPublic/GetStatus"
+	AgentPublic_Ping_FullMethodName      = "/agent.public.v1.AgentPublic/Ping"
 )
 
 // AgentPublicClient is the client API for AgentPublic service.
@@ -29,6 +30,7 @@ const (
 // AgentPublic is the orchestrator/agent-facing gRPC service, served over TCP.
 type AgentPublicClient interface {
 	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
 
 type agentPublicClient struct {
@@ -49,6 +51,16 @@ func (c *agentPublicClient) GetStatus(ctx context.Context, in *GetStatusRequest,
 	return out, nil
 }
 
+func (c *agentPublicClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, AgentPublic_Ping_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentPublicServer is the server API for AgentPublic service.
 // All implementations must embed UnimplementedAgentPublicServer
 // for forward compatibility.
@@ -56,6 +68,7 @@ func (c *agentPublicClient) GetStatus(ctx context.Context, in *GetStatusRequest,
 // AgentPublic is the orchestrator/agent-facing gRPC service, served over TCP.
 type AgentPublicServer interface {
 	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	mustEmbedUnimplementedAgentPublicServer()
 }
 
@@ -68,6 +81,9 @@ type UnimplementedAgentPublicServer struct{}
 
 func (UnimplementedAgentPublicServer) GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
+}
+func (UnimplementedAgentPublicServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedAgentPublicServer) mustEmbedUnimplementedAgentPublicServer() {}
 func (UnimplementedAgentPublicServer) testEmbeddedByValue()                     {}
@@ -108,6 +124,24 @@ func _AgentPublic_GetStatus_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentPublic_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_Ping_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentPublic_ServiceDesc is the grpc.ServiceDesc for AgentPublic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -119,7 +153,11 @@ var AgentPublic_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetStatus",
 			Handler:    _AgentPublic_GetStatus_Handler,
 		},
+		{
+			MethodName: "Ping",
+			Handler:    _AgentPublic_Ping_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "agent/interface/grpc_public/agent_public.proto",
+	Metadata: "agent_public.proto",
 }

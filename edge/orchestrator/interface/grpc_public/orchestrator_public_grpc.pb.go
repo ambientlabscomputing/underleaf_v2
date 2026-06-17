@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: interface/grpc_public/orchestrator_public.proto
+// source: orchestrator_public.proto
 
 package grpc_public
 
@@ -19,7 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrchestratorPublic_GetNodes_FullMethodName = "/orchestrator.public.v1.OrchestratorPublic/GetNodes"
+	OrchestratorPublic_CreateNode_FullMethodName = "/orchestrator.public.v1.OrchestratorPublic/CreateNode"
+	OrchestratorPublic_GetNodes_FullMethodName   = "/orchestrator.public.v1.OrchestratorPublic/GetNodes"
+	OrchestratorPublic_Ping_FullMethodName       = "/orchestrator.public.v1.OrchestratorPublic/Ping"
 )
 
 // OrchestratorPublicClient is the client API for OrchestratorPublic service.
@@ -28,7 +30,9 @@ const (
 //
 // OrchestratorPublic is the agent-facing gRPC service, served over TCP.
 type OrchestratorPublicClient interface {
+	CreateNode(ctx context.Context, in *CreateNodeRequest, opts ...grpc.CallOption) (*CreateNodeResponse, error)
 	GetNodes(ctx context.Context, in *GetNodesRequest, opts ...grpc.CallOption) (*GetNodesResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
 
 type orchestratorPublicClient struct {
@@ -37,6 +41,16 @@ type orchestratorPublicClient struct {
 
 func NewOrchestratorPublicClient(cc grpc.ClientConnInterface) OrchestratorPublicClient {
 	return &orchestratorPublicClient{cc}
+}
+
+func (c *orchestratorPublicClient) CreateNode(ctx context.Context, in *CreateNodeRequest, opts ...grpc.CallOption) (*CreateNodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateNodeResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPublic_CreateNode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *orchestratorPublicClient) GetNodes(ctx context.Context, in *GetNodesRequest, opts ...grpc.CallOption) (*GetNodesResponse, error) {
@@ -49,13 +63,25 @@ func (c *orchestratorPublicClient) GetNodes(ctx context.Context, in *GetNodesReq
 	return out, nil
 }
 
+func (c *orchestratorPublicClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPublic_Ping_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrchestratorPublicServer is the server API for OrchestratorPublic service.
 // All implementations must embed UnimplementedOrchestratorPublicServer
 // for forward compatibility.
 //
 // OrchestratorPublic is the agent-facing gRPC service, served over TCP.
 type OrchestratorPublicServer interface {
+	CreateNode(context.Context, *CreateNodeRequest) (*CreateNodeResponse, error)
 	GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	mustEmbedUnimplementedOrchestratorPublicServer()
 }
 
@@ -66,8 +92,14 @@ type OrchestratorPublicServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOrchestratorPublicServer struct{}
 
+func (UnimplementedOrchestratorPublicServer) CreateNode(context.Context, *CreateNodeRequest) (*CreateNodeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateNode not implemented")
+}
 func (UnimplementedOrchestratorPublicServer) GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNodes not implemented")
+}
+func (UnimplementedOrchestratorPublicServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedOrchestratorPublicServer) mustEmbedUnimplementedOrchestratorPublicServer() {}
 func (UnimplementedOrchestratorPublicServer) testEmbeddedByValue()                            {}
@@ -90,6 +122,24 @@ func RegisterOrchestratorPublicServer(s grpc.ServiceRegistrar, srv OrchestratorP
 	s.RegisterService(&OrchestratorPublic_ServiceDesc, srv)
 }
 
+func _OrchestratorPublic_CreateNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateNodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPublicServer).CreateNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPublic_CreateNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPublicServer).CreateNode(ctx, req.(*CreateNodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OrchestratorPublic_GetNodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetNodesRequest)
 	if err := dec(in); err != nil {
@@ -108,6 +158,24 @@ func _OrchestratorPublic_GetNodes_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrchestratorPublic_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPublicServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPublic_Ping_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPublicServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrchestratorPublic_ServiceDesc is the grpc.ServiceDesc for OrchestratorPublic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -116,10 +184,18 @@ var OrchestratorPublic_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*OrchestratorPublicServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "CreateNode",
+			Handler:    _OrchestratorPublic_CreateNode_Handler,
+		},
+		{
 			MethodName: "GetNodes",
 			Handler:    _OrchestratorPublic_GetNodes_Handler,
 		},
+		{
+			MethodName: "Ping",
+			Handler:    _OrchestratorPublic_Ping_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "interface/grpc_public/orchestrator_public.proto",
+	Metadata: "orchestrator_public.proto",
 }

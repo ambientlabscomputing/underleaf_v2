@@ -7,10 +7,24 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/int
 // AgentPrivate is the CLI-facing gRPC service, served over a unix socket.
 service AgentPrivate {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
 }
 
 message GetStatusRequest {}
 
 message GetStatusResponse {
   string status = 1;
+}
+
+message PingRequest {}
+
+message PingResponse {
+  // Agent's own ping result
+  string agent_status        = 1;
+  int64  agent_timestamp_ms  = 2;
+  // Result from the agent pinging the orchestrator
+  bool   orchestrator_reachable  = 3;
+  string orchestrator_responder  = 4;
+  int64  orchestrator_timestamp_ms = 5;
+  string orchestrator_error      = 6;
 }

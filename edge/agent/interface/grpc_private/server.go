@@ -44,3 +44,28 @@ func (s *AgentGRPCPrivateServer) Serve() {
 func (s *AgentGRPCPrivateServer) GetStatus(_ context.Context, _ *GetStatusRequest) (*GetStatusResponse, error) {
 	return &GetStatusResponse{Status: "ok"}, nil
 }
+
+// Ping implements AgentPrivateServer — calls Health.Ping locally and Health.PingPeer toward the orchestrator.
+func (s *AgentGRPCPrivateServer) Ping(ctx context.Context, _ *PingRequest) (*PingResponse, error) {
+	local, err := s.Service.Health().Ping("cli")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &PingResponse{
+		AgentStatus:      local.Responder,
+		AgentTimestampMs: local.TimestampUnixMs,
+	}
+
+	peer, peerErr := s.Service.Health().PingPeer(ctx)
+	if peerErr != nil {
+		resp.OrchestratorReachable = false
+		resp.OrchestratorError = peerErr.Error()
+	} else {
+		resp.OrchestratorReachable = true
+		resp.OrchestratorResponder = peer.Responder
+		resp.OrchestratorTimestampMs = peer.TimestampUnixMs
+	}
+
+	return resp, nil
+}

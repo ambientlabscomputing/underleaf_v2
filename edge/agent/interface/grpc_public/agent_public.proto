@@ -7,10 +7,21 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/int
 // AgentPublic is the orchestrator/agent-facing gRPC service, served over TCP.
 service AgentPublic {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
 }
 
 message GetStatusRequest {}
 
 message GetStatusResponse {
   string status = 1;
+}
+
+message PingRequest {
+  string source           = 1;
+  int64  timestamp_unix_ms = 2;
+}
+
+message PingResponse {
+  string responder        = 1;
+  int64  timestamp_unix_ms = 2;
 }

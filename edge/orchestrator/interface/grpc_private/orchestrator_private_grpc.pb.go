@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: interface/grpc_private/orchestrator_private.proto
+// source: orchestrator_private.proto
 
 package grpc_private
 
@@ -121,5 +121,5 @@ var OrchestratorPrivate_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "interface/grpc_private/orchestrator_private.proto",
+	Metadata: "orchestrator_private.proto",
 }

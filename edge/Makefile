@@ -2,8 +2,15 @@
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## //' | awk -F': ' '{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
+## proto: Regenerate all protobuf/gRPC Go files
+proto:
+	go generate ./agent/interface/grpc_private/...
+	go generate ./agent/interface/grpc_public/...
+	go generate ./orchestrator/interface/grpc_private/...
+	go generate ./orchestrator/interface/grpc_public/...
+
 ## build: Build the orchestrator
-build:
+build: proto
 	go build -o bin/orcli ./orchestrator/cmd/cli
 	go build -o bin/orch-server ./orchestrator/cmd/server
 	go build -o bin/migrate ./orchestrator/cmd/migrate
@@ -23,12 +30,15 @@ install: build
 fmt:
 	go fmt ./...
 
+## docker-build: Build the Docker image
 docker-build:
 	docker build -t underleaf:latest -f docker/Dockerfile .
 
+## docker-run: Build and run the Docker container
 docker-run: docker-build
 	docker run -p 9090:80 -p 50100:50100 underleaf:latest
 
+## docker-push: Push the Docker image to GitHub Container Registry
 docker-push:
 	docker tag underleaf:latest ghcr.io/ambientlabscomputing/underleaf:latest
 	docker push ghcr.io/ambientlabscomputing/underleaf:latest
@@ -47,3 +57,15 @@ dev-clean:
 	-rm -f $(HOME)/Library/LaunchAgents/com.ambientlabs.ufagentd.plist
 	-docker rm -f underleaf 2>/dev/null
 	@echo "Cleaned up launchd agent and Docker container."
+
+ui-run:
+	cd orchestrator_ui && npm run dev &
+
+run: install ui-run
+	orch-server run &
+	ufagentd run &
+
+stop:
+	-pkill -f underleaf
+	-pkill orch-server
+	-pkill ufagentd

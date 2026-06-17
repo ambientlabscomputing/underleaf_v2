@@ -12,3 +12,24 @@ type NodeService struct {
 func (s *NodeService) GetNodes() ([]*types.Node, error) {
 	return s.Repository.Nodes.ListNodes()
 }
+
+func (s *NodeService) GetNode(id string) (*types.Node, error) {
+	return s.Repository.Nodes.GetNodeByID(id)
+}
+
+type CreateNodeRequest struct {
+	Name string `json:"name"`
+}
+
+func (s *NodeService) CreateNode(req CreateNodeRequest) (*types.Node, error) {
+	node := types.NewNode(req.Name)
+	err := s.Repository.Nodes.CreateNode(node)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (s *NodeService) DeleteNode(id string) error {
+	return s.Repository.Nodes.DeleteNode(id)
+}

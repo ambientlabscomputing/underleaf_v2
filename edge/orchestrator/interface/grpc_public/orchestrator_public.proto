@@ -6,7 +6,9 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestra
 
 // OrchestratorPublic is the agent-facing gRPC service, served over TCP.
 service OrchestratorPublic {
+  rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
   rpc GetNodes(GetNodesRequest) returns (GetNodesResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
 }
 
 message GetNodesRequest {}
@@ -18,4 +20,23 @@ message GetNodesResponse {
 message Node {
   string id   = 1;
   string name = 2;
+}
+
+message PingRequest {
+  string source           = 1;
+  int64  timestamp_unix_ms = 2;
+}
+
+message PingResponse {
+  string responder        = 1;
+  int64  timestamp_unix_ms = 2;
+}
+
+message CreateNodeRequest {
+    string name = 1;
+}
+
+message CreateNodeResponse {
+    string id = 1;
+    string name = 2;
 }

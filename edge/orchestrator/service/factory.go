@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/clients"
 )
 
 func NewService() Service {
@@ -12,9 +13,16 @@ func NewService() Service {
 	if err := repo.Start(); err != nil {
 		panic("Failed to start repository: " + err.Error())
 	}
+
+	peer, err := clients.NewAgentClient()
+	if err != nil {
+		panic("orchestrator: failed to create agent gRPC client: " + err.Error())
+	}
+
 	return &AppService{
 		Repository: repo,
 		nodes:      NewNodeService(repo),
+		health:     &HealthService{peer: peer},
 	}
 }
 

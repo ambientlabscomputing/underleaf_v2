@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: interface/grpc_private/orchestrator_private.proto
+// source: orchestrator_private.proto
 
 package grpc_private
 
@@ -29,7 +29,7 @@ type GetNodesRequest struct {
 
 func (x *GetNodesRequest) Reset() {
 	*x = GetNodesRequest{}
-	mi := &file_interface_grpc_private_orchestrator_private_proto_msgTypes[0]
+	mi := &file_orchestrator_private_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +41,7 @@ func (x *GetNodesRequest) String() string {
 func (*GetNodesRequest) ProtoMessage() {}
 
 func (x *GetNodesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_interface_grpc_private_orchestrator_private_proto_msgTypes[0]
+	mi := &file_orchestrator_private_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +54,7 @@ func (x *GetNodesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNodesRequest.ProtoReflect.Descriptor instead.
 func (*GetNodesRequest) Descriptor() ([]byte, []int) {
-	return file_interface_grpc_private_orchestrator_private_proto_rawDescGZIP(), []int{0}
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{0}
 }
 
 type GetNodesResponse struct {
@@ -66,7 +66,7 @@ type GetNodesResponse struct {
 
 func (x *GetNodesResponse) Reset() {
 	*x = GetNodesResponse{}
-	mi := &file_interface_grpc_private_orchestrator_private_proto_msgTypes[1]
+	mi := &file_orchestrator_private_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +78,7 @@ func (x *GetNodesResponse) String() string {
 func (*GetNodesResponse) ProtoMessage() {}
 
 func (x *GetNodesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_interface_grpc_private_orchestrator_private_proto_msgTypes[1]
+	mi := &file_orchestrator_private_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +91,7 @@ func (x *GetNodesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNodesResponse.ProtoReflect.Descriptor instead.
 func (*GetNodesResponse) Descriptor() ([]byte, []int) {
-	return file_interface_grpc_private_orchestrator_private_proto_rawDescGZIP(), []int{1}
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetNodesResponse) GetNodes() []*Node {
@@ -111,7 +111,7 @@ type Node struct {
 
 func (x *Node) Reset() {
 	*x = Node{}
-	mi := &file_interface_grpc_private_orchestrator_private_proto_msgTypes[2]
+	mi := &file_orchestrator_private_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -123,7 +123,7 @@ func (x *Node) String() string {
 func (*Node) ProtoMessage() {}
 
 func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_interface_grpc_private_orchestrator_private_proto_msgTypes[2]
+	mi := &file_orchestrator_private_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -136,7 +136,7 @@ func (x *Node) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Node.ProtoReflect.Descriptor instead.
 func (*Node) Descriptor() ([]byte, []int) {
-	return file_interface_grpc_private_orchestrator_private_proto_rawDescGZIP(), []int{2}
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Node) GetId() string {
@@ -153,11 +153,11 @@ func (x *Node) GetName() string {
 	return ""
 }
 
-var File_interface_grpc_private_orchestrator_private_proto protoreflect.FileDescriptor
+var File_orchestrator_private_proto protoreflect.FileDescriptor
 
-const file_interface_grpc_private_orchestrator_private_proto_rawDesc = "" +
+const file_orchestrator_private_proto_rawDesc = "" +
 	"\n" +
-	"1interface/grpc_private/orchestrator_private.proto\x12\x17orchestrator.private.v1\"\x11\n" +
+	"\x1aorchestrator_private.proto\x12\x17orchestrator.private.v1\"\x11\n" +
 	"\x0fGetNodesRequest\"G\n" +
 	"\x10GetNodesResponse\x123\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x1d.orchestrator.private.v1.NodeR\x05nodes\"*\n" +
@@ -168,24 +168,24 @@ const file_interface_grpc_private_orchestrator_private_proto_rawDesc = "" +
 	"\bGetNodes\x12(.orchestrator.private.v1.GetNodesRequest\x1a).orchestrator.private.v1.GetNodesResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
 
 var (
-	file_interface_grpc_private_orchestrator_private_proto_rawDescOnce sync.Once
-	file_interface_grpc_private_orchestrator_private_proto_rawDescData []byte
+	file_orchestrator_private_proto_rawDescOnce sync.Once
+	file_orchestrator_private_proto_rawDescData []byte
 )
 
-func file_interface_grpc_private_orchestrator_private_proto_rawDescGZIP() []byte {
-	file_interface_grpc_private_orchestrator_private_proto_rawDescOnce.Do(func() {
-		file_interface_grpc_private_orchestrator_private_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_interface_grpc_private_orchestrator_private_proto_rawDesc), len(file_interface_grpc_private_orchestrator_private_proto_rawDesc)))
+func file_orchestrator_private_proto_rawDescGZIP() []byte {
+	file_orchestrator_private_proto_rawDescOnce.Do(func() {
+		file_orchestrator_private_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_orchestrator_private_proto_rawDesc), len(file_orchestrator_private_proto_rawDesc)))
 	})
-	return file_interface_grpc_private_orchestrator_private_proto_rawDescData
+	return file_orchestrator_private_proto_rawDescData
 }
 
-var file_interface_grpc_private_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_interface_grpc_private_orchestrator_private_proto_goTypes = []any{
+var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_orchestrator_private_proto_goTypes = []any{
 	(*GetNodesRequest)(nil),  // 0: orchestrator.private.v1.GetNodesRequest
 	(*GetNodesResponse)(nil), // 1: orchestrator.private.v1.GetNodesResponse
 	(*Node)(nil),             // 2: orchestrator.private.v1.Node
 }
-var file_interface_grpc_private_orchestrator_private_proto_depIdxs = []int32{
+var file_orchestrator_private_proto_depIdxs = []int32{
 	2, // 0: orchestrator.private.v1.GetNodesResponse.nodes:type_name -> orchestrator.private.v1.Node
 	0, // 1: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
 	1, // 2: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
@@ -196,26 +196,26 @@ var file_interface_grpc_private_orchestrator_private_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_interface_grpc_private_orchestrator_private_proto_init() }
-func file_interface_grpc_private_orchestrator_private_proto_init() {
-	if File_interface_grpc_private_orchestrator_private_proto != nil {
+func init() { file_orchestrator_private_proto_init() }
+func file_orchestrator_private_proto_init() {
+	if File_orchestrator_private_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_interface_grpc_private_orchestrator_private_proto_rawDesc), len(file_interface_grpc_private_orchestrator_private_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orchestrator_private_proto_rawDesc), len(file_orchestrator_private_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_interface_grpc_private_orchestrator_private_proto_goTypes,
-		DependencyIndexes: file_interface_grpc_private_orchestrator_private_proto_depIdxs,
-		MessageInfos:      file_interface_grpc_private_orchestrator_private_proto_msgTypes,
+		GoTypes:           file_orchestrator_private_proto_goTypes,
+		DependencyIndexes: file_orchestrator_private_proto_depIdxs,
+		MessageInfos:      file_orchestrator_private_proto_msgTypes,
 	}.Build()
-	File_interface_grpc_private_orchestrator_private_proto = out.File
-	file_interface_grpc_private_orchestrator_private_proto_goTypes = nil
-	file_interface_grpc_private_orchestrator_private_proto_depIdxs = nil
+	File_orchestrator_private_proto = out.File
+	file_orchestrator_private_proto_goTypes = nil
+	file_orchestrator_private_proto_depIdxs = nil
 }

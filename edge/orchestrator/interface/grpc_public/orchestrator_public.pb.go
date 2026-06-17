@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: interface/grpc_public/orchestrator_public.proto
+// source: orchestrator_public.proto
 
 package grpc_public
 
@@ -29,7 +29,7 @@ type GetNodesRequest struct {
 
 func (x *GetNodesRequest) Reset() {
 	*x = GetNodesRequest{}
-	mi := &file_interface_grpc_public_orchestrator_public_proto_msgTypes[0]
+	mi := &file_orchestrator_public_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +41,7 @@ func (x *GetNodesRequest) String() string {
 func (*GetNodesRequest) ProtoMessage() {}
 
 func (x *GetNodesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_interface_grpc_public_orchestrator_public_proto_msgTypes[0]
+	mi := &file_orchestrator_public_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +54,7 @@ func (x *GetNodesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNodesRequest.ProtoReflect.Descriptor instead.
 func (*GetNodesRequest) Descriptor() ([]byte, []int) {
-	return file_interface_grpc_public_orchestrator_public_proto_rawDescGZIP(), []int{0}
+	return file_orchestrator_public_proto_rawDescGZIP(), []int{0}
 }
 
 type GetNodesResponse struct {
@@ -66,7 +66,7 @@ type GetNodesResponse struct {
 
 func (x *GetNodesResponse) Reset() {
 	*x = GetNodesResponse{}
-	mi := &file_interface_grpc_public_orchestrator_public_proto_msgTypes[1]
+	mi := &file_orchestrator_public_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +78,7 @@ func (x *GetNodesResponse) String() string {
 func (*GetNodesResponse) ProtoMessage() {}
 
 func (x *GetNodesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_interface_grpc_public_orchestrator_public_proto_msgTypes[1]
+	mi := &file_orchestrator_public_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +91,7 @@ func (x *GetNodesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNodesResponse.ProtoReflect.Descriptor instead.
 func (*GetNodesResponse) Descriptor() ([]byte, []int) {
-	return file_interface_grpc_public_orchestrator_public_proto_rawDescGZIP(), []int{1}
+	return file_orchestrator_public_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetNodesResponse) GetNodes() []*Node {
@@ -111,7 +111,7 @@ type Node struct {
 
 func (x *Node) Reset() {
 	*x = Node{}
-	mi := &file_interface_grpc_public_orchestrator_public_proto_msgTypes[2]
+	mi := &file_orchestrator_public_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -123,7 +123,7 @@ func (x *Node) String() string {
 func (*Node) ProtoMessage() {}
 
 func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_interface_grpc_public_orchestrator_public_proto_msgTypes[2]
+	mi := &file_orchestrator_public_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -136,7 +136,7 @@ func (x *Node) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Node.ProtoReflect.Descriptor instead.
 func (*Node) Descriptor() ([]byte, []int) {
-	return file_interface_grpc_public_orchestrator_public_proto_rawDescGZIP(), []int{2}
+	return file_orchestrator_public_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Node) GetId() string {
@@ -153,69 +153,291 @@ func (x *Node) GetName() string {
 	return ""
 }
 
-var File_interface_grpc_public_orchestrator_public_proto protoreflect.FileDescriptor
+type PingRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Source          string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	TimestampUnixMs int64                  `protobuf:"varint,2,opt,name=timestamp_unix_ms,json=timestampUnixMs,proto3" json:"timestamp_unix_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
 
-const file_interface_grpc_public_orchestrator_public_proto_rawDesc = "" +
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	mi := &file_orchestrator_public_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_public_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_public_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PingRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *PingRequest) GetTimestampUnixMs() int64 {
+	if x != nil {
+		return x.TimestampUnixMs
+	}
+	return 0
+}
+
+type PingResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Responder       string                 `protobuf:"bytes,1,opt,name=responder,proto3" json:"responder,omitempty"`
+	TimestampUnixMs int64                  `protobuf:"varint,2,opt,name=timestamp_unix_ms,json=timestampUnixMs,proto3" json:"timestamp_unix_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_orchestrator_public_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_public_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_public_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PingResponse) GetResponder() string {
+	if x != nil {
+		return x.Responder
+	}
+	return ""
+}
+
+func (x *PingResponse) GetTimestampUnixMs() int64 {
+	if x != nil {
+		return x.TimestampUnixMs
+	}
+	return 0
+}
+
+type CreateNodeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateNodeRequest) Reset() {
+	*x = CreateNodeRequest{}
+	mi := &file_orchestrator_public_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateNodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateNodeRequest) ProtoMessage() {}
+
+func (x *CreateNodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_public_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateNodeRequest.ProtoReflect.Descriptor instead.
+func (*CreateNodeRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_public_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CreateNodeRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type CreateNodeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateNodeResponse) Reset() {
+	*x = CreateNodeResponse{}
+	mi := &file_orchestrator_public_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateNodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateNodeResponse) ProtoMessage() {}
+
+func (x *CreateNodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_public_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateNodeResponse.ProtoReflect.Descriptor instead.
+func (*CreateNodeResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_public_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CreateNodeResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CreateNodeResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+var File_orchestrator_public_proto protoreflect.FileDescriptor
+
+const file_orchestrator_public_proto_rawDesc = "" +
 	"\n" +
-	"/interface/grpc_public/orchestrator_public.proto\x12\x16orchestrator.public.v1\"\x11\n" +
+	"\x19orchestrator_public.proto\x12\x16orchestrator.public.v1\"\x11\n" +
 	"\x0fGetNodesRequest\"F\n" +
 	"\x10GetNodesResponse\x122\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x1c.orchestrator.public.v1.NodeR\x05nodes\"*\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name2s\n" +
-	"\x12OrchestratorPublic\x12]\n" +
-	"\bGetNodes\x12'.orchestrator.public.v1.GetNodesRequest\x1a(.orchestrator.public.v1.GetNodesResponseBVZTgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_publicb\x06proto3"
+	"\x04name\x18\x02 \x01(\tR\x04name\"Q\n" +
+	"\vPingRequest\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12*\n" +
+	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"X\n" +
+	"\fPingResponse\x12\x1c\n" +
+	"\tresponder\x18\x01 \x01(\tR\tresponder\x12*\n" +
+	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"'\n" +
+	"\x11CreateNodeRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"8\n" +
+	"\x12CreateNodeResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name2\xab\x02\n" +
+	"\x12OrchestratorPublic\x12c\n" +
+	"\n" +
+	"CreateNode\x12).orchestrator.public.v1.CreateNodeRequest\x1a*.orchestrator.public.v1.CreateNodeResponse\x12]\n" +
+	"\bGetNodes\x12'.orchestrator.public.v1.GetNodesRequest\x1a(.orchestrator.public.v1.GetNodesResponse\x12Q\n" +
+	"\x04Ping\x12#.orchestrator.public.v1.PingRequest\x1a$.orchestrator.public.v1.PingResponseBVZTgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_publicb\x06proto3"
 
 var (
-	file_interface_grpc_public_orchestrator_public_proto_rawDescOnce sync.Once
-	file_interface_grpc_public_orchestrator_public_proto_rawDescData []byte
+	file_orchestrator_public_proto_rawDescOnce sync.Once
+	file_orchestrator_public_proto_rawDescData []byte
 )
 
-func file_interface_grpc_public_orchestrator_public_proto_rawDescGZIP() []byte {
-	file_interface_grpc_public_orchestrator_public_proto_rawDescOnce.Do(func() {
-		file_interface_grpc_public_orchestrator_public_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_interface_grpc_public_orchestrator_public_proto_rawDesc), len(file_interface_grpc_public_orchestrator_public_proto_rawDesc)))
+func file_orchestrator_public_proto_rawDescGZIP() []byte {
+	file_orchestrator_public_proto_rawDescOnce.Do(func() {
+		file_orchestrator_public_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_orchestrator_public_proto_rawDesc), len(file_orchestrator_public_proto_rawDesc)))
 	})
-	return file_interface_grpc_public_orchestrator_public_proto_rawDescData
+	return file_orchestrator_public_proto_rawDescData
 }
 
-var file_interface_grpc_public_orchestrator_public_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_interface_grpc_public_orchestrator_public_proto_goTypes = []any{
-	(*GetNodesRequest)(nil),  // 0: orchestrator.public.v1.GetNodesRequest
-	(*GetNodesResponse)(nil), // 1: orchestrator.public.v1.GetNodesResponse
-	(*Node)(nil),             // 2: orchestrator.public.v1.Node
+var file_orchestrator_public_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_orchestrator_public_proto_goTypes = []any{
+	(*GetNodesRequest)(nil),    // 0: orchestrator.public.v1.GetNodesRequest
+	(*GetNodesResponse)(nil),   // 1: orchestrator.public.v1.GetNodesResponse
+	(*Node)(nil),               // 2: orchestrator.public.v1.Node
+	(*PingRequest)(nil),        // 3: orchestrator.public.v1.PingRequest
+	(*PingResponse)(nil),       // 4: orchestrator.public.v1.PingResponse
+	(*CreateNodeRequest)(nil),  // 5: orchestrator.public.v1.CreateNodeRequest
+	(*CreateNodeResponse)(nil), // 6: orchestrator.public.v1.CreateNodeResponse
 }
-var file_interface_grpc_public_orchestrator_public_proto_depIdxs = []int32{
+var file_orchestrator_public_proto_depIdxs = []int32{
 	2, // 0: orchestrator.public.v1.GetNodesResponse.nodes:type_name -> orchestrator.public.v1.Node
-	0, // 1: orchestrator.public.v1.OrchestratorPublic.GetNodes:input_type -> orchestrator.public.v1.GetNodesRequest
-	1, // 2: orchestrator.public.v1.OrchestratorPublic.GetNodes:output_type -> orchestrator.public.v1.GetNodesResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	5, // 1: orchestrator.public.v1.OrchestratorPublic.CreateNode:input_type -> orchestrator.public.v1.CreateNodeRequest
+	0, // 2: orchestrator.public.v1.OrchestratorPublic.GetNodes:input_type -> orchestrator.public.v1.GetNodesRequest
+	3, // 3: orchestrator.public.v1.OrchestratorPublic.Ping:input_type -> orchestrator.public.v1.PingRequest
+	6, // 4: orchestrator.public.v1.OrchestratorPublic.CreateNode:output_type -> orchestrator.public.v1.CreateNodeResponse
+	1, // 5: orchestrator.public.v1.OrchestratorPublic.GetNodes:output_type -> orchestrator.public.v1.GetNodesResponse
+	4, // 6: orchestrator.public.v1.OrchestratorPublic.Ping:output_type -> orchestrator.public.v1.PingResponse
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_interface_grpc_public_orchestrator_public_proto_init() }
-func file_interface_grpc_public_orchestrator_public_proto_init() {
-	if File_interface_grpc_public_orchestrator_public_proto != nil {
+func init() { file_orchestrator_public_proto_init() }
+func file_orchestrator_public_proto_init() {
+	if File_orchestrator_public_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_interface_grpc_public_orchestrator_public_proto_rawDesc), len(file_interface_grpc_public_orchestrator_public_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orchestrator_public_proto_rawDesc), len(file_orchestrator_public_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_interface_grpc_public_orchestrator_public_proto_goTypes,
-		DependencyIndexes: file_interface_grpc_public_orchestrator_public_proto_depIdxs,
-		MessageInfos:      file_interface_grpc_public_orchestrator_public_proto_msgTypes,
+		GoTypes:           file_orchestrator_public_proto_goTypes,
+		DependencyIndexes: file_orchestrator_public_proto_depIdxs,
+		MessageInfos:      file_orchestrator_public_proto_msgTypes,
 	}.Build()
-	File_interface_grpc_public_orchestrator_public_proto = out.File
-	file_interface_grpc_public_orchestrator_public_proto_goTypes = nil
-	file_interface_grpc_public_orchestrator_public_proto_depIdxs = nil
+	File_orchestrator_public_proto = out.File
+	file_orchestrator_public_proto_goTypes = nil
+	file_orchestrator_public_proto_depIdxs = nil
 }

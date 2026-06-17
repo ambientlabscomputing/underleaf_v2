@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: agent/interface/grpc_public/agent_public.proto
+// source: agent_public.proto
 
 package grpc_public
 
@@ -29,7 +29,7 @@ type GetStatusRequest struct {
 
 func (x *GetStatusRequest) Reset() {
 	*x = GetStatusRequest{}
-	mi := &file_agent_interface_grpc_public_agent_public_proto_msgTypes[0]
+	mi := &file_agent_public_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +41,7 @@ func (x *GetStatusRequest) String() string {
 func (*GetStatusRequest) ProtoMessage() {}
 
 func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_interface_grpc_public_agent_public_proto_msgTypes[0]
+	mi := &file_agent_public_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +54,7 @@ func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetStatusRequest) Descriptor() ([]byte, []int) {
-	return file_agent_interface_grpc_public_agent_public_proto_rawDescGZIP(), []int{0}
+	return file_agent_public_proto_rawDescGZIP(), []int{0}
 }
 
 type GetStatusResponse struct {
@@ -66,7 +66,7 @@ type GetStatusResponse struct {
 
 func (x *GetStatusResponse) Reset() {
 	*x = GetStatusResponse{}
-	mi := &file_agent_interface_grpc_public_agent_public_proto_msgTypes[1]
+	mi := &file_agent_public_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +78,7 @@ func (x *GetStatusResponse) String() string {
 func (*GetStatusResponse) ProtoMessage() {}
 
 func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_interface_grpc_public_agent_public_proto_msgTypes[1]
+	mi := &file_agent_public_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +91,7 @@ func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetStatusResponse) Descriptor() ([]byte, []int) {
-	return file_agent_interface_grpc_public_agent_public_proto_rawDescGZIP(), []int{1}
+	return file_agent_public_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetStatusResponse) GetStatus() string {
@@ -101,64 +101,179 @@ func (x *GetStatusResponse) GetStatus() string {
 	return ""
 }
 
-var File_agent_interface_grpc_public_agent_public_proto protoreflect.FileDescriptor
+type PingRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Source          string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	TimestampUnixMs int64                  `protobuf:"varint,2,opt,name=timestamp_unix_ms,json=timestampUnixMs,proto3" json:"timestamp_unix_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
 
-const file_agent_interface_grpc_public_agent_public_proto_rawDesc = "" +
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	mi := &file_agent_public_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PingRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *PingRequest) GetTimestampUnixMs() int64 {
+	if x != nil {
+		return x.TimestampUnixMs
+	}
+	return 0
+}
+
+type PingResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Responder       string                 `protobuf:"bytes,1,opt,name=responder,proto3" json:"responder,omitempty"`
+	TimestampUnixMs int64                  `protobuf:"varint,2,opt,name=timestamp_unix_ms,json=timestampUnixMs,proto3" json:"timestamp_unix_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_agent_public_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PingResponse) GetResponder() string {
+	if x != nil {
+		return x.Responder
+	}
+	return ""
+}
+
+func (x *PingResponse) GetTimestampUnixMs() int64 {
+	if x != nil {
+		return x.TimestampUnixMs
+	}
+	return 0
+}
+
+var File_agent_public_proto protoreflect.FileDescriptor
+
+const file_agent_public_proto_rawDesc = "" +
 	"\n" +
-	".agent/interface/grpc_public/agent_public.proto\x12\x0fagent.public.v1\"\x12\n" +
+	"\x12agent_public.proto\x12\x0fagent.public.v1\"\x12\n" +
 	"\x10GetStatusRequest\"+\n" +
 	"\x11GetStatusResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2a\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\"Q\n" +
+	"\vPingRequest\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12*\n" +
+	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"X\n" +
+	"\fPingResponse\x12\x1c\n" +
+	"\tresponder\x18\x01 \x01(\tR\tresponder\x12*\n" +
+	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs2\xa6\x01\n" +
 	"\vAgentPublic\x12R\n" +
-	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponseBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
+	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponse\x12C\n" +
+	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponseBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
 
 var (
-	file_agent_interface_grpc_public_agent_public_proto_rawDescOnce sync.Once
-	file_agent_interface_grpc_public_agent_public_proto_rawDescData []byte
+	file_agent_public_proto_rawDescOnce sync.Once
+	file_agent_public_proto_rawDescData []byte
 )
 
-func file_agent_interface_grpc_public_agent_public_proto_rawDescGZIP() []byte {
-	file_agent_interface_grpc_public_agent_public_proto_rawDescOnce.Do(func() {
-		file_agent_interface_grpc_public_agent_public_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agent_interface_grpc_public_agent_public_proto_rawDesc), len(file_agent_interface_grpc_public_agent_public_proto_rawDesc)))
+func file_agent_public_proto_rawDescGZIP() []byte {
+	file_agent_public_proto_rawDescOnce.Do(func() {
+		file_agent_public_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agent_public_proto_rawDesc), len(file_agent_public_proto_rawDesc)))
 	})
-	return file_agent_interface_grpc_public_agent_public_proto_rawDescData
+	return file_agent_public_proto_rawDescData
 }
 
-var file_agent_interface_grpc_public_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_agent_interface_grpc_public_agent_public_proto_goTypes = []any{
+var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_agent_public_proto_goTypes = []any{
 	(*GetStatusRequest)(nil),  // 0: agent.public.v1.GetStatusRequest
 	(*GetStatusResponse)(nil), // 1: agent.public.v1.GetStatusResponse
+	(*PingRequest)(nil),       // 2: agent.public.v1.PingRequest
+	(*PingResponse)(nil),      // 3: agent.public.v1.PingResponse
 }
-var file_agent_interface_grpc_public_agent_public_proto_depIdxs = []int32{
+var file_agent_public_proto_depIdxs = []int32{
 	0, // 0: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
-	1, // 1: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
+	1, // 2: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
+	3, // 3: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_agent_interface_grpc_public_agent_public_proto_init() }
-func file_agent_interface_grpc_public_agent_public_proto_init() {
-	if File_agent_interface_grpc_public_agent_public_proto != nil {
+func init() { file_agent_public_proto_init() }
+func file_agent_public_proto_init() {
+	if File_agent_public_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_interface_grpc_public_agent_public_proto_rawDesc), len(file_agent_interface_grpc_public_agent_public_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_public_proto_rawDesc), len(file_agent_public_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_agent_interface_grpc_public_agent_public_proto_goTypes,
-		DependencyIndexes: file_agent_interface_grpc_public_agent_public_proto_depIdxs,
-		MessageInfos:      file_agent_interface_grpc_public_agent_public_proto_msgTypes,
+		GoTypes:           file_agent_public_proto_goTypes,
+		DependencyIndexes: file_agent_public_proto_depIdxs,
+		MessageInfos:      file_agent_public_proto_msgTypes,
 	}.Build()
-	File_agent_interface_grpc_public_agent_public_proto = out.File
-	file_agent_interface_grpc_public_agent_public_proto_goTypes = nil
-	file_agent_interface_grpc_public_agent_public_proto_depIdxs = nil
+	File_agent_public_proto = out.File
+	file_agent_public_proto_goTypes = nil
+	file_agent_public_proto_depIdxs = nil
 }

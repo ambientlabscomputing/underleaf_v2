@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: agent/interface/grpc_private/agent_private.proto
+// source: agent_private.proto
 
 package grpc_private
 
@@ -29,7 +29,7 @@ type GetStatusRequest struct {
 
 func (x *GetStatusRequest) Reset() {
 	*x = GetStatusRequest{}
-	mi := &file_agent_interface_grpc_private_agent_private_proto_msgTypes[0]
+	mi := &file_agent_private_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +41,7 @@ func (x *GetStatusRequest) String() string {
 func (*GetStatusRequest) ProtoMessage() {}
 
 func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_interface_grpc_private_agent_private_proto_msgTypes[0]
+	mi := &file_agent_private_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +54,7 @@ func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetStatusRequest) Descriptor() ([]byte, []int) {
-	return file_agent_interface_grpc_private_agent_private_proto_rawDescGZIP(), []int{0}
+	return file_agent_private_proto_rawDescGZIP(), []int{0}
 }
 
 type GetStatusResponse struct {
@@ -66,7 +66,7 @@ type GetStatusResponse struct {
 
 func (x *GetStatusResponse) Reset() {
 	*x = GetStatusResponse{}
-	mi := &file_agent_interface_grpc_private_agent_private_proto_msgTypes[1]
+	mi := &file_agent_private_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +78,7 @@ func (x *GetStatusResponse) String() string {
 func (*GetStatusResponse) ProtoMessage() {}
 
 func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_interface_grpc_private_agent_private_proto_msgTypes[1]
+	mi := &file_agent_private_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +91,7 @@ func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetStatusResponse) Descriptor() ([]byte, []int) {
-	return file_agent_interface_grpc_private_agent_private_proto_rawDescGZIP(), []int{1}
+	return file_agent_private_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetStatusResponse) GetStatus() string {
@@ -101,64 +101,199 @@ func (x *GetStatusResponse) GetStatus() string {
 	return ""
 }
 
-var File_agent_interface_grpc_private_agent_private_proto protoreflect.FileDescriptor
+type PingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
 
-const file_agent_interface_grpc_private_agent_private_proto_rawDesc = "" +
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	mi := &file_agent_private_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_private_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_agent_private_proto_rawDescGZIP(), []int{2}
+}
+
+type PingResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Agent's own ping result
+	AgentStatus      string `protobuf:"bytes,1,opt,name=agent_status,json=agentStatus,proto3" json:"agent_status,omitempty"`
+	AgentTimestampMs int64  `protobuf:"varint,2,opt,name=agent_timestamp_ms,json=agentTimestampMs,proto3" json:"agent_timestamp_ms,omitempty"`
+	// Result from the agent pinging the orchestrator
+	OrchestratorReachable   bool   `protobuf:"varint,3,opt,name=orchestrator_reachable,json=orchestratorReachable,proto3" json:"orchestrator_reachable,omitempty"`
+	OrchestratorResponder   string `protobuf:"bytes,4,opt,name=orchestrator_responder,json=orchestratorResponder,proto3" json:"orchestrator_responder,omitempty"`
+	OrchestratorTimestampMs int64  `protobuf:"varint,5,opt,name=orchestrator_timestamp_ms,json=orchestratorTimestampMs,proto3" json:"orchestrator_timestamp_ms,omitempty"`
+	OrchestratorError       string `protobuf:"bytes,6,opt,name=orchestrator_error,json=orchestratorError,proto3" json:"orchestrator_error,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_agent_private_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_private_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_agent_private_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PingResponse) GetAgentStatus() string {
+	if x != nil {
+		return x.AgentStatus
+	}
+	return ""
+}
+
+func (x *PingResponse) GetAgentTimestampMs() int64 {
+	if x != nil {
+		return x.AgentTimestampMs
+	}
+	return 0
+}
+
+func (x *PingResponse) GetOrchestratorReachable() bool {
+	if x != nil {
+		return x.OrchestratorReachable
+	}
+	return false
+}
+
+func (x *PingResponse) GetOrchestratorResponder() string {
+	if x != nil {
+		return x.OrchestratorResponder
+	}
+	return ""
+}
+
+func (x *PingResponse) GetOrchestratorTimestampMs() int64 {
+	if x != nil {
+		return x.OrchestratorTimestampMs
+	}
+	return 0
+}
+
+func (x *PingResponse) GetOrchestratorError() string {
+	if x != nil {
+		return x.OrchestratorError
+	}
+	return ""
+}
+
+var File_agent_private_proto protoreflect.FileDescriptor
+
+const file_agent_private_proto_rawDesc = "" +
 	"\n" +
-	"0agent/interface/grpc_private/agent_private.proto\x12\x10agent.private.v1\"\x12\n" +
+	"\x13agent_private.proto\x12\x10agent.private.v1\"\x12\n" +
 	"\x10GetStatusRequest\"+\n" +
 	"\x11GetStatusResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2d\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\"\r\n" +
+	"\vPingRequest\"\xb8\x02\n" +
+	"\fPingResponse\x12!\n" +
+	"\fagent_status\x18\x01 \x01(\tR\vagentStatus\x12,\n" +
+	"\x12agent_timestamp_ms\x18\x02 \x01(\x03R\x10agentTimestampMs\x125\n" +
+	"\x16orchestrator_reachable\x18\x03 \x01(\bR\x15orchestratorReachable\x125\n" +
+	"\x16orchestrator_responder\x18\x04 \x01(\tR\x15orchestratorResponder\x12:\n" +
+	"\x19orchestrator_timestamp_ms\x18\x05 \x01(\x03R\x17orchestratorTimestampMs\x12-\n" +
+	"\x12orchestrator_error\x18\x06 \x01(\tR\x11orchestratorError2\xab\x01\n" +
 	"\fAgentPrivate\x12T\n" +
-	"\tGetStatus\x12\".agent.private.v1.GetStatusRequest\x1a#.agent.private.v1.GetStatusResponseBPZNgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_privateb\x06proto3"
+	"\tGetStatus\x12\".agent.private.v1.GetStatusRequest\x1a#.agent.private.v1.GetStatusResponse\x12E\n" +
+	"\x04Ping\x12\x1d.agent.private.v1.PingRequest\x1a\x1e.agent.private.v1.PingResponseBPZNgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_privateb\x06proto3"
 
 var (
-	file_agent_interface_grpc_private_agent_private_proto_rawDescOnce sync.Once
-	file_agent_interface_grpc_private_agent_private_proto_rawDescData []byte
+	file_agent_private_proto_rawDescOnce sync.Once
+	file_agent_private_proto_rawDescData []byte
 )
 
-func file_agent_interface_grpc_private_agent_private_proto_rawDescGZIP() []byte {
-	file_agent_interface_grpc_private_agent_private_proto_rawDescOnce.Do(func() {
-		file_agent_interface_grpc_private_agent_private_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agent_interface_grpc_private_agent_private_proto_rawDesc), len(file_agent_interface_grpc_private_agent_private_proto_rawDesc)))
+func file_agent_private_proto_rawDescGZIP() []byte {
+	file_agent_private_proto_rawDescOnce.Do(func() {
+		file_agent_private_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agent_private_proto_rawDesc), len(file_agent_private_proto_rawDesc)))
 	})
-	return file_agent_interface_grpc_private_agent_private_proto_rawDescData
+	return file_agent_private_proto_rawDescData
 }
 
-var file_agent_interface_grpc_private_agent_private_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_agent_interface_grpc_private_agent_private_proto_goTypes = []any{
+var file_agent_private_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_agent_private_proto_goTypes = []any{
 	(*GetStatusRequest)(nil),  // 0: agent.private.v1.GetStatusRequest
 	(*GetStatusResponse)(nil), // 1: agent.private.v1.GetStatusResponse
+	(*PingRequest)(nil),       // 2: agent.private.v1.PingRequest
+	(*PingResponse)(nil),      // 3: agent.private.v1.PingResponse
 }
-var file_agent_interface_grpc_private_agent_private_proto_depIdxs = []int32{
+var file_agent_private_proto_depIdxs = []int32{
 	0, // 0: agent.private.v1.AgentPrivate.GetStatus:input_type -> agent.private.v1.GetStatusRequest
-	1, // 1: agent.private.v1.AgentPrivate.GetStatus:output_type -> agent.private.v1.GetStatusResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: agent.private.v1.AgentPrivate.Ping:input_type -> agent.private.v1.PingRequest
+	1, // 2: agent.private.v1.AgentPrivate.GetStatus:output_type -> agent.private.v1.GetStatusResponse
+	3, // 3: agent.private.v1.AgentPrivate.Ping:output_type -> agent.private.v1.PingResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_agent_interface_grpc_private_agent_private_proto_init() }
-func file_agent_interface_grpc_private_agent_private_proto_init() {
-	if File_agent_interface_grpc_private_agent_private_proto != nil {
+func init() { file_agent_private_proto_init() }
+func file_agent_private_proto_init() {
+	if File_agent_private_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_interface_grpc_private_agent_private_proto_rawDesc), len(file_agent_interface_grpc_private_agent_private_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_private_proto_rawDesc), len(file_agent_private_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_agent_interface_grpc_private_agent_private_proto_goTypes,
-		DependencyIndexes: file_agent_interface_grpc_private_agent_private_proto_depIdxs,
-		MessageInfos:      file_agent_interface_grpc_private_agent_private_proto_msgTypes,
+		GoTypes:           file_agent_private_proto_goTypes,
+		DependencyIndexes: file_agent_private_proto_depIdxs,
+		MessageInfos:      file_agent_private_proto_msgTypes,
 	}.Build()
-	File_agent_interface_grpc_private_agent_private_proto = out.File
-	file_agent_interface_grpc_private_agent_private_proto_goTypes = nil
-	file_agent_interface_grpc_private_agent_private_proto_depIdxs = nil
+	File_agent_private_proto = out.File
+	file_agent_private_proto_goTypes = nil
+	file_agent_private_proto_depIdxs = nil
 }
