@@ -223,6 +223,146 @@ func (x *PingResponse) GetOrchestratorError() string {
 	return ""
 }
 
+type RegisterRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterRequest) Reset() {
+	*x = RegisterRequest{}
+	mi := &file_agent_private_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterRequest) ProtoMessage() {}
+
+func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_private_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
+func (*RegisterRequest) Descriptor() ([]byte, []int) {
+	return file_agent_private_proto_rawDescGZIP(), []int{4}
+}
+
+type Node struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Node) Reset() {
+	*x = Node{}
+	mi := &file_agent_private_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Node) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Node) ProtoMessage() {}
+
+func (x *Node) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_private_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Node.ProtoReflect.Descriptor instead.
+func (*Node) Descriptor() ([]byte, []int) {
+	return file_agent_private_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Node) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Node) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type RegisterResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Node          *Node                  `protobuf:"bytes,2,opt,name=node,proto3" json:"node,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterResponse) Reset() {
+	*x = RegisterResponse{}
+	mi := &file_agent_private_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterResponse) ProtoMessage() {}
+
+func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_private_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
+func (*RegisterResponse) Descriptor() ([]byte, []int) {
+	return file_agent_private_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *RegisterResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *RegisterResponse) GetNode() *Node {
+	if x != nil {
+		return x.Node
+	}
+	return nil
+}
+
 var File_agent_private_proto protoreflect.FileDescriptor
 
 const file_agent_private_proto_rawDesc = "" +
@@ -238,10 +378,18 @@ const file_agent_private_proto_rawDesc = "" +
 	"\x16orchestrator_reachable\x18\x03 \x01(\bR\x15orchestratorReachable\x125\n" +
 	"\x16orchestrator_responder\x18\x04 \x01(\tR\x15orchestratorResponder\x12:\n" +
 	"\x19orchestrator_timestamp_ms\x18\x05 \x01(\x03R\x17orchestratorTimestampMs\x12-\n" +
-	"\x12orchestrator_error\x18\x06 \x01(\tR\x11orchestratorError2\xab\x01\n" +
+	"\x12orchestrator_error\x18\x06 \x01(\tR\x11orchestratorError\"\x11\n" +
+	"\x0fRegisterRequest\"*\n" +
+	"\x04Node\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"V\n" +
+	"\x10RegisterResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12*\n" +
+	"\x04node\x18\x02 \x01(\v2\x16.agent.private.v1.NodeR\x04node2\xfe\x01\n" +
 	"\fAgentPrivate\x12T\n" +
 	"\tGetStatus\x12\".agent.private.v1.GetStatusRequest\x1a#.agent.private.v1.GetStatusResponse\x12E\n" +
-	"\x04Ping\x12\x1d.agent.private.v1.PingRequest\x1a\x1e.agent.private.v1.PingResponseBPZNgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_privateb\x06proto3"
+	"\x04Ping\x12\x1d.agent.private.v1.PingRequest\x1a\x1e.agent.private.v1.PingResponse\x12Q\n" +
+	"\bRegister\x12!.agent.private.v1.RegisterRequest\x1a\".agent.private.v1.RegisterResponseBPZNgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_privateb\x06proto3"
 
 var (
 	file_agent_private_proto_rawDescOnce sync.Once
@@ -255,23 +403,29 @@ func file_agent_private_proto_rawDescGZIP() []byte {
 	return file_agent_private_proto_rawDescData
 }
 
-var file_agent_private_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_agent_private_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_agent_private_proto_goTypes = []any{
 	(*GetStatusRequest)(nil),  // 0: agent.private.v1.GetStatusRequest
 	(*GetStatusResponse)(nil), // 1: agent.private.v1.GetStatusResponse
 	(*PingRequest)(nil),       // 2: agent.private.v1.PingRequest
 	(*PingResponse)(nil),      // 3: agent.private.v1.PingResponse
+	(*RegisterRequest)(nil),   // 4: agent.private.v1.RegisterRequest
+	(*Node)(nil),              // 5: agent.private.v1.Node
+	(*RegisterResponse)(nil),  // 6: agent.private.v1.RegisterResponse
 }
 var file_agent_private_proto_depIdxs = []int32{
-	0, // 0: agent.private.v1.AgentPrivate.GetStatus:input_type -> agent.private.v1.GetStatusRequest
-	2, // 1: agent.private.v1.AgentPrivate.Ping:input_type -> agent.private.v1.PingRequest
-	1, // 2: agent.private.v1.AgentPrivate.GetStatus:output_type -> agent.private.v1.GetStatusResponse
-	3, // 3: agent.private.v1.AgentPrivate.Ping:output_type -> agent.private.v1.PingResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	5, // 0: agent.private.v1.RegisterResponse.node:type_name -> agent.private.v1.Node
+	0, // 1: agent.private.v1.AgentPrivate.GetStatus:input_type -> agent.private.v1.GetStatusRequest
+	2, // 2: agent.private.v1.AgentPrivate.Ping:input_type -> agent.private.v1.PingRequest
+	4, // 3: agent.private.v1.AgentPrivate.Register:input_type -> agent.private.v1.RegisterRequest
+	1, // 4: agent.private.v1.AgentPrivate.GetStatus:output_type -> agent.private.v1.GetStatusResponse
+	3, // 5: agent.private.v1.AgentPrivate.Ping:output_type -> agent.private.v1.PingResponse
+	6, // 6: agent.private.v1.AgentPrivate.Register:output_type -> agent.private.v1.RegisterResponse
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_agent_private_proto_init() }
@@ -285,7 +439,7 @@ func file_agent_private_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_private_proto_rawDesc), len(file_agent_private_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

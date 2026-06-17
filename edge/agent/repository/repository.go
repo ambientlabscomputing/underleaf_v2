@@ -13,17 +13,23 @@ import (
 type Repository struct {
 	db       *sql.DB
 	Migrator *migrator.Migrator
+
+	// Add other repositories here
+	Nodes *NodeRepository
 }
 
 func NewRepository() (*Repository, error) {
 	cfg := utils.GetConfig(utils.AgentConfig)
+	utils.Logger.Debug("Initializing repository with config", "db_path", cfg.DBPath)
 	db, err := sql.Open("sqlite", cfg.DBPath)
 	if err != nil {
 		return nil, fmt.Errorf("repository: open db: %w", err)
 	}
+	nodeRepo := NewNodeRepository(db)
 	return &Repository{
 		db:       db,
 		Migrator: migrator.NewMigrator(db),
+		Nodes:    nodeRepo,
 	}, nil
 }
 

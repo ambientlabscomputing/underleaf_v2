@@ -31,3 +31,8 @@ func (s *AppService) Stop() error {
 	// implement stop logic
 	return nil
 }
+
+func (s *AppService) Query(query string) (string, error) {
+	result, err := s.Repository.Query(query)
+	return result, err
+}

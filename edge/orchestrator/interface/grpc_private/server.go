@@ -53,3 +53,12 @@ func (s *OrchestratorGRPCPrivateServer) GetNodes(_ context.Context, _ *GetNodesR
 	}
 	return resp, nil
 }
+
+// SqlQuery implements OrchestratorPrivateServer.
+func (s *OrchestratorGRPCPrivateServer) SqlQuery(ctx context.Context, req *SqlQueryRequest) (*SqlQueryResponse, error) {
+	result, err := s.Service.Query(req.Query)
+	if err != nil {
+		return nil, err
+	}
+	return &SqlQueryResponse{Result: result}, nil
+}

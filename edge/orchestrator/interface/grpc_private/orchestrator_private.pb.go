@@ -153,6 +153,94 @@ func (x *Node) GetName() string {
 	return ""
 }
 
+type SqlQueryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SqlQueryRequest) Reset() {
+	*x = SqlQueryRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SqlQueryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SqlQueryRequest) ProtoMessage() {}
+
+func (x *SqlQueryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SqlQueryRequest.ProtoReflect.Descriptor instead.
+func (*SqlQueryRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SqlQueryRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+type SqlQueryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Result        string                 `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SqlQueryResponse) Reset() {
+	*x = SqlQueryResponse{}
+	mi := &file_orchestrator_private_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SqlQueryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SqlQueryResponse) ProtoMessage() {}
+
+func (x *SqlQueryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SqlQueryResponse.ProtoReflect.Descriptor instead.
+func (*SqlQueryResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SqlQueryResponse) GetResult() string {
+	if x != nil {
+		return x.Result
+	}
+	return ""
+}
+
 var File_orchestrator_private_proto protoreflect.FileDescriptor
 
 const file_orchestrator_private_proto_rawDesc = "" +
@@ -163,9 +251,14 @@ const file_orchestrator_private_proto_rawDesc = "" +
 	"\x05nodes\x18\x01 \x03(\v2\x1d.orchestrator.private.v1.NodeR\x05nodes\"*\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name2v\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"'\n" +
+	"\x0fSqlQueryRequest\x12\x14\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\"*\n" +
+	"\x10SqlQueryResponse\x12\x16\n" +
+	"\x06result\x18\x01 \x01(\tR\x06result2\xd7\x01\n" +
 	"\x13OrchestratorPrivate\x12_\n" +
-	"\bGetNodes\x12(.orchestrator.private.v1.GetNodesRequest\x1a).orchestrator.private.v1.GetNodesResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
+	"\bGetNodes\x12(.orchestrator.private.v1.GetNodesRequest\x1a).orchestrator.private.v1.GetNodesResponse\x12_\n" +
+	"\bSqlQuery\x12(.orchestrator.private.v1.SqlQueryRequest\x1a).orchestrator.private.v1.SqlQueryResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
 
 var (
 	file_orchestrator_private_proto_rawDescOnce sync.Once
@@ -179,18 +272,22 @@ func file_orchestrator_private_proto_rawDescGZIP() []byte {
 	return file_orchestrator_private_proto_rawDescData
 }
 
-var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_orchestrator_private_proto_goTypes = []any{
 	(*GetNodesRequest)(nil),  // 0: orchestrator.private.v1.GetNodesRequest
 	(*GetNodesResponse)(nil), // 1: orchestrator.private.v1.GetNodesResponse
 	(*Node)(nil),             // 2: orchestrator.private.v1.Node
+	(*SqlQueryRequest)(nil),  // 3: orchestrator.private.v1.SqlQueryRequest
+	(*SqlQueryResponse)(nil), // 4: orchestrator.private.v1.SqlQueryResponse
 }
 var file_orchestrator_private_proto_depIdxs = []int32{
 	2, // 0: orchestrator.private.v1.GetNodesResponse.nodes:type_name -> orchestrator.private.v1.Node
 	0, // 1: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
-	1, // 2: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	3, // 2: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
+	1, // 3: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
+	4, // 4: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -207,7 +304,7 @@ func file_orchestrator_private_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orchestrator_private_proto_rawDesc), len(file_orchestrator_private_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

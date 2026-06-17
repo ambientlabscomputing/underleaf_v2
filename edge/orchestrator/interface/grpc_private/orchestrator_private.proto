@@ -7,6 +7,7 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestra
 // OrchestratorPrivate is the CLI-facing gRPC service, served over a unix socket.
 service OrchestratorPrivate {
   rpc GetNodes(GetNodesRequest) returns (GetNodesResponse);
+  rpc SqlQuery(SqlQueryRequest) returns (SqlQueryResponse);
 }
 
 message GetNodesRequest {}
@@ -18,4 +19,12 @@ message GetNodesResponse {
 message Node {
   string id   = 1;
   string name = 2;
+}
+
+message SqlQueryRequest{
+    string query = 1;
+}
+
+message SqlQueryResponse {
+    string result = 1;
 }

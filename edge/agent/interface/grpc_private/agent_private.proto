@@ -8,6 +8,7 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/int
 service AgentPrivate {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc Ping(PingRequest) returns (PingResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse);
 }
 
 message GetStatusRequest {}
@@ -27,4 +28,16 @@ message PingResponse {
   string orchestrator_responder  = 4;
   int64  orchestrator_timestamp_ms = 5;
   string orchestrator_error      = 6;
+}
+
+message RegisterRequest {}
+
+message Node {
+    string id = 1;
+    string name = 2;
+}
+
+message RegisterResponse {
+    string status = 1;
+    Node node = 2;
 }

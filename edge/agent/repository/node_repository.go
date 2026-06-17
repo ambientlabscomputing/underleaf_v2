@@ -22,7 +22,7 @@ func (r *NodeRepository) CreateNode(node *types.Node) error {
 		INSERT INTO nodes (id, name)
 		VALUES (?, ?)
 		ON CONFLICT(id) DO UPDATE SET
-			name=excluded.name,
+			name=excluded.name
 	`, node.ID, node.Name)
 	return err
 }

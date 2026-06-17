@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	OrchestratorPrivate_GetNodes_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/GetNodes"
+	OrchestratorPrivate_SqlQuery_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/SqlQuery"
 )
 
 // OrchestratorPrivateClient is the client API for OrchestratorPrivate service.
@@ -29,6 +30,7 @@ const (
 // OrchestratorPrivate is the CLI-facing gRPC service, served over a unix socket.
 type OrchestratorPrivateClient interface {
 	GetNodes(ctx context.Context, in *GetNodesRequest, opts ...grpc.CallOption) (*GetNodesResponse, error)
+	SqlQuery(ctx context.Context, in *SqlQueryRequest, opts ...grpc.CallOption) (*SqlQueryResponse, error)
 }
 
 type orchestratorPrivateClient struct {
@@ -49,6 +51,16 @@ func (c *orchestratorPrivateClient) GetNodes(ctx context.Context, in *GetNodesRe
 	return out, nil
 }
 
+func (c *orchestratorPrivateClient) SqlQuery(ctx context.Context, in *SqlQueryRequest, opts ...grpc.CallOption) (*SqlQueryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SqlQueryResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_SqlQuery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrchestratorPrivateServer is the server API for OrchestratorPrivate service.
 // All implementations must embed UnimplementedOrchestratorPrivateServer
 // for forward compatibility.
@@ -56,6 +68,7 @@ func (c *orchestratorPrivateClient) GetNodes(ctx context.Context, in *GetNodesRe
 // OrchestratorPrivate is the CLI-facing gRPC service, served over a unix socket.
 type OrchestratorPrivateServer interface {
 	GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error)
+	SqlQuery(context.Context, *SqlQueryRequest) (*SqlQueryResponse, error)
 	mustEmbedUnimplementedOrchestratorPrivateServer()
 }
 
@@ -68,6 +81,9 @@ type UnimplementedOrchestratorPrivateServer struct{}
 
 func (UnimplementedOrchestratorPrivateServer) GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNodes not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) SqlQuery(context.Context, *SqlQueryRequest) (*SqlQueryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SqlQuery not implemented")
 }
 func (UnimplementedOrchestratorPrivateServer) mustEmbedUnimplementedOrchestratorPrivateServer() {}
 func (UnimplementedOrchestratorPrivateServer) testEmbeddedByValue()                             {}
@@ -108,6 +124,24 @@ func _OrchestratorPrivate_GetNodes_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrchestratorPrivate_SqlQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SqlQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).SqlQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_SqlQuery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).SqlQuery(ctx, req.(*SqlQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrchestratorPrivate_ServiceDesc is the grpc.ServiceDesc for OrchestratorPrivate service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -118,6 +152,10 @@ var OrchestratorPrivate_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNodes",
 			Handler:    _OrchestratorPrivate_GetNodes_Handler,
+		},
+		{
+			MethodName: "SqlQuery",
+			Handler:    _OrchestratorPrivate_SqlQuery_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -69,3 +69,18 @@ func (s *AgentGRPCPrivateServer) Ping(ctx context.Context, _ *PingRequest) (*Pin
 
 	return resp, nil
 }
+
+// Register implements AgentPrivateServer.
+func (s *AgentGRPCPrivateServer) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
+	node, err := s.Service.Orchestrator().RegisterNode(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &RegisterResponse{
+		Status: "ok",
+		Node: &Node{
+			Id:   node.ID,
+			Name: node.Name,
+		},
+	}, nil
+}

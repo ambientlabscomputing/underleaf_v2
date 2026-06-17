@@ -35,6 +35,15 @@ jobs:
           go-version-file: edge/go.mod
           cache-dependency-path: edge/go.sum
 
+      - name: Set build tags
+        id: tags
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "value=-tags devmode" >> $GITHUB_OUTPUT
+          else
+            echo "value=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build
         working-directory: edge
         env:
@@ -42,10 +51,10 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          go build -ldflags="-s -w" -o bin/ufagent-${{ matrix.goos }}-${{ matrix.goarch }}      ./agent/cmd/ufagent
-          go build -ldflags="-s -w" -o bin/ufagentd-${{ matrix.goos }}-${{ matrix.goarch }}     ./agent/cmd/ufagentd
-          go build -ldflags="-s -w" -o bin/orcli-${{ matrix.goos }}-${{ matrix.goarch }}         ./orchestrator/cmd/cli
-          go build -ldflags="-s -w" -o bin/orch-server-${{ matrix.goos }}-${{ matrix.goarch }} ./orchestrator/cmd/server
+          go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/ufagent-${{ matrix.goos }}-${{ matrix.goarch }}      ./agent/cmd/ufagent
+          go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/ufagentd-${{ matrix.goos }}-${{ matrix.goarch }}     ./agent/cmd/ufagentd
+          go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/orcli-${{ matrix.goos }}-${{ matrix.goarch }}         ./orchestrator/cmd/cli
+          go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/orch-server-${{ matrix.goos }}-${{ matrix.goarch }} ./orchestrator/cmd/server
 
       - uses: actions/upload-artifact@v4
         with:

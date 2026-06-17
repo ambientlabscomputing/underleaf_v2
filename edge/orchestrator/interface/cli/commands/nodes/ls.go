@@ -12,7 +12,7 @@ var LsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "List all nodes in the edge orchestrator",
 	Run: func(cmd *cobra.Command, args []string) {
-		dep_mgr := utils.DependencyManagerBuilder(utils.RequirePrivateClient)
+		dep_mgr := utils.DependencyManagerBuilder(utils.RequireOrchPrivateClient)
 		defer dep_mgr.Close()
 
 		resp, err := dep_mgr.OrchestratorPrivateClient.GetNodes(context.Background(), nil)

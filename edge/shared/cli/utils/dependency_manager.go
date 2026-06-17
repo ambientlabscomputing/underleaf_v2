@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	RequirePrivateClient      = "RequirePrivateClient"
+	RequireOrchPrivateClient  = "RequireOrchPrivateClient"
 	RequireAgentPrivateClient = "RequireAgentPrivateClient"
 )
 
@@ -28,7 +28,7 @@ func DependencyManagerBuilder(deps ...string) *DependencyManager {
 	dm := &DependencyManager{}
 	for _, dep := range deps {
 		switch dep {
-		case RequirePrivateClient:
+		case RequireOrchPrivateClient:
 			conn, err := grpc.NewClient(
 				fmt.Sprintf("unix://%s", privateSocketPath),
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

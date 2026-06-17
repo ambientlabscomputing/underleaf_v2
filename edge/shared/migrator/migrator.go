@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
 )
 
 // Migration represents a single versioned migration. ID matches the filename
@@ -35,6 +37,7 @@ func NewMigrator(db *sql.DB) *Migrator {
 // schema_migrations. Runs each migration's SQL in a single transaction;
 // halts and rolls back on the first error.
 func (m *Migrator) Migrate() error {
+	utils.Logger.Debug("Starting database migration", "file", utils.GetConfig(utils.AgentConfig).DBPath, "total_migrations", len(Migrations))
 	if err := m.ensureSchemaTable(); err != nil {
 		return fmt.Errorf("migrations: ensure schema table: %w", err)
 	}
@@ -46,12 +49,16 @@ func (m *Migrator) Migrate() error {
 
 	for _, migration := range Migrations {
 		if applied[migration.ID] {
+			utils.Logger.Debug("Skipping already applied migration", "migration.ID", migration.ID)
 			continue
 		}
+		utils.Logger.Info("Applying migration", "migration.ID", migration.ID)
 		if err := m.apply(migration); err != nil {
+			utils.Logger.Error("Failed to apply migration", "migration.ID", migration.ID, "error", err)
 			return fmt.Errorf("migrations: apply %s: %w", migration.ID, err)
 		}
 	}
+	utils.Logger.Info("Database migration complete", "file", utils.GetConfig(utils.AgentConfig).DBPath, "total_migrations", len(Migrations))
 	return nil
 }
 
