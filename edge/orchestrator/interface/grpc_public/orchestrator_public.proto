@@ -9,6 +9,7 @@ service OrchestratorPublic {
   rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
   rpc GetNodes(GetNodesRequest) returns (GetNodesResponse);
   rpc Ping(PingRequest) returns (PingResponse);
+  rpc ReportContainers(ReportContainersRequest) returns (ReportContainersResponse);
 }
 
 message GetNodesRequest {}
@@ -39,4 +40,22 @@ message CreateNodeRequest {
 message CreateNodeResponse {
     string id = 1;
     string name = 2;
+}
+
+message Container {
+  string id        = 1;
+  string docker_id = 2;
+  string node_id   = 3;
+  string image     = 4;
+  string status    = 5;
+  int64  uptime    = 6;
+}
+
+message ReportContainersRequest {
+  string             node_id    = 1;
+  repeated Container containers = 2;
+}
+
+message ReportContainersResponse {
+  int32 accepted = 1;
 }

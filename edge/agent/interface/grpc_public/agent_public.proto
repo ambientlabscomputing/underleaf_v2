@@ -8,6 +8,7 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/int
 service AgentPublic {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc Ping(PingRequest) returns (PingResponse);
+  rpc IngestContainers(IngestContainersRequest) returns (IngestContainersResponse);
 }
 
 message GetStatusRequest {}
@@ -24,4 +25,19 @@ message PingRequest {
 message PingResponse {
   string responder        = 1;
   int64  timestamp_unix_ms = 2;
+}
+
+message Container {
+  string id        = 1;
+  string docker_id = 2;
+  string node_id   = 3;
+  string image     = 4;
+  string status    = 5;
+  int64  uptime    = 6;
+}
+
+message IngestContainersRequest {}
+
+message IngestContainersResponse {
+  repeated Container containers = 1;
 }

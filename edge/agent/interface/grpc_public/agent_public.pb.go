@@ -205,6 +205,170 @@ func (x *PingResponse) GetTimestampUnixMs() int64 {
 	return 0
 }
 
+type Container struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DockerId      string                 `protobuf:"bytes,2,opt,name=docker_id,json=dockerId,proto3" json:"docker_id,omitempty"`
+	NodeId        string                 `protobuf:"bytes,3,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Image         string                 `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Uptime        int64                  `protobuf:"varint,6,opt,name=uptime,proto3" json:"uptime,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Container) Reset() {
+	*x = Container{}
+	mi := &file_agent_public_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Container) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Container) ProtoMessage() {}
+
+func (x *Container) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Container.ProtoReflect.Descriptor instead.
+func (*Container) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Container) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Container) GetDockerId() string {
+	if x != nil {
+		return x.DockerId
+	}
+	return ""
+}
+
+func (x *Container) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *Container) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *Container) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Container) GetUptime() int64 {
+	if x != nil {
+		return x.Uptime
+	}
+	return 0
+}
+
+type IngestContainersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IngestContainersRequest) Reset() {
+	*x = IngestContainersRequest{}
+	mi := &file_agent_public_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestContainersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestContainersRequest) ProtoMessage() {}
+
+func (x *IngestContainersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestContainersRequest.ProtoReflect.Descriptor instead.
+func (*IngestContainersRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{5}
+}
+
+type IngestContainersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Containers    []*Container           `protobuf:"bytes,1,rep,name=containers,proto3" json:"containers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IngestContainersResponse) Reset() {
+	*x = IngestContainersResponse{}
+	mi := &file_agent_public_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestContainersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestContainersResponse) ProtoMessage() {}
+
+func (x *IngestContainersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestContainersResponse.ProtoReflect.Descriptor instead.
+func (*IngestContainersResponse) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *IngestContainersResponse) GetContainers() []*Container {
+	if x != nil {
+		return x.Containers
+	}
+	return nil
+}
+
 var File_agent_public_proto protoreflect.FileDescriptor
 
 const file_agent_public_proto_rawDesc = "" +
@@ -218,10 +382,23 @@ const file_agent_public_proto_rawDesc = "" +
 	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"X\n" +
 	"\fPingResponse\x12\x1c\n" +
 	"\tresponder\x18\x01 \x01(\tR\tresponder\x12*\n" +
-	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs2\xa6\x01\n" +
+	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"\x97\x01\n" +
+	"\tContainer\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tdocker_id\x18\x02 \x01(\tR\bdockerId\x12\x17\n" +
+	"\anode_id\x18\x03 \x01(\tR\x06nodeId\x12\x14\n" +
+	"\x05image\x18\x04 \x01(\tR\x05image\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x16\n" +
+	"\x06uptime\x18\x06 \x01(\x03R\x06uptime\"\x19\n" +
+	"\x17IngestContainersRequest\"V\n" +
+	"\x18IngestContainersResponse\x12:\n" +
+	"\n" +
+	"containers\x18\x01 \x03(\v2\x1a.agent.public.v1.ContainerR\n" +
+	"containers2\x8f\x02\n" +
 	"\vAgentPublic\x12R\n" +
 	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponse\x12C\n" +
-	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponseBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
+	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponse\x12g\n" +
+	"\x10IngestContainers\x12(.agent.public.v1.IngestContainersRequest\x1a).agent.public.v1.IngestContainersResponseBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
 
 var (
 	file_agent_public_proto_rawDescOnce sync.Once
@@ -235,23 +412,29 @@ func file_agent_public_proto_rawDescGZIP() []byte {
 	return file_agent_public_proto_rawDescData
 }
 
-var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_agent_public_proto_goTypes = []any{
-	(*GetStatusRequest)(nil),  // 0: agent.public.v1.GetStatusRequest
-	(*GetStatusResponse)(nil), // 1: agent.public.v1.GetStatusResponse
-	(*PingRequest)(nil),       // 2: agent.public.v1.PingRequest
-	(*PingResponse)(nil),      // 3: agent.public.v1.PingResponse
+	(*GetStatusRequest)(nil),         // 0: agent.public.v1.GetStatusRequest
+	(*GetStatusResponse)(nil),        // 1: agent.public.v1.GetStatusResponse
+	(*PingRequest)(nil),              // 2: agent.public.v1.PingRequest
+	(*PingResponse)(nil),             // 3: agent.public.v1.PingResponse
+	(*Container)(nil),                // 4: agent.public.v1.Container
+	(*IngestContainersRequest)(nil),  // 5: agent.public.v1.IngestContainersRequest
+	(*IngestContainersResponse)(nil), // 6: agent.public.v1.IngestContainersResponse
 }
 var file_agent_public_proto_depIdxs = []int32{
-	0, // 0: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
-	2, // 1: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
-	1, // 2: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
-	3, // 3: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4, // 0: agent.public.v1.IngestContainersResponse.containers:type_name -> agent.public.v1.Container
+	0, // 1: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
+	2, // 2: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
+	5, // 3: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
+	1, // 4: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
+	3, // 5: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
+	6, // 6: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_agent_public_proto_init() }
@@ -265,7 +448,7 @@ func file_agent_public_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_public_proto_rawDesc), len(file_agent_public_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

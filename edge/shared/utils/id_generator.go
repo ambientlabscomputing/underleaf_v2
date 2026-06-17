@@ -5,7 +5,10 @@ import (
 )
 
 const (
-	NodeIDPrefix = "node"
+	NodeIDPrefix      = "node"
+	AppIDPrefix       = "app"
+	ContainerIDPrefix = "container"
+	VolumeIDPrefix    = "volume"
 )
 
 // GenerateID generates a unique ID with the given prefix.

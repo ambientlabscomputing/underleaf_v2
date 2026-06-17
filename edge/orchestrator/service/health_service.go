@@ -31,3 +31,9 @@ func (h *HealthService) Ping(_ string) (*PingResult, error) {
 func (h *HealthService) PingPeer(ctx context.Context) (*clients.PingResult, error) {
 	return h.peer.Ping(ctx, "orchestrator")
 }
+
+// IngestAgentContainers instructs the local agent to ingest its Docker containers
+// and push the results back to the orchestrator.
+func (h *HealthService) IngestAgentContainers(ctx context.Context) (int, error) {
+	return h.peer.IngestContainers(ctx)
+}

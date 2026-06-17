@@ -15,7 +15,8 @@ type Repository struct {
 	Migrator *migrator.Migrator
 
 	// Add other repositories here
-	Nodes *NodeRepository
+	Nodes      *NodeRepository
+	Containers *ContainerRepository
 }
 
 func NewRepository() (*Repository, error) {
@@ -26,10 +27,12 @@ func NewRepository() (*Repository, error) {
 		return nil, fmt.Errorf("repository: open db: %w", err)
 	}
 	nodeRepo := NewNodeRepository(db)
+	containerRepo := NewContainerRepository(db)
 	return &Repository{
-		db:       db,
-		Migrator: migrator.NewMigrator(db),
-		Nodes:    nodeRepo,
+		db:         db,
+		Migrator:   migrator.NewMigrator(db),
+		Nodes:      nodeRepo,
+		Containers: containerRepo,
 	}, nil
 }
 

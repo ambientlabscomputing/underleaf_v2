@@ -19,8 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrchestratorPrivate_GetNodes_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/GetNodes"
-	OrchestratorPrivate_SqlQuery_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/SqlQuery"
+	OrchestratorPrivate_GetNodes_FullMethodName       = "/orchestrator.private.v1.OrchestratorPrivate/GetNodes"
+	OrchestratorPrivate_SqlQuery_FullMethodName       = "/orchestrator.private.v1.OrchestratorPrivate/SqlQuery"
+	OrchestratorPrivate_TriggerIngest_FullMethodName  = "/orchestrator.private.v1.OrchestratorPrivate/TriggerIngest"
+	OrchestratorPrivate_ListContainers_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/ListContainers"
 )
 
 // OrchestratorPrivateClient is the client API for OrchestratorPrivate service.
@@ -31,6 +33,8 @@ const (
 type OrchestratorPrivateClient interface {
 	GetNodes(ctx context.Context, in *GetNodesRequest, opts ...grpc.CallOption) (*GetNodesResponse, error)
 	SqlQuery(ctx context.Context, in *SqlQueryRequest, opts ...grpc.CallOption) (*SqlQueryResponse, error)
+	TriggerIngest(ctx context.Context, in *TriggerIngestRequest, opts ...grpc.CallOption) (*TriggerIngestResponse, error)
+	ListContainers(ctx context.Context, in *ListContainersRequest, opts ...grpc.CallOption) (*ListContainersResponse, error)
 }
 
 type orchestratorPrivateClient struct {
@@ -61,6 +65,26 @@ func (c *orchestratorPrivateClient) SqlQuery(ctx context.Context, in *SqlQueryRe
 	return out, nil
 }
 
+func (c *orchestratorPrivateClient) TriggerIngest(ctx context.Context, in *TriggerIngestRequest, opts ...grpc.CallOption) (*TriggerIngestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TriggerIngestResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_TriggerIngest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orchestratorPrivateClient) ListContainers(ctx context.Context, in *ListContainersRequest, opts ...grpc.CallOption) (*ListContainersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListContainersResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_ListContainers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrchestratorPrivateServer is the server API for OrchestratorPrivate service.
 // All implementations must embed UnimplementedOrchestratorPrivateServer
 // for forward compatibility.
@@ -69,6 +93,8 @@ func (c *orchestratorPrivateClient) SqlQuery(ctx context.Context, in *SqlQueryRe
 type OrchestratorPrivateServer interface {
 	GetNodes(context.Context, *GetNodesRequest) (*GetNodesResponse, error)
 	SqlQuery(context.Context, *SqlQueryRequest) (*SqlQueryResponse, error)
+	TriggerIngest(context.Context, *TriggerIngestRequest) (*TriggerIngestResponse, error)
+	ListContainers(context.Context, *ListContainersRequest) (*ListContainersResponse, error)
 	mustEmbedUnimplementedOrchestratorPrivateServer()
 }
 
@@ -84,6 +110,12 @@ func (UnimplementedOrchestratorPrivateServer) GetNodes(context.Context, *GetNode
 }
 func (UnimplementedOrchestratorPrivateServer) SqlQuery(context.Context, *SqlQueryRequest) (*SqlQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SqlQuery not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) TriggerIngest(context.Context, *TriggerIngestRequest) (*TriggerIngestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TriggerIngest not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) ListContainers(context.Context, *ListContainersRequest) (*ListContainersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListContainers not implemented")
 }
 func (UnimplementedOrchestratorPrivateServer) mustEmbedUnimplementedOrchestratorPrivateServer() {}
 func (UnimplementedOrchestratorPrivateServer) testEmbeddedByValue()                             {}
@@ -142,6 +174,42 @@ func _OrchestratorPrivate_SqlQuery_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrchestratorPrivate_TriggerIngest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TriggerIngestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).TriggerIngest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_TriggerIngest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).TriggerIngest(ctx, req.(*TriggerIngestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrchestratorPrivate_ListContainers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListContainersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).ListContainers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_ListContainers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).ListContainers(ctx, req.(*ListContainersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrchestratorPrivate_ServiceDesc is the grpc.ServiceDesc for OrchestratorPrivate service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -156,6 +224,14 @@ var OrchestratorPrivate_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SqlQuery",
 			Handler:    _OrchestratorPrivate_SqlQuery_Handler,
+		},
+		{
+			MethodName: "TriggerIngest",
+			Handler:    _OrchestratorPrivate_TriggerIngest_Handler,
+		},
+		{
+			MethodName: "ListContainers",
+			Handler:    _OrchestratorPrivate_ListContainers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

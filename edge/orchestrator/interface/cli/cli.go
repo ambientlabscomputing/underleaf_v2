@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands/containers"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands/nodes"
 )
 
@@ -17,6 +18,7 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(commands.RunCmd)
 	RootCmd.AddCommand(nodes.NodesCmd)
+	RootCmd.AddCommand(containers.ContainersCmd)
 	registerDevCommands(RootCmd)
 }
 

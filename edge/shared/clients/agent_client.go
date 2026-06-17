@@ -45,3 +45,12 @@ func (c *AgentClient) Ping(ctx context.Context, source string) (*PingResult, err
 func (c *AgentClient) Close() {
 	c.conn.Close()
 }
+
+// IngestContainers tells the agent to ingest its local Docker containers and sync them to the orchestrator.
+func (c *AgentClient) IngestContainers(ctx context.Context) (int, error) {
+	resp, err := c.client.IngestContainers(ctx, &agentpb.IngestContainersRequest{})
+	if err != nil {
+		return 0, err
+	}
+	return len(resp.GetContainers()), nil
+}

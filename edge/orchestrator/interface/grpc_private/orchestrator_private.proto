@@ -8,6 +8,8 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestra
 service OrchestratorPrivate {
   rpc GetNodes(GetNodesRequest) returns (GetNodesResponse);
   rpc SqlQuery(SqlQueryRequest) returns (SqlQueryResponse);
+  rpc TriggerIngest(TriggerIngestRequest) returns (TriggerIngestResponse);
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
 }
 
 message GetNodesRequest {}
@@ -27,4 +29,25 @@ message SqlQueryRequest{
 
 message SqlQueryResponse {
     string result = 1;
+}
+
+message TriggerIngestRequest {}
+
+message TriggerIngestResponse {
+  int32 container_count = 1;
+}
+
+message Container {
+  string id        = 1;
+  string docker_id = 2;
+  string node_id   = 3;
+  string image     = 4;
+  string status    = 5;
+  int64  uptime    = 6;
+}
+
+message ListContainersRequest {}
+
+message ListContainersResponse {
+  repeated Container containers = 1;
 }

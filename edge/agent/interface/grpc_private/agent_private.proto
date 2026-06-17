@@ -9,6 +9,8 @@ service AgentPrivate {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc Ping(PingRequest) returns (PingResponse);
   rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc IngestContainers(IngestContainersRequest) returns (IngestContainersResponse);
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
 }
 
 message GetStatusRequest {}
@@ -40,4 +42,25 @@ message Node {
 message RegisterResponse {
     string status = 1;
     Node node = 2;
+}
+
+message Container {
+  string id        = 1;
+  string docker_id = 2;
+  string node_id   = 3;
+  string image     = 4;
+  string status    = 5;
+  int64  uptime    = 6;
+}
+
+message IngestContainersRequest {}
+
+message IngestContainersResponse {
+  repeated Container containers = 1;
+}
+
+message ListContainersRequest {}
+
+message ListContainersResponse {
+  repeated Container containers = 1;
 }

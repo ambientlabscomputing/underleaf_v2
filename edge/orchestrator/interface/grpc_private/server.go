@@ -62,3 +62,32 @@ func (s *OrchestratorGRPCPrivateServer) SqlQuery(ctx context.Context, req *SqlQu
 	}
 	return &SqlQueryResponse{Result: result}, nil
 }
+
+// TriggerIngest implements OrchestratorPrivateServer — tells the local agent to ingest its Docker containers.
+func (s *OrchestratorGRPCPrivateServer) TriggerIngest(ctx context.Context, _ *TriggerIngestRequest) (*TriggerIngestResponse, error) {
+	count, err := s.Service.Health().IngestAgentContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &TriggerIngestResponse{ContainerCount: int32(count)}, nil
+}
+
+// ListContainers implements OrchestratorPrivateServer — returns containers stored in the orchestrator.
+func (s *OrchestratorGRPCPrivateServer) ListContainers(_ context.Context, _ *ListContainersRequest) (*ListContainersResponse, error) {
+	containers, err := s.Service.Containers().GetContainers()
+	if err != nil {
+		return nil, err
+	}
+	resp := &ListContainersResponse{}
+	for _, c := range containers {
+		resp.Containers = append(resp.Containers, &Container{
+			Id:       c.ID,
+			DockerId: c.DockerID,
+			NodeId:   string(c.NodeID),
+			Image:    c.Image,
+			Status:   c.Status,
+			Uptime:   c.Uptime,
+		})
+	}
+	return resp, nil
+}

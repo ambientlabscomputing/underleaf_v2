@@ -23,6 +23,7 @@ func NewService() Service {
 		Repository: repo,
 		nodes:      NewNodeService(repo),
 		health:     &HealthService{peer: peer},
+		containers: &ContainerService{Repository: repo},
 	}
 }
 

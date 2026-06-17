@@ -84,3 +84,43 @@ func (s *AgentGRPCPrivateServer) Register(ctx context.Context, req *RegisterRequ
 		},
 	}, nil
 }
+
+// IngestContainers implements AgentPrivateServer — triggers Docker container ingestion and sync.
+func (s *AgentGRPCPrivateServer) IngestContainers(ctx context.Context, _ *IngestContainersRequest) (*IngestContainersResponse, error) {
+	containers, err := s.Service.Docker().IngestContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp := &IngestContainersResponse{}
+	for _, c := range containers {
+		resp.Containers = append(resp.Containers, &Container{
+			Id:       c.ID,
+			DockerId: c.DockerID,
+			NodeId:   string(c.NodeID),
+			Image:    c.Image,
+			Status:   c.Status,
+			Uptime:   c.Uptime,
+		})
+	}
+	return resp, nil
+}
+
+// ListContainers implements AgentPrivateServer — returns persisted containers without re-ingesting.
+func (s *AgentGRPCPrivateServer) ListContainers(ctx context.Context, _ *ListContainersRequest) (*ListContainersResponse, error) {
+	containers, err := s.Service.Docker().ListContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp := &ListContainersResponse{}
+	for _, c := range containers {
+		resp.Containers = append(resp.Containers, &Container{
+			Id:       c.ID,
+			DockerId: c.DockerID,
+			NodeId:   string(c.NodeID),
+			Image:    c.Image,
+			Status:   c.Status,
+			Uptime:   c.Uptime,
+		})
+	}
+	return resp, nil
+}

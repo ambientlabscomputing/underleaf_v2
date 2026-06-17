@@ -19,9 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentPrivate_GetStatus_FullMethodName = "/agent.private.v1.AgentPrivate/GetStatus"
-	AgentPrivate_Ping_FullMethodName      = "/agent.private.v1.AgentPrivate/Ping"
-	AgentPrivate_Register_FullMethodName  = "/agent.private.v1.AgentPrivate/Register"
+	AgentPrivate_GetStatus_FullMethodName        = "/agent.private.v1.AgentPrivate/GetStatus"
+	AgentPrivate_Ping_FullMethodName             = "/agent.private.v1.AgentPrivate/Ping"
+	AgentPrivate_Register_FullMethodName         = "/agent.private.v1.AgentPrivate/Register"
+	AgentPrivate_IngestContainers_FullMethodName = "/agent.private.v1.AgentPrivate/IngestContainers"
+	AgentPrivate_ListContainers_FullMethodName   = "/agent.private.v1.AgentPrivate/ListContainers"
 )
 
 // AgentPrivateClient is the client API for AgentPrivate service.
@@ -33,6 +35,8 @@ type AgentPrivateClient interface {
 	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	IngestContainers(ctx context.Context, in *IngestContainersRequest, opts ...grpc.CallOption) (*IngestContainersResponse, error)
+	ListContainers(ctx context.Context, in *ListContainersRequest, opts ...grpc.CallOption) (*ListContainersResponse, error)
 }
 
 type agentPrivateClient struct {
@@ -73,6 +77,26 @@ func (c *agentPrivateClient) Register(ctx context.Context, in *RegisterRequest, 
 	return out, nil
 }
 
+func (c *agentPrivateClient) IngestContainers(ctx context.Context, in *IngestContainersRequest, opts ...grpc.CallOption) (*IngestContainersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IngestContainersResponse)
+	err := c.cc.Invoke(ctx, AgentPrivate_IngestContainers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPrivateClient) ListContainers(ctx context.Context, in *ListContainersRequest, opts ...grpc.CallOption) (*ListContainersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListContainersResponse)
+	err := c.cc.Invoke(ctx, AgentPrivate_ListContainers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentPrivateServer is the server API for AgentPrivate service.
 // All implementations must embed UnimplementedAgentPrivateServer
 // for forward compatibility.
@@ -82,6 +106,8 @@ type AgentPrivateServer interface {
 	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error)
+	ListContainers(context.Context, *ListContainersRequest) (*ListContainersResponse, error)
 	mustEmbedUnimplementedAgentPrivateServer()
 }
 
@@ -100,6 +126,12 @@ func (UnimplementedAgentPrivateServer) Ping(context.Context, *PingRequest) (*Pin
 }
 func (UnimplementedAgentPrivateServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedAgentPrivateServer) IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IngestContainers not implemented")
+}
+func (UnimplementedAgentPrivateServer) ListContainers(context.Context, *ListContainersRequest) (*ListContainersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListContainers not implemented")
 }
 func (UnimplementedAgentPrivateServer) mustEmbedUnimplementedAgentPrivateServer() {}
 func (UnimplementedAgentPrivateServer) testEmbeddedByValue()                      {}
@@ -176,6 +208,42 @@ func _AgentPrivate_Register_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentPrivate_IngestContainers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestContainersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPrivateServer).IngestContainers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPrivate_IngestContainers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPrivateServer).IngestContainers(ctx, req.(*IngestContainersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPrivate_ListContainers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListContainersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPrivateServer).ListContainers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPrivate_ListContainers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPrivateServer).ListContainers(ctx, req.(*ListContainersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentPrivate_ServiceDesc is the grpc.ServiceDesc for AgentPrivate service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -194,6 +262,14 @@ var AgentPrivate_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _AgentPrivate_Register_Handler,
+		},
+		{
+			MethodName: "IngestContainers",
+			Handler:    _AgentPrivate_IngestContainers_Handler,
+		},
+		{
+			MethodName: "ListContainers",
+			Handler:    _AgentPrivate_ListContainers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

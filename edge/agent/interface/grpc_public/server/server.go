@@ -50,3 +50,23 @@ func (s *AgentGRPCPublicServer) Ping(_ context.Context, req *grpc_public.PingReq
 		TimestampUnixMs: result.TimestampUnixMs,
 	}, nil
 }
+
+// IngestContainers implements AgentPublicServer — allows the orchestrator to trigger container ingestion.
+func (s *AgentGRPCPublicServer) IngestContainers(ctx context.Context, _ *grpc_public.IngestContainersRequest) (*grpc_public.IngestContainersResponse, error) {
+	containers, err := s.Service.Docker().IngestContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp := &grpc_public.IngestContainersResponse{}
+	for _, c := range containers {
+		resp.Containers = append(resp.Containers, &grpc_public.Container{
+			Id:       c.ID,
+			DockerId: c.DockerID,
+			NodeId:   string(c.NodeID),
+			Image:    c.Image,
+			Status:   c.Status,
+			Uptime:   c.Uptime,
+		})
+	}
+	return resp, nil
+}

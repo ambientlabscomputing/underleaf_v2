@@ -9,6 +9,7 @@ import (
 
 	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
+	sharedtypes "github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
 )
 
 const tcpAddr = ":50100"
@@ -67,4 +68,23 @@ func (s *OrchestratorGRPCPublicServer) Ping(_ context.Context, req *grpc_public.
 		Responder:       result.Responder,
 		TimestampUnixMs: result.TimestampUnixMs,
 	}, nil
+}
+
+// ReportContainers implements OrchestratorPublicServer — receives container state pushed by an agent.
+func (s *OrchestratorGRPCPublicServer) ReportContainers(_ context.Context, req *grpc_public.ReportContainersRequest) (*grpc_public.ReportContainersResponse, error) {
+	containers := make([]*sharedtypes.Container, 0, len(req.GetContainers()))
+	for _, c := range req.GetContainers() {
+		containers = append(containers, &sharedtypes.Container{
+			ContainerSpec: sharedtypes.ContainerSpec{Image: c.GetImage()},
+			ID:            c.GetId(),
+			DockerID:      c.GetDockerId(),
+			NodeID:        sharedtypes.ForeignKey(c.GetNodeId()),
+			Status:        c.GetStatus(),
+			Uptime:        c.GetUptime(),
+		})
+	}
+	if err := s.Service.Containers().ReportContainers(req.GetNodeId(), containers); err != nil {
+		return nil, err
+	}
+	return &grpc_public.ReportContainersResponse{Accepted: int32(len(containers))}, nil
 }

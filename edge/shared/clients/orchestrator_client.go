@@ -55,3 +55,22 @@ func (c *OrchestratorClient) CreateNode(ctx context.Context, name string) (*type
 func (c *OrchestratorClient) Close() {
 	c.conn.Close()
 }
+
+// ReportContainers pushes a list of Docker containers from an agent to the orchestrator.
+func (c *OrchestratorClient) ReportContainers(ctx context.Context, nodeID string, containers []*types.Container) error {
+	req := &orchpb.ReportContainersRequest{
+		NodeId: nodeID,
+	}
+	for _, c := range containers {
+		req.Containers = append(req.Containers, &orchpb.Container{
+			Id:       c.ID,
+			DockerId: c.DockerID,
+			NodeId:   string(c.NodeID),
+			Image:    c.Image,
+			Status:   c.Status,
+			Uptime:   c.Uptime,
+		})
+	}
+	_, err := c.client.ReportContainers(ctx, req)
+	return err
+}

@@ -241,6 +241,250 @@ func (x *SqlQueryResponse) GetResult() string {
 	return ""
 }
 
+type TriggerIngestRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TriggerIngestRequest) Reset() {
+	*x = TriggerIngestRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TriggerIngestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TriggerIngestRequest) ProtoMessage() {}
+
+func (x *TriggerIngestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TriggerIngestRequest.ProtoReflect.Descriptor instead.
+func (*TriggerIngestRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{5}
+}
+
+type TriggerIngestResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ContainerCount int32                  `protobuf:"varint,1,opt,name=container_count,json=containerCount,proto3" json:"container_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *TriggerIngestResponse) Reset() {
+	*x = TriggerIngestResponse{}
+	mi := &file_orchestrator_private_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TriggerIngestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TriggerIngestResponse) ProtoMessage() {}
+
+func (x *TriggerIngestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TriggerIngestResponse.ProtoReflect.Descriptor instead.
+func (*TriggerIngestResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *TriggerIngestResponse) GetContainerCount() int32 {
+	if x != nil {
+		return x.ContainerCount
+	}
+	return 0
+}
+
+type Container struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DockerId      string                 `protobuf:"bytes,2,opt,name=docker_id,json=dockerId,proto3" json:"docker_id,omitempty"`
+	NodeId        string                 `protobuf:"bytes,3,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Image         string                 `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Uptime        int64                  `protobuf:"varint,6,opt,name=uptime,proto3" json:"uptime,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Container) Reset() {
+	*x = Container{}
+	mi := &file_orchestrator_private_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Container) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Container) ProtoMessage() {}
+
+func (x *Container) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Container.ProtoReflect.Descriptor instead.
+func (*Container) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *Container) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Container) GetDockerId() string {
+	if x != nil {
+		return x.DockerId
+	}
+	return ""
+}
+
+func (x *Container) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *Container) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *Container) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Container) GetUptime() int64 {
+	if x != nil {
+		return x.Uptime
+	}
+	return 0
+}
+
+type ListContainersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListContainersRequest) Reset() {
+	*x = ListContainersRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContainersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContainersRequest) ProtoMessage() {}
+
+func (x *ListContainersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContainersRequest.ProtoReflect.Descriptor instead.
+func (*ListContainersRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{8}
+}
+
+type ListContainersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Containers    []*Container           `protobuf:"bytes,1,rep,name=containers,proto3" json:"containers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListContainersResponse) Reset() {
+	*x = ListContainersResponse{}
+	mi := &file_orchestrator_private_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContainersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContainersResponse) ProtoMessage() {}
+
+func (x *ListContainersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContainersResponse.ProtoReflect.Descriptor instead.
+func (*ListContainersResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListContainersResponse) GetContainers() []*Container {
+	if x != nil {
+		return x.Containers
+	}
+	return nil
+}
+
 var File_orchestrator_private_proto protoreflect.FileDescriptor
 
 const file_orchestrator_private_proto_rawDesc = "" +
@@ -255,10 +499,27 @@ const file_orchestrator_private_proto_rawDesc = "" +
 	"\x0fSqlQueryRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\"*\n" +
 	"\x10SqlQueryResponse\x12\x16\n" +
-	"\x06result\x18\x01 \x01(\tR\x06result2\xd7\x01\n" +
+	"\x06result\x18\x01 \x01(\tR\x06result\"\x16\n" +
+	"\x14TriggerIngestRequest\"@\n" +
+	"\x15TriggerIngestResponse\x12'\n" +
+	"\x0fcontainer_count\x18\x01 \x01(\x05R\x0econtainerCount\"\x97\x01\n" +
+	"\tContainer\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tdocker_id\x18\x02 \x01(\tR\bdockerId\x12\x17\n" +
+	"\anode_id\x18\x03 \x01(\tR\x06nodeId\x12\x14\n" +
+	"\x05image\x18\x04 \x01(\tR\x05image\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x16\n" +
+	"\x06uptime\x18\x06 \x01(\x03R\x06uptime\"\x17\n" +
+	"\x15ListContainersRequest\"\\\n" +
+	"\x16ListContainersResponse\x12B\n" +
+	"\n" +
+	"containers\x18\x01 \x03(\v2\".orchestrator.private.v1.ContainerR\n" +
+	"containers2\xba\x03\n" +
 	"\x13OrchestratorPrivate\x12_\n" +
 	"\bGetNodes\x12(.orchestrator.private.v1.GetNodesRequest\x1a).orchestrator.private.v1.GetNodesResponse\x12_\n" +
-	"\bSqlQuery\x12(.orchestrator.private.v1.SqlQueryRequest\x1a).orchestrator.private.v1.SqlQueryResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
+	"\bSqlQuery\x12(.orchestrator.private.v1.SqlQueryRequest\x1a).orchestrator.private.v1.SqlQueryResponse\x12n\n" +
+	"\rTriggerIngest\x12-.orchestrator.private.v1.TriggerIngestRequest\x1a..orchestrator.private.v1.TriggerIngestResponse\x12q\n" +
+	"\x0eListContainers\x12..orchestrator.private.v1.ListContainersRequest\x1a/.orchestrator.private.v1.ListContainersResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
 
 var (
 	file_orchestrator_private_proto_rawDescOnce sync.Once
@@ -272,25 +533,35 @@ func file_orchestrator_private_proto_rawDescGZIP() []byte {
 	return file_orchestrator_private_proto_rawDescData
 }
 
-var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_orchestrator_private_proto_goTypes = []any{
-	(*GetNodesRequest)(nil),  // 0: orchestrator.private.v1.GetNodesRequest
-	(*GetNodesResponse)(nil), // 1: orchestrator.private.v1.GetNodesResponse
-	(*Node)(nil),             // 2: orchestrator.private.v1.Node
-	(*SqlQueryRequest)(nil),  // 3: orchestrator.private.v1.SqlQueryRequest
-	(*SqlQueryResponse)(nil), // 4: orchestrator.private.v1.SqlQueryResponse
+	(*GetNodesRequest)(nil),        // 0: orchestrator.private.v1.GetNodesRequest
+	(*GetNodesResponse)(nil),       // 1: orchestrator.private.v1.GetNodesResponse
+	(*Node)(nil),                   // 2: orchestrator.private.v1.Node
+	(*SqlQueryRequest)(nil),        // 3: orchestrator.private.v1.SqlQueryRequest
+	(*SqlQueryResponse)(nil),       // 4: orchestrator.private.v1.SqlQueryResponse
+	(*TriggerIngestRequest)(nil),   // 5: orchestrator.private.v1.TriggerIngestRequest
+	(*TriggerIngestResponse)(nil),  // 6: orchestrator.private.v1.TriggerIngestResponse
+	(*Container)(nil),              // 7: orchestrator.private.v1.Container
+	(*ListContainersRequest)(nil),  // 8: orchestrator.private.v1.ListContainersRequest
+	(*ListContainersResponse)(nil), // 9: orchestrator.private.v1.ListContainersResponse
 }
 var file_orchestrator_private_proto_depIdxs = []int32{
 	2, // 0: orchestrator.private.v1.GetNodesResponse.nodes:type_name -> orchestrator.private.v1.Node
-	0, // 1: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
-	3, // 2: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
-	1, // 3: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
-	4, // 4: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	7, // 1: orchestrator.private.v1.ListContainersResponse.containers:type_name -> orchestrator.private.v1.Container
+	0, // 2: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
+	3, // 3: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
+	5, // 4: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
+	8, // 5: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
+	1, // 6: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
+	4, // 7: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
+	6, // 8: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
+	9, // 9: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_orchestrator_private_proto_init() }
@@ -304,7 +575,7 @@ func file_orchestrator_private_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orchestrator_private_proto_rawDesc), len(file_orchestrator_private_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

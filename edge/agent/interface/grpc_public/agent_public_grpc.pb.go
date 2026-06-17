@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentPublic_GetStatus_FullMethodName = "/agent.public.v1.AgentPublic/GetStatus"
-	AgentPublic_Ping_FullMethodName      = "/agent.public.v1.AgentPublic/Ping"
+	AgentPublic_GetStatus_FullMethodName        = "/agent.public.v1.AgentPublic/GetStatus"
+	AgentPublic_Ping_FullMethodName             = "/agent.public.v1.AgentPublic/Ping"
+	AgentPublic_IngestContainers_FullMethodName = "/agent.public.v1.AgentPublic/IngestContainers"
 )
 
 // AgentPublicClient is the client API for AgentPublic service.
@@ -31,6 +32,7 @@ const (
 type AgentPublicClient interface {
 	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
+	IngestContainers(ctx context.Context, in *IngestContainersRequest, opts ...grpc.CallOption) (*IngestContainersResponse, error)
 }
 
 type agentPublicClient struct {
@@ -61,6 +63,16 @@ func (c *agentPublicClient) Ping(ctx context.Context, in *PingRequest, opts ...g
 	return out, nil
 }
 
+func (c *agentPublicClient) IngestContainers(ctx context.Context, in *IngestContainersRequest, opts ...grpc.CallOption) (*IngestContainersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IngestContainersResponse)
+	err := c.cc.Invoke(ctx, AgentPublic_IngestContainers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentPublicServer is the server API for AgentPublic service.
 // All implementations must embed UnimplementedAgentPublicServer
 // for forward compatibility.
@@ -69,6 +81,7 @@ func (c *agentPublicClient) Ping(ctx context.Context, in *PingRequest, opts ...g
 type AgentPublicServer interface {
 	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error)
 	mustEmbedUnimplementedAgentPublicServer()
 }
 
@@ -84,6 +97,9 @@ func (UnimplementedAgentPublicServer) GetStatus(context.Context, *GetStatusReque
 }
 func (UnimplementedAgentPublicServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
+func (UnimplementedAgentPublicServer) IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IngestContainers not implemented")
 }
 func (UnimplementedAgentPublicServer) mustEmbedUnimplementedAgentPublicServer() {}
 func (UnimplementedAgentPublicServer) testEmbeddedByValue()                     {}
@@ -142,6 +158,24 @@ func _AgentPublic_Ping_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentPublic_IngestContainers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestContainersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).IngestContainers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_IngestContainers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).IngestContainers(ctx, req.(*IngestContainersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentPublic_ServiceDesc is the grpc.ServiceDesc for AgentPublic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -156,6 +190,10 @@ var AgentPublic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Ping",
 			Handler:    _AgentPublic_Ping_Handler,
+		},
+		{
+			MethodName: "IngestContainers",
+			Handler:    _AgentPublic_IngestContainers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
