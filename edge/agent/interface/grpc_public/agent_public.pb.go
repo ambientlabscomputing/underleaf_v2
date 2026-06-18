@@ -369,6 +369,254 @@ func (x *IngestContainersResponse) GetContainers() []*Container {
 	return nil
 }
 
+type LogLine struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DockerId      string                 `protobuf:"bytes,1,opt,name=docker_id,json=dockerId,proto3" json:"docker_id,omitempty"`
+	TsMs          int64                  `protobuf:"varint,2,opt,name=ts_ms,json=tsMs,proto3" json:"ts_ms,omitempty"`
+	Stream        string                 `protobuf:"bytes,3,opt,name=stream,proto3" json:"stream,omitempty"` // "stdout" or "stderr"
+	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogLine) Reset() {
+	*x = LogLine{}
+	mi := &file_agent_public_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogLine) ProtoMessage() {}
+
+func (x *LogLine) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogLine.ProtoReflect.Descriptor instead.
+func (*LogLine) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *LogLine) GetDockerId() string {
+	if x != nil {
+		return x.DockerId
+	}
+	return ""
+}
+
+func (x *LogLine) GetTsMs() int64 {
+	if x != nil {
+		return x.TsMs
+	}
+	return 0
+}
+
+func (x *LogLine) GetStream() string {
+	if x != nil {
+		return x.Stream
+	}
+	return ""
+}
+
+func (x *LogLine) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type GetContainerLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DockerId      string                 `protobuf:"bytes,1,opt,name=docker_id,json=dockerId,proto3" json:"docker_id,omitempty"`
+	SinceMs       int64                  `protobuf:"varint,2,opt,name=since_ms,json=sinceMs,proto3" json:"since_ms,omitempty"`    // 0 = beginning of buffer
+	UntilMs       int64                  `protobuf:"varint,3,opt,name=until_ms,json=untilMs,proto3" json:"until_ms,omitempty"`    // 0 = no upper bound
+	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`                       // 0 = server default (100)
+	CursorId      int64                  `protobuf:"varint,5,opt,name=cursor_id,json=cursorId,proto3" json:"cursor_id,omitempty"` // row id pagination cursor; 0 = start
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetContainerLogsRequest) Reset() {
+	*x = GetContainerLogsRequest{}
+	mi := &file_agent_public_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetContainerLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetContainerLogsRequest) ProtoMessage() {}
+
+func (x *GetContainerLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetContainerLogsRequest.ProtoReflect.Descriptor instead.
+func (*GetContainerLogsRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetContainerLogsRequest) GetDockerId() string {
+	if x != nil {
+		return x.DockerId
+	}
+	return ""
+}
+
+func (x *GetContainerLogsRequest) GetSinceMs() int64 {
+	if x != nil {
+		return x.SinceMs
+	}
+	return 0
+}
+
+func (x *GetContainerLogsRequest) GetUntilMs() int64 {
+	if x != nil {
+		return x.UntilMs
+	}
+	return 0
+}
+
+func (x *GetContainerLogsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetContainerLogsRequest) GetCursorId() int64 {
+	if x != nil {
+		return x.CursorId
+	}
+	return 0
+}
+
+type GetContainerLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Lines         []*LogLine             `protobuf:"bytes,1,rep,name=lines,proto3" json:"lines,omitempty"`
+	NextCursor    int64                  `protobuf:"varint,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"` // 0 = no more pages
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetContainerLogsResponse) Reset() {
+	*x = GetContainerLogsResponse{}
+	mi := &file_agent_public_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetContainerLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetContainerLogsResponse) ProtoMessage() {}
+
+func (x *GetContainerLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetContainerLogsResponse.ProtoReflect.Descriptor instead.
+func (*GetContainerLogsResponse) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetContainerLogsResponse) GetLines() []*LogLine {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+func (x *GetContainerLogsResponse) GetNextCursor() int64 {
+	if x != nil {
+		return x.NextCursor
+	}
+	return 0
+}
+
+type StreamContainerLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DockerId      string                 `protobuf:"bytes,1,opt,name=docker_id,json=dockerId,proto3" json:"docker_id,omitempty"`
+	SinceMs       int64                  `protobuf:"varint,2,opt,name=since_ms,json=sinceMs,proto3" json:"since_ms,omitempty"` // 0 = tail only (no history replay)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamContainerLogsRequest) Reset() {
+	*x = StreamContainerLogsRequest{}
+	mi := &file_agent_public_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamContainerLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamContainerLogsRequest) ProtoMessage() {}
+
+func (x *StreamContainerLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamContainerLogsRequest.ProtoReflect.Descriptor instead.
+func (*StreamContainerLogsRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *StreamContainerLogsRequest) GetDockerId() string {
+	if x != nil {
+		return x.DockerId
+	}
+	return ""
+}
+
+func (x *StreamContainerLogsRequest) GetSinceMs() int64 {
+	if x != nil {
+		return x.SinceMs
+	}
+	return 0
+}
+
 var File_agent_public_proto protoreflect.FileDescriptor
 
 const file_agent_public_proto_rawDesc = "" +
@@ -394,11 +642,31 @@ const file_agent_public_proto_rawDesc = "" +
 	"\x18IngestContainersResponse\x12:\n" +
 	"\n" +
 	"containers\x18\x01 \x03(\v2\x1a.agent.public.v1.ContainerR\n" +
-	"containers2\x8f\x02\n" +
+	"containers\"m\n" +
+	"\aLogLine\x12\x1b\n" +
+	"\tdocker_id\x18\x01 \x01(\tR\bdockerId\x12\x13\n" +
+	"\x05ts_ms\x18\x02 \x01(\x03R\x04tsMs\x12\x16\n" +
+	"\x06stream\x18\x03 \x01(\tR\x06stream\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\"\x9f\x01\n" +
+	"\x17GetContainerLogsRequest\x12\x1b\n" +
+	"\tdocker_id\x18\x01 \x01(\tR\bdockerId\x12\x19\n" +
+	"\bsince_ms\x18\x02 \x01(\x03R\asinceMs\x12\x19\n" +
+	"\buntil_ms\x18\x03 \x01(\x03R\auntilMs\x12\x14\n" +
+	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x1b\n" +
+	"\tcursor_id\x18\x05 \x01(\x03R\bcursorId\"k\n" +
+	"\x18GetContainerLogsResponse\x12.\n" +
+	"\x05lines\x18\x01 \x03(\v2\x18.agent.public.v1.LogLineR\x05lines\x12\x1f\n" +
+	"\vnext_cursor\x18\x02 \x01(\x03R\n" +
+	"nextCursor\"T\n" +
+	"\x1aStreamContainerLogsRequest\x12\x1b\n" +
+	"\tdocker_id\x18\x01 \x01(\tR\bdockerId\x12\x19\n" +
+	"\bsince_ms\x18\x02 \x01(\x03R\asinceMs2\xd8\x03\n" +
 	"\vAgentPublic\x12R\n" +
 	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponse\x12C\n" +
 	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponse\x12g\n" +
-	"\x10IngestContainers\x12(.agent.public.v1.IngestContainersRequest\x1a).agent.public.v1.IngestContainersResponseBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
+	"\x10IngestContainers\x12(.agent.public.v1.IngestContainersRequest\x1a).agent.public.v1.IngestContainersResponse\x12g\n" +
+	"\x10GetContainerLogs\x12(.agent.public.v1.GetContainerLogsRequest\x1a).agent.public.v1.GetContainerLogsResponse\x12^\n" +
+	"\x13StreamContainerLogs\x12+.agent.public.v1.StreamContainerLogsRequest\x1a\x18.agent.public.v1.LogLine0\x01BOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
 
 var (
 	file_agent_public_proto_rawDescOnce sync.Once
@@ -412,29 +680,38 @@ func file_agent_public_proto_rawDescGZIP() []byte {
 	return file_agent_public_proto_rawDescData
 }
 
-var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_agent_public_proto_goTypes = []any{
-	(*GetStatusRequest)(nil),         // 0: agent.public.v1.GetStatusRequest
-	(*GetStatusResponse)(nil),        // 1: agent.public.v1.GetStatusResponse
-	(*PingRequest)(nil),              // 2: agent.public.v1.PingRequest
-	(*PingResponse)(nil),             // 3: agent.public.v1.PingResponse
-	(*Container)(nil),                // 4: agent.public.v1.Container
-	(*IngestContainersRequest)(nil),  // 5: agent.public.v1.IngestContainersRequest
-	(*IngestContainersResponse)(nil), // 6: agent.public.v1.IngestContainersResponse
+	(*GetStatusRequest)(nil),           // 0: agent.public.v1.GetStatusRequest
+	(*GetStatusResponse)(nil),          // 1: agent.public.v1.GetStatusResponse
+	(*PingRequest)(nil),                // 2: agent.public.v1.PingRequest
+	(*PingResponse)(nil),               // 3: agent.public.v1.PingResponse
+	(*Container)(nil),                  // 4: agent.public.v1.Container
+	(*IngestContainersRequest)(nil),    // 5: agent.public.v1.IngestContainersRequest
+	(*IngestContainersResponse)(nil),   // 6: agent.public.v1.IngestContainersResponse
+	(*LogLine)(nil),                    // 7: agent.public.v1.LogLine
+	(*GetContainerLogsRequest)(nil),    // 8: agent.public.v1.GetContainerLogsRequest
+	(*GetContainerLogsResponse)(nil),   // 9: agent.public.v1.GetContainerLogsResponse
+	(*StreamContainerLogsRequest)(nil), // 10: agent.public.v1.StreamContainerLogsRequest
 }
 var file_agent_public_proto_depIdxs = []int32{
-	4, // 0: agent.public.v1.IngestContainersResponse.containers:type_name -> agent.public.v1.Container
-	0, // 1: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
-	2, // 2: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
-	5, // 3: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
-	1, // 4: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
-	3, // 5: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
-	6, // 6: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4,  // 0: agent.public.v1.IngestContainersResponse.containers:type_name -> agent.public.v1.Container
+	7,  // 1: agent.public.v1.GetContainerLogsResponse.lines:type_name -> agent.public.v1.LogLine
+	0,  // 2: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
+	2,  // 3: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
+	5,  // 4: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
+	8,  // 5: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
+	10, // 6: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
+	1,  // 7: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
+	3,  // 8: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
+	6,  // 9: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
+	9,  // 10: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
+	7,  // 11: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
+	7,  // [7:12] is the sub-list for method output_type
+	2,  // [2:7] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_agent_public_proto_init() }
@@ -448,7 +725,7 @@ func file_agent_public_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_public_proto_rawDesc), len(file_agent_public_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

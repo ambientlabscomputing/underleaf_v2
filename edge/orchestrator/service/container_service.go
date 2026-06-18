@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 )
 
 // ContainerService manages container data received from agents.

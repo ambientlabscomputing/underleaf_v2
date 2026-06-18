@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/ui"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/ui"
 	"github.com/spf13/cobra"
 )
 

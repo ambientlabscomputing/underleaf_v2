@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative orchestrator_private.proto
@@ -41,17 +43,34 @@ func (s *OrchestratorGRPCPrivateServer) Serve() {
 }
 
 // GetNodes implements OrchestratorPrivateServer.
-func (s *OrchestratorGRPCPrivateServer) GetNodes(_ context.Context, _ *GetNodesRequest) (*GetNodesResponse, error) {
-	nodes, err := s.Service.Nodes().GetNodes()
+func (s *OrchestratorGRPCPrivateServer) GetNodes(_ context.Context, req *GetNodesRequest) (*GetNodesResponse, error) {
+	resp, err := s.Service.Nodes().GetNodes(types.QueryNodesRequest{
+		BaseQueryRequest: types.BaseQueryRequest{
+			Limit:   utils.Int64PtrToInt(req.Limit),
+			Offset:  utils.Int64PtrToInt(req.Offset),
+			Order:   utils.ParseStringPtr(req.Order),
+			OrderBy: utils.ParseStringPtr(req.OrderBy),
+		},
+		Name:   utils.ParseStringPtr(req.Name),
+		OS:     utils.ParseStringPtr(req.Os),
+		Arch:   utils.ParseStringPtr(req.Arch),
+		Search: utils.ParseStringPtr(req.Search),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	resp := &GetNodesResponse{}
-	for _, n := range nodes {
-		resp.Nodes = append(resp.Nodes, &Node{Id: n.ID, Name: n.Name})
+	nodesResp := &GetNodesResponse{
+		Total: *utils.IntToInt64Ptr(resp.Total),
+		Query: req,
 	}
-	return resp, nil
+	count := 0
+	for _, n := range resp.Results {
+		nodesResp.Results = append(nodesResp.Results, &Node{Id: n.ID, Name: n.Name})
+		count++
+	}
+	nodesResp.Count = int64(count)
+	return nodesResp, nil
 }
 
 // SqlQuery implements OrchestratorPrivateServer.

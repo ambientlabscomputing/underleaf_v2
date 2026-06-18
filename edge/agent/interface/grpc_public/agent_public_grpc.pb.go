@@ -19,9 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentPublic_GetStatus_FullMethodName        = "/agent.public.v1.AgentPublic/GetStatus"
-	AgentPublic_Ping_FullMethodName             = "/agent.public.v1.AgentPublic/Ping"
-	AgentPublic_IngestContainers_FullMethodName = "/agent.public.v1.AgentPublic/IngestContainers"
+	AgentPublic_GetStatus_FullMethodName           = "/agent.public.v1.AgentPublic/GetStatus"
+	AgentPublic_Ping_FullMethodName                = "/agent.public.v1.AgentPublic/Ping"
+	AgentPublic_IngestContainers_FullMethodName    = "/agent.public.v1.AgentPublic/IngestContainers"
+	AgentPublic_GetContainerLogs_FullMethodName    = "/agent.public.v1.AgentPublic/GetContainerLogs"
+	AgentPublic_StreamContainerLogs_FullMethodName = "/agent.public.v1.AgentPublic/StreamContainerLogs"
 )
 
 // AgentPublicClient is the client API for AgentPublic service.
@@ -33,6 +35,9 @@ type AgentPublicClient interface {
 	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	IngestContainers(ctx context.Context, in *IngestContainersRequest, opts ...grpc.CallOption) (*IngestContainersResponse, error)
+	// Log RPCs — agent is the source of truth for container logs.
+	GetContainerLogs(ctx context.Context, in *GetContainerLogsRequest, opts ...grpc.CallOption) (*GetContainerLogsResponse, error)
+	StreamContainerLogs(ctx context.Context, in *StreamContainerLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error)
 }
 
 type agentPublicClient struct {
@@ -73,6 +78,35 @@ func (c *agentPublicClient) IngestContainers(ctx context.Context, in *IngestCont
 	return out, nil
 }
 
+func (c *agentPublicClient) GetContainerLogs(ctx context.Context, in *GetContainerLogsRequest, opts ...grpc.CallOption) (*GetContainerLogsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetContainerLogsResponse)
+	err := c.cc.Invoke(ctx, AgentPublic_GetContainerLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) StreamContainerLogs(ctx context.Context, in *StreamContainerLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentPublic_ServiceDesc.Streams[0], AgentPublic_StreamContainerLogs_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamContainerLogsRequest, LogLine]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentPublic_StreamContainerLogsClient = grpc.ServerStreamingClient[LogLine]
+
 // AgentPublicServer is the server API for AgentPublic service.
 // All implementations must embed UnimplementedAgentPublicServer
 // for forward compatibility.
@@ -82,6 +116,9 @@ type AgentPublicServer interface {
 	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error)
+	// Log RPCs — agent is the source of truth for container logs.
+	GetContainerLogs(context.Context, *GetContainerLogsRequest) (*GetContainerLogsResponse, error)
+	StreamContainerLogs(*StreamContainerLogsRequest, grpc.ServerStreamingServer[LogLine]) error
 	mustEmbedUnimplementedAgentPublicServer()
 }
 
@@ -100,6 +137,12 @@ func (UnimplementedAgentPublicServer) Ping(context.Context, *PingRequest) (*Ping
 }
 func (UnimplementedAgentPublicServer) IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IngestContainers not implemented")
+}
+func (UnimplementedAgentPublicServer) GetContainerLogs(context.Context, *GetContainerLogsRequest) (*GetContainerLogsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetContainerLogs not implemented")
+}
+func (UnimplementedAgentPublicServer) StreamContainerLogs(*StreamContainerLogsRequest, grpc.ServerStreamingServer[LogLine]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamContainerLogs not implemented")
 }
 func (UnimplementedAgentPublicServer) mustEmbedUnimplementedAgentPublicServer() {}
 func (UnimplementedAgentPublicServer) testEmbeddedByValue()                     {}
@@ -176,6 +219,35 @@ func _AgentPublic_IngestContainers_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentPublic_GetContainerLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetContainerLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).GetContainerLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_GetContainerLogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).GetContainerLogs(ctx, req.(*GetContainerLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_StreamContainerLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamContainerLogsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AgentPublicServer).StreamContainerLogs(m, &grpc.GenericServerStream[StreamContainerLogsRequest, LogLine]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentPublic_StreamContainerLogsServer = grpc.ServerStreamingServer[LogLine]
+
 // AgentPublic_ServiceDesc is the grpc.ServiceDesc for AgentPublic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -195,7 +267,17 @@ var AgentPublic_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "IngestContainers",
 			Handler:    _AgentPublic_IngestContainers_Handler,
 		},
+		{
+			MethodName: "GetContainerLogs",
+			Handler:    _AgentPublic_GetContainerLogs_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamContainerLogs",
+			Handler:       _AgentPublic_StreamContainerLogs_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "agent_public.proto",
 }

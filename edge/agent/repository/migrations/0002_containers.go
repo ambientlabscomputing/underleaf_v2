@@ -1,6 +1,6 @@
 package migrations
 
-import "github.com/ambientlabscomputing/underleaf_v2/edge/shared/migrator"
+import "github.com/ambientlabscomputing/underleaf_v2/shared/migrator"
 
 var migration0002 = []string{
 	`CREATE TABLE IF NOT EXISTS containers (

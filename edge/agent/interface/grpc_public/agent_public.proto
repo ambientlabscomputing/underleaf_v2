@@ -9,6 +9,10 @@ service AgentPublic {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc Ping(PingRequest) returns (PingResponse);
   rpc IngestContainers(IngestContainersRequest) returns (IngestContainersResponse);
+
+  // Log RPCs — agent is the source of truth for container logs.
+  rpc GetContainerLogs(GetContainerLogsRequest) returns (GetContainerLogsResponse);
+  rpc StreamContainerLogs(StreamContainerLogsRequest) returns (stream LogLine);
 }
 
 message GetStatusRequest {}
@@ -40,4 +44,31 @@ message IngestContainersRequest {}
 
 message IngestContainersResponse {
   repeated Container containers = 1;
+}
+
+// ── Log messages ─────────────────────────────────────────────────────────────
+
+message LogLine {
+  string docker_id = 1;
+  int64  ts_ms     = 2;
+  string stream    = 3; // "stdout" or "stderr"
+  string message   = 4;
+}
+
+message GetContainerLogsRequest {
+  string docker_id = 1;
+  int64  since_ms  = 2; // 0 = beginning of buffer
+  int64  until_ms  = 3; // 0 = no upper bound
+  int32  limit     = 4; // 0 = server default (100)
+  int64  cursor_id = 5; // row id pagination cursor; 0 = start
+}
+
+message GetContainerLogsResponse {
+  repeated LogLine lines       = 1;
+  int64            next_cursor = 2; // 0 = no more pages
+}
+
+message StreamContainerLogsRequest {
+  string docker_id = 1;
+  int64  since_ms  = 2; // 0 = tail only (no history replay)
 }

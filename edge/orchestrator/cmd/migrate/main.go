@@ -24,8 +24,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/migrator"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/migrator"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 	"github.com/spf13/cobra"
 )
 

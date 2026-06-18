@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 type OrchestratorRESTServer struct {
@@ -35,6 +35,7 @@ func (s *OrchestratorRESTServer) Serve() {
 	v2 := router.Group("/api/v2")
 	s.RegisterNodeRoutes(v2, s.Service)
 	s.RegisterContainerRoutes(v2, s.Service)
+	s.RegisterLogRoutes(v2, s.Service)
 
 	config := utils.GetConfig(utils.OrchestratorConfig)
 	addr := fmt.Sprintf(":%d", config.Http.Port)

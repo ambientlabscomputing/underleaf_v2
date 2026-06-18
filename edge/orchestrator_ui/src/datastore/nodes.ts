@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { nodesService } from '../api/services/NodesService';
+import { nodesService, type GetNodesRequest } from '../api/services/NodesService';
 
 export const nodeKeys = {
   all: ['nodes'] as const,
+  list: (params?: GetNodesRequest) => [...nodeKeys.all, params] as const,
 };
 
-export function useNodes() {
+export function useNodes(params?: GetNodesRequest) {
   return useQuery({
-    queryKey: nodeKeys.all,
-    queryFn: () => nodesService.getNodes(),
+    queryKey: nodeKeys.list(params),
+    queryFn: () => nodesService.getNodes(params),
   });
 }

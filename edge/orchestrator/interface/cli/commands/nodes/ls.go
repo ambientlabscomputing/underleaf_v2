@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/utils"
+	grpc_private "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -15,12 +16,12 @@ var LsCmd = &cobra.Command{
 		dep_mgr := utils.DependencyManagerBuilder(utils.RequireOrchPrivateClient)
 		defer dep_mgr.Close()
 
-		resp, err := dep_mgr.OrchestratorPrivateClient.GetNodes(context.Background(), nil)
+		resp, err := dep_mgr.OrchestratorPrivateClient.GetNodes(context.Background(), &grpc_private.GetNodesRequest{})
 		if err != nil {
 			fmt.Printf("Error fetching nodes: %v\n", err)
 			return
 		}
-		nodes := resp.GetNodes()
+		nodes := resp.GetResults()
 		if len(nodes) == 0 {
 			fmt.Println("No nodes found in the edge orchestrator.")
 			return

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import HubIcon from '@mui/icons-material/Hub';
 import StorageIcon from '@mui/icons-material/Storage';
 
@@ -42,40 +43,39 @@ const columns: GridColDef<Container>[] = [
   },
 ];
 
-// ── Nav ───────────────────────────────────────────────────────────────────────
-
-export interface ContainersProps {
-  onNavigate?: (page: 'nodes' | 'containers') => void;
-}
-
-const buildNavItems = (onNavigate: ContainersProps['onNavigate']): NavItem[] => [
-  {
-    label: 'Nodes',
-    icon: <HubIcon fontSize="small" />,
-    onClick: () => onNavigate?.('nodes'),
-    selected: false,
-  },
-  {
-    label: 'Containers',
-    icon: <StorageIcon fontSize="small" />,
-    onClick: () => {},
-    selected: true,
-  },
-];
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export function Containers({ onNavigate }: ContainersProps) {
+export function Containers() {
+  const navigate = useNavigate();
   const { data: containers = [], isPending, isError } = useContainers();
 
+  const navItems: NavItem[] = [
+    {
+      label: 'Nodes',
+      icon: <HubIcon fontSize="small" />,
+      onClick: () => navigate('/nodes'),
+      selected: false,
+    },
+    {
+      label: 'Containers',
+      icon: <StorageIcon fontSize="small" />,
+      onClick: () => {},
+      selected: true,
+    },
+  ];
+
   return (
-    <PageShell title="Orchestrator" navItems={buildNavItems(onNavigate)}>
+    <PageShell title="Orchestrator" navItems={navItems}>
       <AppDataGrid
         rows={containers}
         columns={columns}
         loading={isPending}
         emptyMessage={isError ? 'Failed to load containers.' : 'No containers synced yet. Check agent status.'}
-        sx={{ flex: 1 }}
+        onRowClick={(params) => {
+          const container = params.row as Container;
+          navigate(`/containers/${container.docker_id}/logs`, { state: { container } });
+        }}
+        sx={{ flex: 1, cursor: 'pointer' }}
       />
     </PageShell>
   );

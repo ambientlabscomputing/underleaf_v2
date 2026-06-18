@@ -54,3 +54,23 @@ func (c *AgentClient) IngestContainers(ctx context.Context) (int, error) {
 	}
 	return len(resp.GetContainers()), nil
 }
+
+// GetContainerLogs fetches a page of persisted log lines from the agent.
+func (c *AgentClient) GetContainerLogs(ctx context.Context, dockerID string, sinceMs, untilMs int64, limit int, cursorID int64) (*agentpb.GetContainerLogsResponse, error) {
+	return c.client.GetContainerLogs(ctx, &agentpb.GetContainerLogsRequest{
+		DockerId: dockerID,
+		SinceMs:  sinceMs,
+		UntilMs:  untilMs,
+		Limit:    int32(limit),
+		CursorId: cursorID,
+	})
+}
+
+// StreamContainerLogs opens a server-streaming RPC that replays history (if sinceMs > 0)
+// then follows live log lines. The returned stream must be closed by the caller.
+func (c *AgentClient) StreamContainerLogs(ctx context.Context, dockerID string, sinceMs int64) (agentpb.AgentPublic_StreamContainerLogsClient, error) {
+	return c.client.StreamContainerLogs(ctx, &agentpb.StreamContainerLogsRequest{
+		DockerId: dockerID,
+		SinceMs:  sinceMs,
+	})
+}

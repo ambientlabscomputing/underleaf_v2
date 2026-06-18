@@ -2,37 +2,43 @@ package service
 
 import (
 	"context"
-	"os"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/clients"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 // OrchestratorService for interacting with the orchestrator
 type OrchestratorService struct {
 	orchClient *clients.OrchestratorClient
 	repository *repository.Repository
+	hostSvc    *HostService
 }
 
 // NewOrchestratorService creates a new OrchestratorService with the given OrchestratorClient.
-func NewOrchestratorService(orchClient *clients.OrchestratorClient, repository *repository.Repository) *OrchestratorService {
+func NewOrchestratorService(orchClient *clients.OrchestratorClient, repository *repository.Repository, hostSvc *HostService) *OrchestratorService {
 	return &OrchestratorService{
 		orchClient: orchClient,
 		repository: repository,
+		hostSvc:    hostSvc,
 	}
 }
 
 // RegisterNode registers this node with the orchestrator using hostname
 func (s *OrchestratorService) RegisterNode(ctx context.Context) (*types.Node, error) {
-	name, err := os.Hostname()
+	hostInfo, err := s.hostSvc.GetHostInfo()
 	if err != nil {
-		utils.Logger.Error("failed to get hostname for node registration: " + err.Error())
+		utils.Logger.Error("failed to get host info: " + err.Error())
 		return nil, err
 	}
-	utils.Logger.Info("Registering node with orchestrator: " + name)
-	node, err := s.orchClient.CreateNode(ctx, name)
+	utils.Logger.Info("Registering node with orchestrator", "hostInfo", hostInfo)
+	node, err := s.orchClient.CreateNode(ctx, types.CreateNodeRequest{
+		Name:   hostInfo.Hostname,
+		IPAddr: hostInfo.IPAddr,
+		OS:     hostInfo.OS,
+		Arch:   hostInfo.Arch,
+	})
 	if err != nil {
 		utils.Logger.Error("failed to create node: " + err.Error())
 		return nil, err

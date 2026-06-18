@@ -6,7 +6,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 // Migration represents a single versioned migration. ID matches the filename

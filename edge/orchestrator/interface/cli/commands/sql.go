@@ -4,8 +4,8 @@ package commands
 
 import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/ui"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/ui"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/utils"
 	"github.com/spf13/cobra"
 )
 

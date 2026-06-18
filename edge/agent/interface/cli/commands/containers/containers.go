@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/utils"
 )
 
 var ContainersCmd = &cobra.Command{

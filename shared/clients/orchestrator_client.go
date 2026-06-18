@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	orchpb "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 )
 
 const orchestratorAddr = "localhost:50100"
@@ -43,12 +43,23 @@ func (c *OrchestratorClient) Ping(ctx context.Context, source string) (*PingResu
 }
 
 // CreateNode calls the orchestrator's CreateNode RPC and returns the result.
-func (c *OrchestratorClient) CreateNode(ctx context.Context, name string) (*types.Node, error) {
-	resp, err := c.client.CreateNode(ctx, &orchpb.CreateNodeRequest{Name: name})
+func (c *OrchestratorClient) CreateNode(ctx context.Context, req types.CreateNodeRequest) (*types.Node, error) {
+	resp, err := c.client.CreateNode(ctx, &orchpb.CreateNodeRequest{
+		Name:      req.Name,
+		IpAddress: req.IPAddr,
+		Os:        req.OS,
+		Arch:      req.Arch,
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &types.Node{Name: resp.Name, ID: resp.Id}, nil
+	return &types.Node{
+		ID:     resp.Id,
+		Name:   resp.Name,
+		IPAddr: resp.IpAddress,
+		OS:     resp.Os,
+		Arch:   resp.Arch,
+	}, nil
 }
 
 // Close releases the underlying gRPC connection.

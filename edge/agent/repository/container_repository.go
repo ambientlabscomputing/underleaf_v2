@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 )
 
 // ContainerRepository provides persistence for Docker containers on the local node.

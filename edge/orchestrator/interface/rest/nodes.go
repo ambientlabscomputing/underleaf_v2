@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,15 +12,19 @@ func (s *OrchestratorRESTServer) RegisterNodeRoutes(router *gin.RouterGroup, ser
 	router.GET("/nodes", s.GetNodes)
 }
 
-type GetNodesResponse struct {
-	Results []*types.Node `json:"results"`
-}
-
 func (s *OrchestratorRESTServer) GetNodes(c *gin.Context) {
-	nodes, err := s.Service.Nodes().GetNodes()
+	var query types.QueryNodesRequest
+
+	// Bind the query parameters directly to the struct
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := s.Service.Nodes().GetNodes(query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, &GetNodesResponse{Results: nodes})
+	c.JSON(http.StatusOK, resp)
 }

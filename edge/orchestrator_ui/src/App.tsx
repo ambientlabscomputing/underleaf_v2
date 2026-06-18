@@ -1,17 +1,15 @@
-import { useState } from 'react';
-import { Home } from './pages';
-import { Containers } from './pages';
-
-type Page = 'nodes' | 'containers';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { Home, Containers, ContainerLogs } from './pages';
 
 function App() {
-  const [page, setPage] = useState<Page>('nodes');
-
-  if (page === 'containers') {
-    return <Containers onNavigate={setPage} />;
-  }
-
-  return <Home onNavigate={setPage} />;
+  return (
+    <Routes>
+      <Route path="/nodes" element={<Home />} />
+      <Route path="/containers" element={<Containers />} />
+      <Route path="/containers/:dockerId/logs" element={<ContainerLogs />} />
+      <Route path="*" element={<Navigate to="/nodes" replace />} />
+    </Routes>
+  );
 }
 
 export default App;

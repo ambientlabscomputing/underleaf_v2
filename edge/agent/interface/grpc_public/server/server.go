@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
 )
 
@@ -69,4 +70,87 @@ func (s *AgentGRPCPublicServer) IngestContainers(ctx context.Context, _ *grpc_pu
 		})
 	}
 	return resp, nil
+}
+
+// GetContainerLogs implements AgentPublicServer — returns a page of persisted log lines.
+func (s *AgentGRPCPublicServer) GetContainerLogs(_ context.Context, req *grpc_public.GetContainerLogsRequest) (*grpc_public.GetContainerLogsResponse, error) {
+	page, err := s.Service.Logs().GetLogs(repository.QueryLogsParams{
+		DockerID: req.DockerId,
+		SinceMs:  req.SinceMs,
+		UntilMs:  req.UntilMs,
+		Limit:    int(req.Limit),
+		CursorID: req.CursorId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp := &grpc_public.GetContainerLogsResponse{NextCursor: page.NextCursor}
+	for _, l := range page.Lines {
+		resp.Lines = append(resp.Lines, &grpc_public.LogLine{
+			DockerId: l.DockerID,
+			TsMs:     l.TsMs,
+			Stream:   l.Stream,
+			Message:  l.Message,
+		})
+	}
+	return resp, nil
+}
+
+// StreamContainerLogs implements AgentPublicServer — replays history then streams live lines.
+func (s *AgentGRPCPublicServer) StreamContainerLogs(req *grpc_public.StreamContainerLogsRequest, stream grpc_public.AgentPublic_StreamContainerLogsServer) error {
+	dockerID := req.DockerId
+	ctx := stream.Context()
+
+	// Subscribe to live fan-out before querying history to avoid a gap.
+	liveCh := s.Service.Logs().Subscribe(dockerID)
+	defer s.Service.Logs().Unsubscribe(dockerID, liveCh)
+
+	// Replay persisted history if requested.
+	if req.SinceMs > 0 {
+		cursor := int64(0)
+		for {
+			page, err := s.Service.Logs().GetLogs(repository.QueryLogsParams{
+				DockerID: dockerID,
+				SinceMs:  req.SinceMs,
+				CursorID: cursor,
+			})
+			if err != nil {
+				return err
+			}
+			for _, l := range page.Lines {
+				if err := stream.Send(&grpc_public.LogLine{
+					DockerId: l.DockerID,
+					TsMs:     l.TsMs,
+					Stream:   l.Stream,
+					Message:  l.Message,
+				}); err != nil {
+					return err
+				}
+			}
+			if page.NextCursor == 0 {
+				break
+			}
+			cursor = page.NextCursor
+		}
+	}
+
+	// Stream live lines until the client disconnects.
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case line, ok := <-liveCh:
+			if !ok {
+				return nil
+			}
+			if err := stream.Send(&grpc_public.LogLine{
+				DockerId: line.DockerID,
+				TsMs:     line.TsMs,
+				Stream:   line.Stream,
+				Message:  line.Message,
+			}); err != nil {
+				return err
+			}
+		}
+	}
 }

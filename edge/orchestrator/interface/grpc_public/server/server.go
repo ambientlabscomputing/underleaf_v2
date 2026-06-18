@@ -9,7 +9,8 @@ import (
 
 	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
-	sharedtypes "github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
+	sharedtypes "github.com/ambientlabscomputing/underleaf_v2/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 const tcpAddr = ":50100"
@@ -36,26 +37,60 @@ func (s *OrchestratorGRPCPublicServer) Serve() {
 }
 
 // GetNodes implements OrchestratorPublicServer.
-func (s *OrchestratorGRPCPublicServer) GetNodes(_ context.Context, _ *grpc_public.GetNodesRequest) (*grpc_public.GetNodesResponse, error) {
-	nodes, err := s.Service.Nodes().GetNodes()
+func (s *OrchestratorGRPCPublicServer) GetNodes(_ context.Context, req *grpc_public.GetNodesRequest) (*grpc_public.GetNodesResponse, error) {
+	resp, err := s.Service.Nodes().GetNodes(sharedtypes.QueryNodesRequest{
+		BaseQueryRequest: sharedtypes.BaseQueryRequest{
+			Limit:   utils.Int64PtrToInt(req.Limit),
+			Offset:  utils.Int64PtrToInt(req.Offset),
+			Order:   utils.ParseStringPtr(req.Order),
+			OrderBy: utils.ParseStringPtr(req.OrderBy),
+		},
+		Name:   utils.ParseStringPtr(req.Name),
+		OS:     utils.ParseStringPtr(req.Os),
+		Arch:   utils.ParseStringPtr(req.Arch),
+		Search: utils.ParseStringPtr(req.Search),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	resp := &grpc_public.GetNodesResponse{}
-	for _, n := range nodes {
-		resp.Nodes = append(resp.Nodes, &grpc_public.Node{Id: n.ID, Name: n.Name})
+	nodesResp := &grpc_public.GetNodesResponse{
+		Total: *utils.IntToInt64Ptr(resp.Total),
+		Query: req,
 	}
-	return resp, nil
+	count := 0
+	for _, n := range resp.Results {
+		nodesResp.Results = append(nodesResp.Results, &grpc_public.Node{
+			Id:        n.ID,
+			Name:      n.Name,
+			IpAddress: n.IPAddr,
+			Os:        n.OS,
+			Arch:      n.Arch,
+		})
+		count++
+	}
+	nodesResp.Count = int64(count)
+	return nodesResp, nil
 }
 
 // CreateNode implements OrchestratorPublicServer.
 func (s *OrchestratorGRPCPublicServer) CreateNode(ctx context.Context, req *grpc_public.CreateNodeRequest) (*grpc_public.CreateNodeResponse, error) {
-	node, err := s.Service.Nodes().CreateNode(service.CreateNodeRequest{Name: req.Name})
+	node, err := s.Service.Nodes().CreateNode(sharedtypes.CreateNodeRequest{
+		Name:   req.Name,
+		IPAddr: req.IpAddress,
+		OS:     req.Os,
+		Arch:   req.Arch,
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &grpc_public.CreateNodeResponse{Name: node.Name, Id: node.ID}, nil
+	return &grpc_public.CreateNodeResponse{
+		Id:        node.ID,
+		Name:      node.Name,
+		IpAddress: node.IPAddr,
+		Os:        node.OS,
+		Arch:      node.Arch,
+	}, nil
 }
 
 // Ping implements OrchestratorPublicServer — delegates to the Health service.

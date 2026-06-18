@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/utils"
 	"github.com/spf13/cobra"
 )
 

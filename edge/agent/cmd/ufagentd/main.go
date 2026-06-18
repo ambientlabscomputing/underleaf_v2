@@ -10,7 +10,7 @@ import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/rest"
 	_ "github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository/migrations"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/cli/ui"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/ui"
 	"github.com/spf13/cobra"
 )
 

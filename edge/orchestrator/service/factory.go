@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/clients"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
 )
 
 func NewService() Service {
@@ -24,6 +24,7 @@ func NewService() Service {
 		nodes:      NewNodeService(repo),
 		health:     &HealthService{peer: peer},
 		containers: &ContainerService{Repository: repo},
+		logs:       &LogService{peer: peer},
 	}
 }
 

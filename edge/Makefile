@@ -86,3 +86,17 @@ stop:
 	-pkill -f underleaf
 	-pkill orch-server
 	-pkill ufagentd
+
+clean-db:
+	rm -f orchestrator.db
+	rm -f agent.db
+	rm -f agent.db-shm
+	rm -f agent.db-wal
+
+clean: stop clean-db
+	rm -rf bin
+	rm -f $(HOME)/.local/bin/orcli
+	rm -f $(HOME)/.local/bin/orch-server
+	rm -f $(HOME)/.local/bin/migrate
+	rm -f $(HOME)/.local/bin/ufagent
+	rm -f $(HOME)/.local/bin/ufagentd

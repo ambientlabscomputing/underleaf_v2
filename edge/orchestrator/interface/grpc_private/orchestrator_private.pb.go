@@ -23,6 +23,14 @@ const (
 
 type GetNodesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         *int64                 `protobuf:"varint,1,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	Offset        *int64                 `protobuf:"varint,2,opt,name=offset,proto3,oneof" json:"offset,omitempty"`
+	OrderBy       *string                `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3,oneof" json:"order_by,omitempty"`
+	Order         *string                `protobuf:"bytes,4,opt,name=order,proto3,oneof" json:"order,omitempty"`
+	Search        *string                `protobuf:"bytes,5,opt,name=search,proto3,oneof" json:"search,omitempty"`
+	Name          *string                `protobuf:"bytes,6,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Os            *string                `protobuf:"bytes,7,opt,name=os,proto3,oneof" json:"os,omitempty"`
+	Arch          *string                `protobuf:"bytes,8,opt,name=arch,proto3,oneof" json:"arch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -57,9 +65,68 @@ func (*GetNodesRequest) Descriptor() ([]byte, []int) {
 	return file_orchestrator_private_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *GetNodesRequest) GetLimit() int64 {
+	if x != nil && x.Limit != nil {
+		return *x.Limit
+	}
+	return 0
+}
+
+func (x *GetNodesRequest) GetOffset() int64 {
+	if x != nil && x.Offset != nil {
+		return *x.Offset
+	}
+	return 0
+}
+
+func (x *GetNodesRequest) GetOrderBy() string {
+	if x != nil && x.OrderBy != nil {
+		return *x.OrderBy
+	}
+	return ""
+}
+
+func (x *GetNodesRequest) GetOrder() string {
+	if x != nil && x.Order != nil {
+		return *x.Order
+	}
+	return ""
+}
+
+func (x *GetNodesRequest) GetSearch() string {
+	if x != nil && x.Search != nil {
+		return *x.Search
+	}
+	return ""
+}
+
+func (x *GetNodesRequest) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *GetNodesRequest) GetOs() string {
+	if x != nil && x.Os != nil {
+		return *x.Os
+	}
+	return ""
+}
+
+func (x *GetNodesRequest) GetArch() string {
+	if x != nil && x.Arch != nil {
+		return *x.Arch
+	}
+	return ""
+}
+
 type GetNodesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Nodes         []*Node                `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	Results       []*Node                `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+	Count         int64                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Total         int64                  `protobuf:"varint,3,opt,name=total,proto3" json:"total,omitempty"`
+	Query         *GetNodesRequest       `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -94,9 +161,30 @@ func (*GetNodesResponse) Descriptor() ([]byte, []int) {
 	return file_orchestrator_private_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetNodesResponse) GetNodes() []*Node {
+func (x *GetNodesResponse) GetResults() []*Node {
 	if x != nil {
-		return x.Nodes
+		return x.Results
+	}
+	return nil
+}
+
+func (x *GetNodesResponse) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *GetNodesResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *GetNodesResponse) GetQuery() *GetNodesRequest {
+	if x != nil {
+		return x.Query
 	}
 	return nil
 }
@@ -489,10 +577,29 @@ var File_orchestrator_private_proto protoreflect.FileDescriptor
 
 const file_orchestrator_private_proto_rawDesc = "" +
 	"\n" +
-	"\x1aorchestrator_private.proto\x12\x17orchestrator.private.v1\"\x11\n" +
-	"\x0fGetNodesRequest\"G\n" +
-	"\x10GetNodesResponse\x123\n" +
-	"\x05nodes\x18\x01 \x03(\v2\x1d.orchestrator.private.v1.NodeR\x05nodes\"*\n" +
+	"\x1aorchestrator_private.proto\x12\x17orchestrator.private.v1\"\xb8\x02\n" +
+	"\x0fGetNodesRequest\x12\x19\n" +
+	"\x05limit\x18\x01 \x01(\x03H\x00R\x05limit\x88\x01\x01\x12\x1b\n" +
+	"\x06offset\x18\x02 \x01(\x03H\x01R\x06offset\x88\x01\x01\x12\x1e\n" +
+	"\border_by\x18\x03 \x01(\tH\x02R\aorderBy\x88\x01\x01\x12\x19\n" +
+	"\x05order\x18\x04 \x01(\tH\x03R\x05order\x88\x01\x01\x12\x1b\n" +
+	"\x06search\x18\x05 \x01(\tH\x04R\x06search\x88\x01\x01\x12\x17\n" +
+	"\x04name\x18\x06 \x01(\tH\x05R\x04name\x88\x01\x01\x12\x13\n" +
+	"\x02os\x18\a \x01(\tH\x06R\x02os\x88\x01\x01\x12\x17\n" +
+	"\x04arch\x18\b \x01(\tH\aR\x04arch\x88\x01\x01B\b\n" +
+	"\x06_limitB\t\n" +
+	"\a_offsetB\v\n" +
+	"\t_order_byB\b\n" +
+	"\x06_orderB\t\n" +
+	"\a_searchB\a\n" +
+	"\x05_nameB\x05\n" +
+	"\x03_osB\a\n" +
+	"\x05_arch\"\xb7\x01\n" +
+	"\x10GetNodesResponse\x127\n" +
+	"\aresults\x18\x01 \x03(\v2\x1d.orchestrator.private.v1.NodeR\aresults\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\x12\x14\n" +
+	"\x05total\x18\x03 \x01(\x03R\x05total\x12>\n" +
+	"\x05query\x18\x04 \x01(\v2(.orchestrator.private.v1.GetNodesRequestR\x05query\"*\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"'\n" +
@@ -547,21 +654,22 @@ var file_orchestrator_private_proto_goTypes = []any{
 	(*ListContainersResponse)(nil), // 9: orchestrator.private.v1.ListContainersResponse
 }
 var file_orchestrator_private_proto_depIdxs = []int32{
-	2, // 0: orchestrator.private.v1.GetNodesResponse.nodes:type_name -> orchestrator.private.v1.Node
-	7, // 1: orchestrator.private.v1.ListContainersResponse.containers:type_name -> orchestrator.private.v1.Container
-	0, // 2: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
-	3, // 3: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
-	5, // 4: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
-	8, // 5: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
-	1, // 6: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
-	4, // 7: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
-	6, // 8: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
-	9, // 9: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
-	6, // [6:10] is the sub-list for method output_type
-	2, // [2:6] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 0: orchestrator.private.v1.GetNodesResponse.results:type_name -> orchestrator.private.v1.Node
+	0, // 1: orchestrator.private.v1.GetNodesResponse.query:type_name -> orchestrator.private.v1.GetNodesRequest
+	7, // 2: orchestrator.private.v1.ListContainersResponse.containers:type_name -> orchestrator.private.v1.Container
+	0, // 3: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
+	3, // 4: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
+	5, // 5: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
+	8, // 6: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
+	1, // 7: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
+	4, // 8: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
+	6, // 9: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
+	9, // 10: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
+	7, // [7:11] is the sub-list for method output_type
+	3, // [3:7] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_orchestrator_private_proto_init() }
@@ -569,6 +677,7 @@ func file_orchestrator_private_proto_init() {
 	if File_orchestrator_private_proto != nil {
 		return
 	}
+	file_orchestrator_private_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

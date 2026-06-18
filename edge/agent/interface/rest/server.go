@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 type AgentRESTServer struct {

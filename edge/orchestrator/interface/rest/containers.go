@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/gin-gonic/gin"
 )
 

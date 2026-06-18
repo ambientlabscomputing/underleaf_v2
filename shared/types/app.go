@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/utils"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 type VolumeSpec struct {
@@ -40,6 +40,15 @@ type Container struct {
 	NodeID   ForeignKey `json:"node_id"`
 	Uptime   int64      `json:"uptime"`
 	Status   string     `json:"status"`
+}
+
+// LogLine represents a single log line emitted by a container.
+type LogLine struct {
+	RowID    int64  `json:"-"`
+	DockerID string `json:"docker_id"`
+	TsMs     int64  `json:"ts_ms"`
+	Stream   string `json:"stream"` // "stdout" or "stderr"
+	Message  string `json:"message"`
 }
 
 // NewContainer creates a new Container instance with a unique ID.

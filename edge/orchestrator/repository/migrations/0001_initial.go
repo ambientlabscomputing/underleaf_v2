@@ -1,6 +1,6 @@
 package migrations
 
-import "github.com/ambientlabscomputing/underleaf_v2/edge/shared/migrator"
+import "github.com/ambientlabscomputing/underleaf_v2/shared/migrator"
 
 // migration0001 was generated with:
 //

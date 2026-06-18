@@ -12,10 +12,22 @@ service OrchestratorPrivate {
   rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
 }
 
-message GetNodesRequest {}
+message GetNodesRequest {
+    optional int64 limit = 1;
+    optional int64 offset = 2;
+    optional string order_by = 3;
+    optional string order = 4;
+    optional string search = 5;
+    optional string name = 6;
+    optional string os = 7;
+    optional string arch = 8;
+}
 
 message GetNodesResponse {
-  repeated Node nodes = 1;
+  repeated Node results = 1;
+  int64 count = 2;
+  int64 total = 3;
+  GetNodesRequest query = 4;
 }
 
 message Node {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/clients"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
 )
 
 // HealthService handles both serving inbound Ping RPCs and initiating outbound

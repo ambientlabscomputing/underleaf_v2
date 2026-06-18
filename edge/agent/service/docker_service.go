@@ -8,8 +8,8 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/clients"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 )
 
 // DockerService ingests the local node's Docker containers into the agent repository
@@ -18,6 +18,7 @@ type DockerService struct {
 	docker     *client.Client
 	repository *repository.Repository
 	orchClient *clients.OrchestratorClient
+	logs       *LogCollector
 }
 
 // IngestContainers reads running (and stopped) containers from the local Docker daemon,
@@ -54,6 +55,15 @@ func (s *DockerService) IngestContainers(ctx context.Context) ([]*types.Containe
 	if err := s.orchClient.ReportContainers(ctx, node.ID, containers); err != nil {
 		fmt.Printf("[docker] warn: failed to report containers to orchestrator: %v\n", err)
 	}
+
+	// Reconcile log tailers: start tailing newly running containers, stop for removed ones.
+	var runningIDs []string
+	for _, dc := range dockerContainers {
+		if dc.State == "running" {
+			runningIDs = append(runningIDs, dc.ID)
+		}
+	}
+	s.logs.Reconcile(runningIDs)
 
 	return containers, nil
 }
