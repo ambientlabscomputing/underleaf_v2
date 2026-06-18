@@ -1,9 +1,5 @@
 package types
 
-import (
-	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
-)
-
 type VolumeSpec struct {
 	Name string `json:"name"`
 }
@@ -55,7 +51,7 @@ type LogLine struct {
 func NewContainer(dockerID, image string, nodeID ForeignKey) *Container {
 	return &Container{
 		ContainerSpec: ContainerSpec{Image: image},
-		ID:            utils.GenerateID(utils.ContainerIDPrefix),
+		ID:            GenerateID(ContainerIDPrefix),
 		DockerID:      dockerID,
 		NodeID:        nodeID,
 	}
@@ -73,7 +69,7 @@ type Volume struct {
 // NewApp creates a new App instance with a unique ID.
 func NewApp(name, description string) *App {
 	return &App{
-		ID:   utils.GenerateID(utils.AppIDPrefix),
+		ID:   GenerateID(AppIDPrefix),
 		Name: name,
 	}
 }

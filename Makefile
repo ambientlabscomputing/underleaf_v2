@@ -5,3 +5,9 @@ help:
 ## build-orchestrator: Build the orchestrator
 build-orc:
 	cd edge/orchestrator && make build
+
+go-lint:
+	go fmt ./...
+	go vet ./...
+
+lint: go-lint

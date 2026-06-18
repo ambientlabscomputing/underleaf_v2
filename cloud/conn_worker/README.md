@@ -43,7 +43,7 @@ api:
             {id}:
                 GET: Get tunnel
                 DELETE: Tear down tunnel
-        metrics:
+        metrics: # future
             performance:
                 GET: performance related metrics
                 timeseries:
@@ -63,4 +63,15 @@ Intended for use by the agent to establish and manage its connection with the Co
 ```proto
 BeginConn(BeginConnRequest) returns BeginConnResponse;
 TerminateConn(TerminateConnRequest) returns TerminateConnResponse;
+```
+
+## Data Model
+
+```mermaid
+erDiagram
+    ConnWorker ||--|| Tunnel: ConnectsTo
+    Tunnel ||--o{ Connection : Multiplexes
+    Agent ||--|| Tunnel: ConnectsTo
+    Agent ||--o{ UserApp: Hosts
+    UserApp }o--o{ Connection: OneConnectionPerPort
 ```
