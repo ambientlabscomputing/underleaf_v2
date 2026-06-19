@@ -1,3 +1,8 @@
 **.lock
 **/.DS_Store
 **/bin
+**/*.egg-info
+**/dist
+**/build
+**/__pycache__
+**/*.pyc

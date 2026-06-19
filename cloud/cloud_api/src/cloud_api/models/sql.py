@@ -1,0 +1,158 @@
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey, DateTime
+from sqlalchemy.dialects.postgresql import JSONB
+from datetime import datetime
+from typing import Optional
+from cloud_api.models.base import generate_id, IDPrefix
+
+
+class SQLBase(DeclarativeBase):
+    id: Mapped[str] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class SQLPrincipalAccount(SQLBase):
+    __tablename__ = "principal_accounts"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.PRINCIPAL_ACCOUNT))
+    name: Mapped[str]
+    users: Mapped[list["SQLUser"]] = relationship(back_populates="principal_account")
+    billing_account: Mapped["SQLBillingAccount"] = relationship(
+        back_populates="principal_account"
+    )
+
+
+class SQLBillingAccount(SQLBase):
+    __tablename__ = "billing_accounts"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.BILLING_ACCOUNT))
+    name: Mapped[str]
+    principal_account_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.principal_accounts.id")
+    )
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(nullable=True)
+    stripe_data: Mapped[dict] = mapped_column(JSONB, default={}, server_default="{}")
+    principal_account: Mapped["SQLPrincipalAccount"] = relationship(
+        back_populates="billing_account"
+    )
+    entitlements_bucket: Mapped["SQLEntitlementsBucket"] = relationship(
+        back_populates="billing_account"
+    )
+    subscription: Mapped["SQLSubscription"] = relationship(
+        back_populates="billing_account"
+    )
+
+
+class SQLSubscription(SQLBase):
+    __tablename__ = "subscriptions"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.SUBSCRIPTION))
+    billing_account_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.billing_accounts.id")
+    )
+    tier: Mapped[str] = mapped_column()
+    billing_account: Mapped["SQLBillingAccount"] = relationship(
+        back_populates="subscription"
+    )
+
+
+class SQLEntitlementsBucket(SQLBase):
+    __tablename__ = "entitlements_buckets"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.ENTITLEMENTS_BUCKET))
+    name: Mapped[str]
+    billing_account_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.billing_accounts.id")
+    )
+    billing_account: Mapped["SQLBillingAccount"] = relationship(
+        back_populates="entitlements_bucket"
+    )
+
+    network_traffic_balance: Mapped[int] = mapped_column(default=0)
+    connection_slot_balance: Mapped[int] = mapped_column(default=0)
+
+
+class SQLUser(SQLBase):
+    __tablename__ = "users"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.USER))
+    name: Mapped[str]
+    email: Mapped[str]
+    principal_account_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.principal_accounts.id")
+    )
+    principal_account: Mapped["SQLPrincipalAccount"] = relationship(
+        back_populates="users"
+    )
+    password: Mapped["SQLUserPassword"] = relationship(
+        uselist=False, back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class SQLUserPassword(SQLBase):
+    __tablename__ = "user_passwords"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.CREDENTIAL))
+    user_id: Mapped[str] = mapped_column(ForeignKey("underleaf.users.id"))
+    password_hash: Mapped[str] = mapped_column()
+    user: Mapped["SQLUser"] = relationship(back_populates="password")
+
+
+class SQLCluster(SQLBase):
+    __tablename__ = "clusters"
+    __table_args__ = {"schema": "underleaf"}
+
+    name: Mapped[str]
+    principal_account_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.principal_accounts.id")
+    )
+    nodes: Mapped[list["SQLNode"]] = relationship(back_populates="cluster")
+
+
+class SQLNode(SQLBase):
+    __tablename__ = "nodes"
+    __table_args__ = {"schema": "underleaf"}
+
+    name: Mapped[str]
+    cluster_id: Mapped[str] = mapped_column(ForeignKey("underleaf.clusters.id"))
+    cluster: Mapped["SQLCluster"] = relationship(back_populates="nodes")
+
+
+class SqlTunnel(SQLBase):
+    __tablename__ = "tunnels"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.TUNNEL))
+    name: Mapped[str]
+    node_id: Mapped[str] = mapped_column(ForeignKey("underleaf.nodes.id"))
+    connections: Mapped[list["SQLConnection"]] = relationship(back_populates="tunnel")
+
+
+class SQLConnection(SQLBase):
+    __tablename__ = "connections"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.CONNECTION))
+    name: Mapped[str]
+    tunnel_id: Mapped[str] = mapped_column(ForeignKey("underleaf.tunnels.id"))
+    tunnel: Mapped["SqlTunnel"] = relationship(back_populates="connections")
+
+
+class SQLUsageEvent(SQLBase):
+    __tablename__ = "usage_events"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.USAGE_EVENT))
+    billing_account_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.billing_accounts.id")
+    )
+    event_type: Mapped[str] = mapped_column()
+    usage_unit: Mapped[str] = mapped_column()
+    usage_amount: Mapped[int] = mapped_column()

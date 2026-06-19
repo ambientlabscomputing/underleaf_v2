@@ -1,0 +1,102 @@
+"""
+service_manager.py — Application-wide singleton factories.
+
+Every repository, lib, and service is constructed exactly once per process
+via @lru_cache and exposed as a FastAPI-compatible Depends() callable.
+
+Usage in a router:
+    from cloud_api.service_manager import get_account_service
+    from cloud_api.service.account_service import AccountService
+
+    @router.post("/signup")
+    async def signup(svc: AccountService = Depends(get_account_service)):
+        ...
+"""
+
+from functools import lru_cache
+
+from cloud_api.lib.auth_lib import AuthLib
+from cloud_api.repository.billing_account_repository import BillingAccountRepository
+from cloud_api.repository.entitlements_bucket_repository import (
+    EntitlementsBucketRepository,
+)
+from cloud_api.repository.principal_account_repository import (
+    PrincipalAccountRepository,
+)
+from cloud_api.repository.subscription_repository import SubscriptionRepository
+from cloud_api.repository.usage_event_repository import UsageEventRepository
+from cloud_api.repository.user_repository import UserRepository
+from cloud_api.service.account_service import AccountService
+from cloud_api.service.auth_service import AuthService
+
+
+# ---------------------------------------------------------------------------
+# Repository singletons
+# All repositories are stateless — they acquire a fresh DB session per call
+# from the connection pool, so sharing a single instance is safe.
+# ---------------------------------------------------------------------------
+
+
+@lru_cache
+def get_user_repo() -> UserRepository:
+    return UserRepository()
+
+
+@lru_cache
+def get_principal_account_repo() -> PrincipalAccountRepository:
+    return PrincipalAccountRepository()
+
+
+@lru_cache
+def get_billing_account_repo() -> BillingAccountRepository:
+    return BillingAccountRepository()
+
+
+@lru_cache
+def get_usage_event_repo() -> UsageEventRepository:
+    return UsageEventRepository()
+
+
+@lru_cache
+def get_subscription_repo() -> SubscriptionRepository:
+    return SubscriptionRepository()
+
+
+@lru_cache
+def get_entitlements_bucket_repo() -> EntitlementsBucketRepository:
+    return EntitlementsBucketRepository()
+
+
+# ---------------------------------------------------------------------------
+# Lib singletons
+# ---------------------------------------------------------------------------
+
+
+@lru_cache
+def get_auth_lib() -> AuthLib:
+    """AuthLib is expensive to construct (RSA cert load/generate). One instance."""
+    return AuthLib(get_user_repo())
+
+
+# ---------------------------------------------------------------------------
+# Service singletons
+# ---------------------------------------------------------------------------
+
+
+@lru_cache
+def get_account_service() -> AccountService:
+    return AccountService(
+        principal_account_repo=get_principal_account_repo(),
+        billing_account_repo=get_billing_account_repo(),
+        usage_event_repo=get_usage_event_repo(),
+        user_repo=get_user_repo(),
+        subscription_repo=get_subscription_repo(),
+    )
+
+
+@lru_cache
+def get_auth_service() -> AuthService:
+    return AuthService(
+        auth_lib=get_auth_lib(),
+        user_repo=get_user_repo(),
+    )

@@ -1,0 +1,355 @@
+from pydantic import BaseModel, Field
+from cloud_api.models.base import Base, generate_id, IDPrefix
+from enum import StrEnum
+
+
+class PrincipalAccount(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.PRINCIPAL_ACCOUNT),
+        description="Unique identifier for the principal account",
+    )
+    name: str = Field(..., description="Name of the principal account")
+
+
+class CreatePrincipalAccountRequest(BaseModel):
+    name: str = Field(..., description="Name of the principal account")
+
+
+class PatchPrincipalAccountRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the principal account")
+
+
+class QueryPrincipalAccountRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the principal account")
+
+
+class User(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.USER),
+        description="Unique identifier for the user",
+    )
+    name: str = Field(..., description="Name of the user")
+    email: str = Field(..., description="Email address of the user")
+    principal_account_id: str = Field(
+        ..., description="ID of the associated principal account"
+    )
+
+
+class CreateUserRequest(BaseModel):
+    name: str = Field(..., description="Name of the user")
+    password: str = Field(..., description="Password for the user")
+    email: str = Field(..., description="Email address of the user")
+
+
+class PatchUserRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the user")
+    email: str | None = Field(None, description="Email address of the user")
+
+
+class QueryUserRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the user")
+    email: str | None = Field(None, description="Email address of the user")
+
+
+class UserPassword(Base):
+    user_id: str = Field(..., description="ID of the associated user")
+    password_hash: str = Field(..., description="Hashed password for the user")
+
+
+class InternalUser(User):
+    user_password: UserPassword = Field(
+        ..., description="Password information for the user"
+    )
+
+
+# Cluster and Node IDs don't get generators because they are tracked by the local clusters
+# themselves and will come with a canonical ID.
+class Cluster(Base):
+    id: str = Field(
+        ...,
+        description="Unique identifier for the cluster",
+    )
+    name: str = Field(..., description="Name of the cluster")
+    principal_account_id: str = Field(
+        ..., description="ID of the associated principal account"
+    )
+
+
+class CreateClusterRequest(BaseModel):
+    id: str = Field(..., description="Unique identifier for the cluster")
+    name: str = Field(..., description="Name of the cluster")
+    principal_account_id: str = Field(
+        ..., description="ID of the associated principal account"
+    )
+
+
+class PatchClusterRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the cluster")
+
+
+class QueryClusterRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the cluster")
+    principal_account_id: str | None = Field(
+        None, description="ID of the associated principal account"
+    )
+
+
+class Node(Base):
+    id: str = Field(
+        ...,
+        description="Unique identifier for the node",
+    )
+    name: str = Field(..., description="Name of the node")
+    cluster_id: str = Field(..., description="ID of the associated cluster")
+
+
+class CreateNodeRequest(BaseModel):
+    id: str = Field(..., description="Unique identifier for the node")
+    name: str = Field(..., description="Name of the node")
+    cluster_id: str = Field(..., description="ID of the associated cluster")
+
+
+class PatchNodeRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the node")
+
+
+class QueryNodeRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the node")
+    cluster_id: str | None = Field(None, description="ID of the associated cluster")
+
+
+class Tunnel(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.TUNNEL),
+        description="Unique identifier for the tunnel",
+    )
+    name: str = Field(..., description="Name of the tunnel")
+    node_id: str = Field(..., description="ID of the associated node")
+
+
+class CreateTunnelRequest(BaseModel):
+    name: str = Field(..., description="Name of the tunnel")
+    node_id: str = Field(..., description="ID of the associated node")
+
+
+class PatchTunnelRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the tunnel")
+
+
+class QueryTunnelRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the tunnel")
+    node_id: str | None = Field(None, description="ID of the associated node")
+
+
+class Connection(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.CONNECTION),
+        description="Unique identifier for the connection",
+    )
+    name: str = Field(..., description="Name of the connection")
+    tunnel_id: str = Field(..., description="ID of the associated tunnel")
+
+
+class CreateConnectionRequest(BaseModel):
+    name: str = Field(..., description="Name of the connection")
+    tunnel_id: str = Field(..., description="ID of the associated tunnel")
+
+
+class PatchConnectionRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the connection")
+
+
+class QueryConnectionRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the connection")
+    tunnel_id: str | None = Field(None, description="ID of the associated tunnel")
+
+
+class BillingAccount(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.BILLING_ACCOUNT),
+        description="Unique identifier for the billing account",
+    )
+    name: str = Field(..., description="Name of the billing account")
+    principal_account_id: str = Field(
+        ..., description="ID of the associated principal account"
+    )
+    stripe_customer_id: str | None = Field(
+        default=None,
+        description="Stripe customer ID associated with the billing account",
+    )
+    stripe_data: dict = Field(
+        default={}, description="Stripe-related data for the billing account"
+    )
+
+
+class CreateBillingAccountRequest(BaseModel):
+    name: str = Field(..., description="Name of the billing account")
+    principal_account_id: str = Field(
+        ..., description="ID of the associated principal account"
+    )
+
+
+class PatchBillingAccountRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the billing account")
+    stripe_customer_id: str | None = Field(
+        None, description="Stripe customer ID associated with the billing account"
+    )
+    stripe_data: dict | None = Field(
+        None, description="Stripe-related data for the billing account"
+    )
+
+
+class QueryBillingAccountRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the billing account")
+    principal_account_id: str | None = Field(
+        None, description="ID of the associated principal account"
+    )
+
+
+class EntitlementsBucket(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.ENTITLEMENTS_BUCKET),
+        description="Unique identifier for the entitlements bucket",
+    )
+    name: str = Field(..., description="Name of the entitlements bucket")
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+
+    network_traffic_balance: int = Field(
+        default=0,
+        description="Available balance for network traffic in the entitlements bucket in bytes",
+    )
+    connection_slot_balance: int = Field(
+        default=0,
+        description="Available balance for connection slots in the entitlements bucket",
+    )
+
+
+class CreateEntitlementsBucketRequest(BaseModel):
+    name: str = Field(..., description="Name of the entitlements bucket")
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+
+
+class PatchEntitlementsBucketRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the entitlements bucket")
+    network_traffic_balance: int | None = Field(
+        None, description="Available balance for network traffic in bytes"
+    )
+    connection_slot_balance: int | None = Field(
+        None, description="Available balance for connection slots"
+    )
+
+
+class QueryEntitlementsBucketRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the entitlements bucket")
+    billing_account_id: str | None = Field(
+        None, description="ID of the associated billing account"
+    )
+
+
+class UsageEventType(StrEnum):
+    DATA_USAGE = "data_usage"
+    CONNECTION_SLOT = "connection_slot"
+
+
+class UsageUnits(StrEnum):
+    BYTES = "bytes"
+    CONNECTION_SLOTS = "connection_slots"
+
+
+class UsageEvent(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.USAGE_EVENT),
+        description="Unique identifier for the usage event",
+    )
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+    event_type: UsageEventType = Field(..., description="Type of the usage event")
+    usage_unit: UsageUnits = Field(..., description="Units of usage for the event")
+    usage_amount: int = Field(..., description="Amount of usage for the event")
+
+
+class CreateUsageEventRequest(BaseModel):
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+    event_type: UsageEventType = Field(..., description="Type of the usage event")
+    usage_unit: UsageUnits = Field(..., description="Units of usage for the event")
+    usage_amount: int = Field(..., description="Amount of usage for the event")
+
+
+class QueryUsageEventRequest(BaseModel):
+    billing_account_id: str | None = Field(
+        None, description="ID of the associated billing account"
+    )
+    event_type: UsageEventType | None = Field(
+        None, description="Type of the usage event"
+    )
+    usage_unit: UsageUnits | None = Field(
+        None, description="Units of usage for the event"
+    )
+
+
+class SubscriptionTier(StrEnum):
+    FREE = "free"
+    BUILDER = "builder"
+    PRO = "pro"
+
+
+class Subscription(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.SUBSCRIPTION),
+        description="Unique identifier for the subscription",
+    )
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+    tier: SubscriptionTier = Field(..., description="Subscription tier")
+
+
+class CreateSubscriptionRequest(BaseModel):
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+    tier: SubscriptionTier = Field(..., description="Subscription tier")
+
+
+class PatchSubscriptionRequest(BaseModel):
+    tier: SubscriptionTier | None = Field(None, description="Subscription tier")
+
+
+class QuerySubscriptionRequest(BaseModel):
+    billing_account_id: str | None = Field(
+        None, description="ID of the associated billing account"
+    )
+    tier: SubscriptionTier | None = Field(None, description="Subscription tier")
+
+
+class UserSignUpResponse(BaseModel):
+    user: User = Field(..., description="The created user")
+    principal_account: PrincipalAccount = Field(
+        ..., description="The created principal account"
+    )
+    billing_account: BillingAccount = Field(
+        ..., description="The created billing account"
+    )
+    subscription: Subscription = Field(..., description="The created subscription")
+
+
+class SignInRequest(BaseModel):
+    email: str = Field(..., description="Email address of the user")
+    password: str = Field(..., description="Password for the user")
+
+
+class SignInResponse(BaseModel):
+    user: User = Field(..., description="The authenticated user")
+
+
+class TokenResponse(BaseModel):
+    access_token: str = Field(..., description="Short-lived JWT access token")
+    refresh_token: str = Field(..., description="Long-lived JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type")
