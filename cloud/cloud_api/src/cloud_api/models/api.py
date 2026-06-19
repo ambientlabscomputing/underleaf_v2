@@ -78,8 +78,8 @@ class Cluster(Base):
 class CreateClusterRequest(BaseModel):
     id: str = Field(..., description="Unique identifier for the cluster")
     name: str = Field(..., description="Name of the cluster")
-    principal_account_id: str = Field(
-        ..., description="ID of the associated principal account"
+    principal_account_id: str | None = Field(
+        None, description="Principal account ID — injected server-side, not required in request body"
     )
 
 
@@ -92,6 +92,11 @@ class QueryClusterRequest(BaseModel):
     principal_account_id: str | None = Field(
         None, description="ID of the associated principal account"
     )
+
+
+class ListClusterResponse(BaseModel):
+    items: list["Cluster"] = Field(..., description="List of clusters")
+    total: int = Field(..., description="Total number of matching clusters")
 
 
 class Node(Base):

@@ -17,9 +17,11 @@ from functools import lru_cache
 
 from cloud_api.lib.auth_lib import AuthLib
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
+from cloud_api.repository.cluster_repository import ClusterRepository
 from cloud_api.repository.entitlements_bucket_repository import (
     EntitlementsBucketRepository,
 )
+from cloud_api.repository.node_repository import NodeRepository
 from cloud_api.repository.principal_account_repository import (
     PrincipalAccountRepository,
 )
@@ -28,6 +30,7 @@ from cloud_api.repository.usage_event_repository import UsageEventRepository
 from cloud_api.repository.user_repository import UserRepository
 from cloud_api.service.account_service import AccountService
 from cloud_api.service.auth_service import AuthService
+from cloud_api.service.cluster_service import ClusterService
 
 
 # ---------------------------------------------------------------------------
@@ -99,4 +102,22 @@ def get_auth_service() -> AuthService:
     return AuthService(
         auth_lib=get_auth_lib(),
         user_repo=get_user_repo(),
+    )
+
+
+@lru_cache
+def get_cluster_repo() -> ClusterRepository:
+    return ClusterRepository()
+
+
+@lru_cache
+def get_node_repo() -> NodeRepository:
+    return NodeRepository()
+
+
+@lru_cache
+def get_cluster_service() -> ClusterService:
+    return ClusterService(
+        cluster_repo=get_cluster_repo(),
+        node_repo=get_node_repo(),
     )

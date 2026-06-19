@@ -29,7 +29,7 @@ class InvalidTokenError(Exception):
 
 class JWTClaims(BaseModel):
     sub: str = Field(..., description="Subject of the token, typically the user ID")
-    azp: str | None = Field(None, description="Authorized party — the principal account ID (access tokens only)")
+    azp: str | None = Field(default=None, description="Authorized party — the principal account ID (access tokens only)")
     exp: int = Field(..., description="Expiration time as a Unix timestamp")
     iat: int = Field(..., description="Issued at time as a Unix timestamp")
     iss: str = Field(..., description="Issuer of the token")
