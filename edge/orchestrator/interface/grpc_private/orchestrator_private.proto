@@ -10,6 +10,8 @@ service OrchestratorPrivate {
   rpc SqlQuery(SqlQueryRequest) returns (SqlQueryResponse);
   rpc TriggerIngest(TriggerIngestRequest) returns (TriggerIngestResponse);
   rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
+  rpc InitiateCloudRegistration(InitiateCloudRegistrationRequest) returns (InitiateCloudRegistrationResponse);
+  rpc GetCloudRegistrationStatus(GetCloudRegistrationStatusRequest) returns (GetCloudRegistrationStatusResponse);
 }
 
 message GetNodesRequest {
@@ -62,4 +64,23 @@ message ListContainersRequest {}
 
 message ListContainersResponse {
   repeated Container containers = 1;
+}
+
+message InitiateCloudRegistrationRequest {
+  string cluster_name = 1;
+  string cluster_id   = 2;
+}
+
+message InitiateCloudRegistrationResponse {
+  string user_code                  = 1;
+  string verification_uri_complete  = 2;
+  int32  expires_in                 = 3;
+  int32  interval                   = 4;
+}
+
+message GetCloudRegistrationStatusRequest {}
+
+message GetCloudRegistrationStatusResponse {
+  string status     = 1;
+  string cluster_id = 2;
 }

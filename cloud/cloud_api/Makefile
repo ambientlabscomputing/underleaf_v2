@@ -17,4 +17,4 @@ db-down:
 env-up: db-up
 
 run:
-	python -m cloud_api.main
+	PYTHONPATH=src .venv/bin/python -m cloud_api.main

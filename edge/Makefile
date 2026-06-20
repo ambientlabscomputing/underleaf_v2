@@ -78,14 +78,13 @@ dev-clean:
 ui-run:
 	cd orchestrator_ui && npm run dev &
 
-run: stop install-dev ui-run
-	orch-server run &
-	ufagentd run &
+## run: Run all services via overmind (ui→5183)
+run: stop install-dev
+	overmind start
 
+## stop: Stop all overmind-managed services
 stop:
-	-pkill -f underleaf
-	-pkill orch-server
-	-pkill ufagentd
+	-overmind kill
 
 clean-db:
 	rm -f orchestrator.db

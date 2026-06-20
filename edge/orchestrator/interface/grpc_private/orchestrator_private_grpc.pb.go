@@ -19,10 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrchestratorPrivate_GetNodes_FullMethodName       = "/orchestrator.private.v1.OrchestratorPrivate/GetNodes"
-	OrchestratorPrivate_SqlQuery_FullMethodName       = "/orchestrator.private.v1.OrchestratorPrivate/SqlQuery"
-	OrchestratorPrivate_TriggerIngest_FullMethodName  = "/orchestrator.private.v1.OrchestratorPrivate/TriggerIngest"
-	OrchestratorPrivate_ListContainers_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/ListContainers"
+	OrchestratorPrivate_GetNodes_FullMethodName                   = "/orchestrator.private.v1.OrchestratorPrivate/GetNodes"
+	OrchestratorPrivate_SqlQuery_FullMethodName                   = "/orchestrator.private.v1.OrchestratorPrivate/SqlQuery"
+	OrchestratorPrivate_TriggerIngest_FullMethodName              = "/orchestrator.private.v1.OrchestratorPrivate/TriggerIngest"
+	OrchestratorPrivate_ListContainers_FullMethodName             = "/orchestrator.private.v1.OrchestratorPrivate/ListContainers"
+	OrchestratorPrivate_InitiateCloudRegistration_FullMethodName  = "/orchestrator.private.v1.OrchestratorPrivate/InitiateCloudRegistration"
+	OrchestratorPrivate_GetCloudRegistrationStatus_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/GetCloudRegistrationStatus"
 )
 
 // OrchestratorPrivateClient is the client API for OrchestratorPrivate service.
@@ -35,6 +37,8 @@ type OrchestratorPrivateClient interface {
 	SqlQuery(ctx context.Context, in *SqlQueryRequest, opts ...grpc.CallOption) (*SqlQueryResponse, error)
 	TriggerIngest(ctx context.Context, in *TriggerIngestRequest, opts ...grpc.CallOption) (*TriggerIngestResponse, error)
 	ListContainers(ctx context.Context, in *ListContainersRequest, opts ...grpc.CallOption) (*ListContainersResponse, error)
+	InitiateCloudRegistration(ctx context.Context, in *InitiateCloudRegistrationRequest, opts ...grpc.CallOption) (*InitiateCloudRegistrationResponse, error)
+	GetCloudRegistrationStatus(ctx context.Context, in *GetCloudRegistrationStatusRequest, opts ...grpc.CallOption) (*GetCloudRegistrationStatusResponse, error)
 }
 
 type orchestratorPrivateClient struct {
@@ -85,6 +89,26 @@ func (c *orchestratorPrivateClient) ListContainers(ctx context.Context, in *List
 	return out, nil
 }
 
+func (c *orchestratorPrivateClient) InitiateCloudRegistration(ctx context.Context, in *InitiateCloudRegistrationRequest, opts ...grpc.CallOption) (*InitiateCloudRegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitiateCloudRegistrationResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_InitiateCloudRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orchestratorPrivateClient) GetCloudRegistrationStatus(ctx context.Context, in *GetCloudRegistrationStatusRequest, opts ...grpc.CallOption) (*GetCloudRegistrationStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCloudRegistrationStatusResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_GetCloudRegistrationStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrchestratorPrivateServer is the server API for OrchestratorPrivate service.
 // All implementations must embed UnimplementedOrchestratorPrivateServer
 // for forward compatibility.
@@ -95,6 +119,8 @@ type OrchestratorPrivateServer interface {
 	SqlQuery(context.Context, *SqlQueryRequest) (*SqlQueryResponse, error)
 	TriggerIngest(context.Context, *TriggerIngestRequest) (*TriggerIngestResponse, error)
 	ListContainers(context.Context, *ListContainersRequest) (*ListContainersResponse, error)
+	InitiateCloudRegistration(context.Context, *InitiateCloudRegistrationRequest) (*InitiateCloudRegistrationResponse, error)
+	GetCloudRegistrationStatus(context.Context, *GetCloudRegistrationStatusRequest) (*GetCloudRegistrationStatusResponse, error)
 	mustEmbedUnimplementedOrchestratorPrivateServer()
 }
 
@@ -116,6 +142,12 @@ func (UnimplementedOrchestratorPrivateServer) TriggerIngest(context.Context, *Tr
 }
 func (UnimplementedOrchestratorPrivateServer) ListContainers(context.Context, *ListContainersRequest) (*ListContainersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListContainers not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) InitiateCloudRegistration(context.Context, *InitiateCloudRegistrationRequest) (*InitiateCloudRegistrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitiateCloudRegistration not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) GetCloudRegistrationStatus(context.Context, *GetCloudRegistrationStatusRequest) (*GetCloudRegistrationStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCloudRegistrationStatus not implemented")
 }
 func (UnimplementedOrchestratorPrivateServer) mustEmbedUnimplementedOrchestratorPrivateServer() {}
 func (UnimplementedOrchestratorPrivateServer) testEmbeddedByValue()                             {}
@@ -210,6 +242,42 @@ func _OrchestratorPrivate_ListContainers_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrchestratorPrivate_InitiateCloudRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitiateCloudRegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).InitiateCloudRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_InitiateCloudRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).InitiateCloudRegistration(ctx, req.(*InitiateCloudRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrchestratorPrivate_GetCloudRegistrationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCloudRegistrationStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).GetCloudRegistrationStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_GetCloudRegistrationStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).GetCloudRegistrationStatus(ctx, req.(*GetCloudRegistrationStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrchestratorPrivate_ServiceDesc is the grpc.ServiceDesc for OrchestratorPrivate service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +300,14 @@ var OrchestratorPrivate_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListContainers",
 			Handler:    _OrchestratorPrivate_ListContainers_Handler,
+		},
+		{
+			MethodName: "InitiateCloudRegistration",
+			Handler:    _OrchestratorPrivate_InitiateCloudRegistration_Handler,
+		},
+		{
+			MethodName: "GetCloudRegistrationStatus",
+			Handler:    _OrchestratorPrivate_GetCloudRegistrationStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

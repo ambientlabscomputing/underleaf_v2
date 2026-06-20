@@ -573,6 +573,214 @@ func (x *ListContainersResponse) GetContainers() []*Container {
 	return nil
 }
 
+type InitiateCloudRegistrationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClusterName   string                 `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	ClusterId     string                 `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InitiateCloudRegistrationRequest) Reset() {
+	*x = InitiateCloudRegistrationRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitiateCloudRegistrationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitiateCloudRegistrationRequest) ProtoMessage() {}
+
+func (x *InitiateCloudRegistrationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitiateCloudRegistrationRequest.ProtoReflect.Descriptor instead.
+func (*InitiateCloudRegistrationRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *InitiateCloudRegistrationRequest) GetClusterName() string {
+	if x != nil {
+		return x.ClusterName
+	}
+	return ""
+}
+
+func (x *InitiateCloudRegistrationRequest) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
+type InitiateCloudRegistrationResponse struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	UserCode                string                 `protobuf:"bytes,1,opt,name=user_code,json=userCode,proto3" json:"user_code,omitempty"`
+	VerificationUriComplete string                 `protobuf:"bytes,2,opt,name=verification_uri_complete,json=verificationUriComplete,proto3" json:"verification_uri_complete,omitempty"`
+	ExpiresIn               int32                  `protobuf:"varint,3,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	Interval                int32                  `protobuf:"varint,4,opt,name=interval,proto3" json:"interval,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *InitiateCloudRegistrationResponse) Reset() {
+	*x = InitiateCloudRegistrationResponse{}
+	mi := &file_orchestrator_private_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitiateCloudRegistrationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitiateCloudRegistrationResponse) ProtoMessage() {}
+
+func (x *InitiateCloudRegistrationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitiateCloudRegistrationResponse.ProtoReflect.Descriptor instead.
+func (*InitiateCloudRegistrationResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *InitiateCloudRegistrationResponse) GetUserCode() string {
+	if x != nil {
+		return x.UserCode
+	}
+	return ""
+}
+
+func (x *InitiateCloudRegistrationResponse) GetVerificationUriComplete() string {
+	if x != nil {
+		return x.VerificationUriComplete
+	}
+	return ""
+}
+
+func (x *InitiateCloudRegistrationResponse) GetExpiresIn() int32 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
+func (x *InitiateCloudRegistrationResponse) GetInterval() int32 {
+	if x != nil {
+		return x.Interval
+	}
+	return 0
+}
+
+type GetCloudRegistrationStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCloudRegistrationStatusRequest) Reset() {
+	*x = GetCloudRegistrationStatusRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCloudRegistrationStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCloudRegistrationStatusRequest) ProtoMessage() {}
+
+func (x *GetCloudRegistrationStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCloudRegistrationStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetCloudRegistrationStatusRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{12}
+}
+
+type GetCloudRegistrationStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	ClusterId     string                 `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCloudRegistrationStatusResponse) Reset() {
+	*x = GetCloudRegistrationStatusResponse{}
+	mi := &file_orchestrator_private_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCloudRegistrationStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCloudRegistrationStatusResponse) ProtoMessage() {}
+
+func (x *GetCloudRegistrationStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCloudRegistrationStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetCloudRegistrationStatusResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetCloudRegistrationStatusResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetCloudRegistrationStatusResponse) GetClusterId() string {
+	if x != nil {
+		return x.ClusterId
+	}
+	return ""
+}
+
 var File_orchestrator_private_proto protoreflect.FileDescriptor
 
 const file_orchestrator_private_proto_rawDesc = "" +
@@ -621,12 +829,29 @@ const file_orchestrator_private_proto_rawDesc = "" +
 	"\x16ListContainersResponse\x12B\n" +
 	"\n" +
 	"containers\x18\x01 \x03(\v2\".orchestrator.private.v1.ContainerR\n" +
-	"containers2\xba\x03\n" +
+	"containers\"d\n" +
+	" InitiateCloudRegistrationRequest\x12!\n" +
+	"\fcluster_name\x18\x01 \x01(\tR\vclusterName\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\x02 \x01(\tR\tclusterId\"\xb7\x01\n" +
+	"!InitiateCloudRegistrationResponse\x12\x1b\n" +
+	"\tuser_code\x18\x01 \x01(\tR\buserCode\x12:\n" +
+	"\x19verification_uri_complete\x18\x02 \x01(\tR\x17verificationUriComplete\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x03 \x01(\x05R\texpiresIn\x12\x1a\n" +
+	"\binterval\x18\x04 \x01(\x05R\binterval\"#\n" +
+	"!GetCloudRegistrationStatusRequest\"[\n" +
+	"\"GetCloudRegistrationStatusResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\x02 \x01(\tR\tclusterId2\xe7\x05\n" +
 	"\x13OrchestratorPrivate\x12_\n" +
 	"\bGetNodes\x12(.orchestrator.private.v1.GetNodesRequest\x1a).orchestrator.private.v1.GetNodesResponse\x12_\n" +
 	"\bSqlQuery\x12(.orchestrator.private.v1.SqlQueryRequest\x1a).orchestrator.private.v1.SqlQueryResponse\x12n\n" +
 	"\rTriggerIngest\x12-.orchestrator.private.v1.TriggerIngestRequest\x1a..orchestrator.private.v1.TriggerIngestResponse\x12q\n" +
-	"\x0eListContainers\x12..orchestrator.private.v1.ListContainersRequest\x1a/.orchestrator.private.v1.ListContainersResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
+	"\x0eListContainers\x12..orchestrator.private.v1.ListContainersRequest\x1a/.orchestrator.private.v1.ListContainersResponse\x12\x92\x01\n" +
+	"\x19InitiateCloudRegistration\x129.orchestrator.private.v1.InitiateCloudRegistrationRequest\x1a:.orchestrator.private.v1.InitiateCloudRegistrationResponse\x12\x95\x01\n" +
+	"\x1aGetCloudRegistrationStatus\x12:.orchestrator.private.v1.GetCloudRegistrationStatusRequest\x1a;.orchestrator.private.v1.GetCloudRegistrationStatusResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
 
 var (
 	file_orchestrator_private_proto_rawDescOnce sync.Once
@@ -640,36 +865,44 @@ func file_orchestrator_private_proto_rawDescGZIP() []byte {
 	return file_orchestrator_private_proto_rawDescData
 }
 
-var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_orchestrator_private_proto_goTypes = []any{
-	(*GetNodesRequest)(nil),        // 0: orchestrator.private.v1.GetNodesRequest
-	(*GetNodesResponse)(nil),       // 1: orchestrator.private.v1.GetNodesResponse
-	(*Node)(nil),                   // 2: orchestrator.private.v1.Node
-	(*SqlQueryRequest)(nil),        // 3: orchestrator.private.v1.SqlQueryRequest
-	(*SqlQueryResponse)(nil),       // 4: orchestrator.private.v1.SqlQueryResponse
-	(*TriggerIngestRequest)(nil),   // 5: orchestrator.private.v1.TriggerIngestRequest
-	(*TriggerIngestResponse)(nil),  // 6: orchestrator.private.v1.TriggerIngestResponse
-	(*Container)(nil),              // 7: orchestrator.private.v1.Container
-	(*ListContainersRequest)(nil),  // 8: orchestrator.private.v1.ListContainersRequest
-	(*ListContainersResponse)(nil), // 9: orchestrator.private.v1.ListContainersResponse
+	(*GetNodesRequest)(nil),                    // 0: orchestrator.private.v1.GetNodesRequest
+	(*GetNodesResponse)(nil),                   // 1: orchestrator.private.v1.GetNodesResponse
+	(*Node)(nil),                               // 2: orchestrator.private.v1.Node
+	(*SqlQueryRequest)(nil),                    // 3: orchestrator.private.v1.SqlQueryRequest
+	(*SqlQueryResponse)(nil),                   // 4: orchestrator.private.v1.SqlQueryResponse
+	(*TriggerIngestRequest)(nil),               // 5: orchestrator.private.v1.TriggerIngestRequest
+	(*TriggerIngestResponse)(nil),              // 6: orchestrator.private.v1.TriggerIngestResponse
+	(*Container)(nil),                          // 7: orchestrator.private.v1.Container
+	(*ListContainersRequest)(nil),              // 8: orchestrator.private.v1.ListContainersRequest
+	(*ListContainersResponse)(nil),             // 9: orchestrator.private.v1.ListContainersResponse
+	(*InitiateCloudRegistrationRequest)(nil),   // 10: orchestrator.private.v1.InitiateCloudRegistrationRequest
+	(*InitiateCloudRegistrationResponse)(nil),  // 11: orchestrator.private.v1.InitiateCloudRegistrationResponse
+	(*GetCloudRegistrationStatusRequest)(nil),  // 12: orchestrator.private.v1.GetCloudRegistrationStatusRequest
+	(*GetCloudRegistrationStatusResponse)(nil), // 13: orchestrator.private.v1.GetCloudRegistrationStatusResponse
 }
 var file_orchestrator_private_proto_depIdxs = []int32{
-	2, // 0: orchestrator.private.v1.GetNodesResponse.results:type_name -> orchestrator.private.v1.Node
-	0, // 1: orchestrator.private.v1.GetNodesResponse.query:type_name -> orchestrator.private.v1.GetNodesRequest
-	7, // 2: orchestrator.private.v1.ListContainersResponse.containers:type_name -> orchestrator.private.v1.Container
-	0, // 3: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
-	3, // 4: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
-	5, // 5: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
-	8, // 6: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
-	1, // 7: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
-	4, // 8: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
-	6, // 9: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
-	9, // 10: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2,  // 0: orchestrator.private.v1.GetNodesResponse.results:type_name -> orchestrator.private.v1.Node
+	0,  // 1: orchestrator.private.v1.GetNodesResponse.query:type_name -> orchestrator.private.v1.GetNodesRequest
+	7,  // 2: orchestrator.private.v1.ListContainersResponse.containers:type_name -> orchestrator.private.v1.Container
+	0,  // 3: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
+	3,  // 4: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
+	5,  // 5: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
+	8,  // 6: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
+	10, // 7: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:input_type -> orchestrator.private.v1.InitiateCloudRegistrationRequest
+	12, // 8: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:input_type -> orchestrator.private.v1.GetCloudRegistrationStatusRequest
+	1,  // 9: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
+	4,  // 10: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
+	6,  // 11: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
+	9,  // 12: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
+	11, // 13: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:output_type -> orchestrator.private.v1.InitiateCloudRegistrationResponse
+	13, // 14: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:output_type -> orchestrator.private.v1.GetCloudRegistrationStatusResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_orchestrator_private_proto_init() }
@@ -684,7 +917,7 @@ func file_orchestrator_private_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orchestrator_private_proto_rawDesc), len(file_orchestrator_private_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

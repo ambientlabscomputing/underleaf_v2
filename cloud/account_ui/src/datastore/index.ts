@@ -40,3 +40,9 @@ export {
   useUpdateSubscription,
   useDeleteSubscription,
 } from './subscriptions';
+
+export {
+  registrationKeys,
+  useCandidate,
+  useApproveRegistration,
+} from './registration';

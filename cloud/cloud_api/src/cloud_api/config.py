@@ -110,6 +110,10 @@ class AppConfig(BaseModel):
         default=True,
         description="Whether to enable auto-reloading of the API server on code changes (for development)",
     )
+    account_ui_base_url: str = Field(
+        default="http://localhost:5173",
+        description="Base URL for the account UI — used to build the device-auth verification_uri",
+    )
     db: DBConfig = Field(
         default_factory=DBConfig, description="Database configuration settings"
     )

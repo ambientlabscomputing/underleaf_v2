@@ -156,3 +156,28 @@ class SQLUsageEvent(SQLBase):
     event_type: Mapped[str] = mapped_column()
     usage_unit: Mapped[str] = mapped_column()
     usage_amount: Mapped[int] = mapped_column()
+
+
+class SQLClusterCandidate(SQLBase):
+    __tablename__ = "cluster_candidates"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.CANDIDATE))
+    # user-facing short code carried in the verification URL
+    user_code: Mapped[str] = mapped_column(unique=True)
+    # SHA-256 hex digest of the plaintext device_code (never stored in clear)
+    device_code_hash: Mapped[str] = mapped_column(unique=True)
+    status: Mapped[str] = mapped_column(default="pending")  # pending|approved|expired|consumed
+    proposed_cluster_name: Mapped[str]
+    proposed_cluster_id: Mapped[str]
+    # filled in when a user approves the request
+    principal_account_id: Mapped[Optional[str]] = mapped_column(nullable=True)
+    cluster_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("underleaf.clusters.id"), nullable=True
+    )
+    # one-time token used by orch-server to request a signed cert
+    one_time_token_hash: Mapped[Optional[str]] = mapped_column(nullable=True)
+    one_time_token_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    device_code_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    poll_interval: Mapped[int] = mapped_column(default=5)
+    last_polled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

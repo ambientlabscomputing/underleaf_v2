@@ -110,3 +110,26 @@ func (s *OrchestratorGRPCPrivateServer) ListContainers(_ context.Context, _ *Lis
 	}
 	return resp, nil
 }
+
+// InitiateCloudRegistration calls cloud-api to start the device-auth flow.
+func (s *OrchestratorGRPCPrivateServer) InitiateCloudRegistration(ctx context.Context, req *InitiateCloudRegistrationRequest) (*InitiateCloudRegistrationResponse, error) {
+	state, err := s.Service.Registration().InitiateRegistration(ctx, req.ClusterName, req.ClusterId)
+	if err != nil {
+		return nil, err
+	}
+	return &InitiateCloudRegistrationResponse{
+		UserCode:                state.UserCode,
+		VerificationUriComplete: state.VerificationURIComplete,
+		ExpiresIn:               int32(state.ExpiresIn),
+		Interval:                int32(state.Interval),
+	}, nil
+}
+
+// GetCloudRegistrationStatus returns the current registration status.
+func (s *OrchestratorGRPCPrivateServer) GetCloudRegistrationStatus(_ context.Context, _ *GetCloudRegistrationStatusRequest) (*GetCloudRegistrationStatusResponse, error) {
+	status, err := s.Service.Registration().GetStatus()
+	if err != nil {
+		return nil, err
+	}
+	return &GetCloudRegistrationStatusResponse{Status: status}, nil
+}

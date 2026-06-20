@@ -18,6 +18,7 @@ class IDPrefix(StrEnum):
     USAGE_EVENT = "usage"
     CREDIT_EVENT = "credit"
     SUBSCRIPTION = "subscription"
+    CANDIDATE = "candidate"
 
 
 def generate_id(prefix: IDPrefix) -> str:

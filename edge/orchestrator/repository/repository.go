@@ -16,8 +16,9 @@ type Repository struct {
 	Migrator *migrator.Migrator
 
 	// Add other repositories here
-	Nodes      *NodeRepository
-	Containers *ContainerRepository
+	Nodes        *NodeRepository
+	Containers   *ContainerRepository
+	Registration *RegistrationRepository
 }
 
 func NewRepository() (*Repository, error) {
@@ -28,11 +29,13 @@ func NewRepository() (*Repository, error) {
 	}
 	nodeRepo := NewNodeRepository(db)
 	containerRepo := NewContainerRepository(db)
+	registrationRepo := NewRegistrationRepository(db)
 	return &Repository{
-		db:         db,
-		Migrator:   migrator.NewMigrator(db),
-		Nodes:      nodeRepo,
-		Containers: containerRepo,
+		db:           db,
+		Migrator:     migrator.NewMigrator(db),
+		Nodes:        nodeRepo,
+		Containers:   containerRepo,
+		Registration: registrationRepo,
 	}, nil
 }
 

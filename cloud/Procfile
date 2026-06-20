@@ -1,0 +1,5 @@
+accounts: cd account_ui && npm run dev
+cockpit:  cd cockpit_ui && npm run dev
+api:      cd cloud_api && PYTHONPATH=src .venv/bin/python -m cloud_api.main
+# worker is not yet implemented — uncomment when conn_worker/cmd/main.go is real
+# worker:   cd conn_worker && make run

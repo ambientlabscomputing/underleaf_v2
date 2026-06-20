@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AppTextField, Box, Button, Paper, Typography, Alert, CircularProgress, Link } from '../components';
 
@@ -8,6 +8,7 @@ import { AppTextField, Box, Button, Paper, Typography, Alert, CircularProgress, 
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +20,8 @@ export function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/billing-accounts', { replace: true });
+      const from = (location.state as { from?: Location })?.from?.pathname ?? '/billing-accounts';
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

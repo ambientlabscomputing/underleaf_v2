@@ -35,6 +35,7 @@ from cloud_api.service.auth_service import AuthService
 from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
 from cloud_api.service.connection_service import ConnectionService
+from cloud_api.service.registration_service import RegistrationService
 from cloud_api.service.subscription_service import SubscriptionService
 from cloud_api.service.tunnel_service import TunnelService
 
@@ -157,3 +158,30 @@ def get_billing_account_service() -> BillingAccountService:
 @lru_cache
 def get_subscription_service() -> SubscriptionService:
     return SubscriptionService(subscription_repo=get_subscription_repo())
+
+
+@lru_cache
+def get_registration_repo():
+    from cloud_api.repository.registration_repository import RegistrationRepository
+    return RegistrationRepository()
+
+
+@lru_cache
+def get_cert_lib():
+    from cloud_api.lib.cert_lib import CertLib
+    from cloud_api import app_config
+    if not app_config:
+        raise RuntimeError("App config not loaded")
+    return CertLib(
+        cert_path=app_config.oauth.root_ca_cert_path,
+        key_path=app_config.oauth.private_key_path,
+    )
+
+
+@lru_cache
+def get_registration_service() -> RegistrationService:
+    return RegistrationService(
+        registration_repo=get_registration_repo(),
+        cluster_repo=get_cluster_repo(),
+        cert_lib=get_cert_lib(),
+    )

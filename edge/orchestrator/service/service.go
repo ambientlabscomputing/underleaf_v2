@@ -12,21 +12,24 @@ type Service interface {
 	Health() *HealthService
 	Containers() *ContainerService
 	Logs() *LogService
+	Registration() *RegistrationService
 }
 
 // This is the heavy full service implementation for the server
 type AppService struct {
-	Repository *repository.Repository
-	nodes      *NodeService
-	health     *HealthService
-	containers *ContainerService
-	logs       *LogService
+	Repository   *repository.Repository
+	nodes        *NodeService
+	health       *HealthService
+	containers   *ContainerService
+	logs         *LogService
+	registration *RegistrationService
 }
 
-func (s *AppService) Nodes() *NodeService           { return s.nodes }
-func (s *AppService) Health() *HealthService        { return s.health }
-func (s *AppService) Containers() *ContainerService { return s.containers }
-func (s *AppService) Logs() *LogService             { return s.logs }
+func (s *AppService) Nodes() *NodeService                { return s.nodes }
+func (s *AppService) Health() *HealthService             { return s.health }
+func (s *AppService) Containers() *ContainerService      { return s.containers }
+func (s *AppService) Logs() *LogService                  { return s.logs }
+func (s *AppService) Registration() *RegistrationService { return s.registration }
 
 func (s *AppService) Start() error {
 	// implement start logic

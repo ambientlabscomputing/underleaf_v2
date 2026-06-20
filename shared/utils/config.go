@@ -11,6 +11,9 @@ type Config struct {
 	Http                     HttpConfig `yaml:"http"`
 	DBPath                   string     `yaml:"db_path"`
 	ContainerSyncIntervalSec int        `yaml:"container_sync_interval_sec"`
+	CloudAPIBaseURL          string     `yaml:"cloud_api_base_url"`
+	AccountUIBaseURL         string     `yaml:"account_ui_base_url"`
+	CertDir                  string     `yaml:"cert_dir"`
 }
 
 var defaultOrchConfig Config
@@ -26,6 +29,9 @@ func init() {
 		},
 		DBPath:                   "orchestrator.db",
 		ContainerSyncIntervalSec: 60,
+		CloudAPIBaseURL:          "http://localhost:8080",
+		AccountUIBaseURL:         "http://localhost:5173",
+		CertDir:                  "./certs",
 	}
 	defaultAgentConfig = Config{
 		Http: HttpConfig{
