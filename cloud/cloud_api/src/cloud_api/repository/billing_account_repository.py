@@ -66,7 +66,7 @@ class BillingAccountRepository(BaseRepository):
             if req.stripe_data is not None:
                 update_stmt = update_stmt.values(stripe_data=req.stripe_data)
             result = await session.execute(update_stmt)
-            if result.scalar() is None:
+            if result.rowcount == 0:
                 return None
             await session.commit()
             updated_account = await session.get(SQLBillingAccount, billing_account_id)

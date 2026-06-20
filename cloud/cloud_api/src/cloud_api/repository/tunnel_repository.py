@@ -56,7 +56,7 @@ class TunnelRepository(BaseRepository):
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
             result = await session.execute(update_stmt)
-            if result.scalar() is None:
+            if result.rowcount == 0:
                 return None
             await session.commit()
             updated_tunnel = await session.get(SqlTunnel, tunnel_id)

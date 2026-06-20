@@ -68,7 +68,7 @@ class EntitlementsBucketRepository(BaseRepository):
                     connection_slot_balance=req.connection_slot_balance
                 )
             result = await session.execute(update_stmt)
-            if result.scalar() is None:
+            if result.rowcount == 0:
                 return None
             await session.commit()
             updated_bucket = await session.get(

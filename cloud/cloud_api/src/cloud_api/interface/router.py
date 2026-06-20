@@ -23,14 +23,15 @@ app.add_middleware(
 
 
 router = APIRouter(prefix="/api/v2")
+router.include_router(accounts_router)
+router.include_router(clusters_router)
+router.include_router(billing_accounts_router)
+router.include_router(subscriptions_router)
+router.include_router(tunnels_router)
+router.include_router(connections_router)
+
 app.include_router(router)
 app.include_router(oauth_router)
-app.include_router(accounts_router)
-app.include_router(clusters_router)
-app.include_router(billing_accounts_router)
-app.include_router(subscriptions_router)
-app.include_router(tunnels_router)
-app.include_router(connections_router)
 
 
 @router.get("/health")

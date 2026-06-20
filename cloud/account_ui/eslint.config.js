@@ -19,4 +19,23 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  // Enforce that MUI is only imported inside src/components.
+  {
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['src/components/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@mui/*', '@mui/material', '@mui/x-data-grid', '@mui/icons-material'],
+              message:
+                "Do not import MUI directly. Use the design-system wrappers in 'src/components' instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ])
