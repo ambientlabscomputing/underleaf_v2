@@ -4,7 +4,7 @@ from cloud_api.models.api import (
     QuerySubscriptionRequest,
     PatchSubscriptionRequest,
 )
-from cloud_api.models.sql import SQLSubscription
+from cloud_api.models.sql import SQLSubscription, SQLBillingAccount
 from cloud_api.repository.base_repository import BaseRepository
 from sqlalchemy import select, update
 from datetime import datetime, timezone
@@ -35,13 +35,20 @@ class SubscriptionRepository(BaseRepository):
         self, req: QuerySubscriptionRequest
     ) -> list[Subscription]:
         async with self.get_session() as session:
-            query = select(SQLSubscription)
+            query = (
+                select(SQLSubscription)
+                .join(SQLBillingAccount, SQLSubscription.billing_account_id == SQLBillingAccount.id)
+            )
             if req.billing_account_id is not None:
                 query = query.filter(
                     SQLSubscription.billing_account_id == req.billing_account_id
                 )
             if req.tier is not None:
                 query = query.filter(SQLSubscription.tier == req.tier)
+            if req.principal_account_id is not None:
+                query = query.filter(
+                    SQLBillingAccount.principal_account_id == req.principal_account_id
+                )
             result = await session.scalars(query)
             subscriptions = result.all()
             return [

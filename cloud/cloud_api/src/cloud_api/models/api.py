@@ -144,6 +144,12 @@ class PatchTunnelRequest(BaseModel):
 class QueryTunnelRequest(BaseModel):
     name: str | None = Field(None, description="Name of the tunnel")
     node_id: str | None = Field(None, description="ID of the associated node")
+    principal_account_id: str | None = Field(None, description="Scope to a principal account")
+
+
+class ListTunnelResponse(BaseModel):
+    items: list[Tunnel] = Field(..., description="List of tunnels")
+    total: int = Field(..., description="Total number of matching tunnels")
 
 
 class Connection(Base):
@@ -167,6 +173,12 @@ class PatchConnectionRequest(BaseModel):
 class QueryConnectionRequest(BaseModel):
     name: str | None = Field(None, description="Name of the connection")
     tunnel_id: str | None = Field(None, description="ID of the associated tunnel")
+    principal_account_id: str | None = Field(None, description="Scope to a principal account")
+
+
+class ListConnectionResponse(BaseModel):
+    items: list[Connection] = Field(..., description="List of connections")
+    total: int = Field(..., description="Total number of matching connections")
 
 
 class BillingAccount(Base):
@@ -209,6 +221,11 @@ class QueryBillingAccountRequest(BaseModel):
     principal_account_id: str | None = Field(
         None, description="ID of the associated principal account"
     )
+
+
+class ListBillingAccountResponse(BaseModel):
+    items: list[BillingAccount] = Field(..., description="List of billing accounts")
+    total: int = Field(..., description="Total number of matching billing accounts")
 
 
 class EntitlementsBucket(Base):
@@ -332,6 +349,12 @@ class QuerySubscriptionRequest(BaseModel):
         None, description="ID of the associated billing account"
     )
     tier: SubscriptionTier | None = Field(None, description="Subscription tier")
+    principal_account_id: str | None = Field(None, description="Scope to a principal account")
+
+
+class ListSubscriptionResponse(BaseModel):
+    items: list[Subscription] = Field(..., description="List of subscriptions")
+    total: int = Field(..., description="Total number of matching subscriptions")
 
 
 class UserSignUpResponse(BaseModel):

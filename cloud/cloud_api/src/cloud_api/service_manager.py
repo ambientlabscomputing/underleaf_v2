@@ -18,6 +18,7 @@ from functools import lru_cache
 from cloud_api.lib.auth_lib import AuthLib
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.cluster_repository import ClusterRepository
+from cloud_api.repository.connection_repository import ConnectionRepository
 from cloud_api.repository.entitlements_bucket_repository import (
     EntitlementsBucketRepository,
 )
@@ -26,11 +27,16 @@ from cloud_api.repository.principal_account_repository import (
     PrincipalAccountRepository,
 )
 from cloud_api.repository.subscription_repository import SubscriptionRepository
+from cloud_api.repository.tunnel_repository import TunnelRepository
 from cloud_api.repository.usage_event_repository import UsageEventRepository
 from cloud_api.repository.user_repository import UserRepository
 from cloud_api.service.account_service import AccountService
 from cloud_api.service.auth_service import AuthService
+from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
+from cloud_api.service.connection_service import ConnectionService
+from cloud_api.service.subscription_service import SubscriptionService
+from cloud_api.service.tunnel_service import TunnelService
 
 
 # ---------------------------------------------------------------------------
@@ -121,3 +127,33 @@ def get_cluster_service() -> ClusterService:
         cluster_repo=get_cluster_repo(),
         node_repo=get_node_repo(),
     )
+
+
+@lru_cache
+def get_tunnel_repo() -> TunnelRepository:
+    return TunnelRepository()
+
+
+@lru_cache
+def get_connection_repo() -> ConnectionRepository:
+    return ConnectionRepository()
+
+
+@lru_cache
+def get_tunnel_service() -> TunnelService:
+    return TunnelService(tunnel_repo=get_tunnel_repo())
+
+
+@lru_cache
+def get_connection_service() -> ConnectionService:
+    return ConnectionService(connection_repo=get_connection_repo())
+
+
+@lru_cache
+def get_billing_account_service() -> BillingAccountService:
+    return BillingAccountService(billing_account_repo=get_billing_account_repo())
+
+
+@lru_cache
+def get_subscription_service() -> SubscriptionService:
+    return SubscriptionService(subscription_repo=get_subscription_repo())

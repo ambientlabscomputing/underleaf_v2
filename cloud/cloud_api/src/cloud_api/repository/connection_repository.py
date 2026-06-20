@@ -4,7 +4,7 @@ from cloud_api.models.api import (
     QueryConnectionRequest,
     PatchConnectionRequest,
 )
-from cloud_api.models.sql import SQLConnection
+from cloud_api.models.sql import SQLConnection, SQLCluster, SQLNode, SqlTunnel
 from cloud_api.repository.base_repository import BaseRepository
 from sqlalchemy import select, update
 from datetime import datetime, timezone
@@ -33,11 +33,18 @@ class ConnectionRepository(BaseRepository):
 
     async def query_connections(self, req: QueryConnectionRequest) -> list[Connection]:
         async with self.get_session() as session:
-            query = select(SQLConnection)
+            query = (
+                select(SQLConnection)
+                .join(SqlTunnel, SQLConnection.tunnel_id == SqlTunnel.id)
+                .join(SQLNode, SqlTunnel.node_id == SQLNode.id)
+                .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
+            )
             if req.name is not None:
                 query = query.filter(SQLConnection.name == req.name)
             if req.tunnel_id is not None:
                 query = query.filter(SQLConnection.tunnel_id == req.tunnel_id)
+            if req.principal_account_id is not None:
+                query = query.filter(SQLCluster.principal_account_id == req.principal_account_id)
             result = await session.scalars(query)
             connections = result.all()
             return [Connection.model_validate(connection) for connection in connections]

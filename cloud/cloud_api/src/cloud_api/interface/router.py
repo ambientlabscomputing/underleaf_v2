@@ -2,8 +2,12 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from cloud_api import app_config
 from cloud_api.interface.accounts.accounts import router as accounts_router
+from cloud_api.interface.billing_accounts.billing_accounts import router as billing_accounts_router
 from cloud_api.interface.clusters.clusters import router as clusters_router
+from cloud_api.interface.connections.connections import router as connections_router
 from cloud_api.interface.oauth.oauth import router as oauth_router
+from cloud_api.interface.subscriptions.subscriptions import router as subscriptions_router
+from cloud_api.interface.tunnels.tunnels import router as tunnels_router
 
 app = FastAPI()
 if not app_config:
@@ -23,6 +27,10 @@ app.include_router(router)
 app.include_router(oauth_router)
 app.include_router(accounts_router)
 app.include_router(clusters_router)
+app.include_router(billing_accounts_router)
+app.include_router(subscriptions_router)
+app.include_router(tunnels_router)
+app.include_router(connections_router)
 
 
 @router.get("/health")

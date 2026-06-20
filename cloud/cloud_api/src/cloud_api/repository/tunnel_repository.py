@@ -4,7 +4,7 @@ from cloud_api.models.api import (
     QueryTunnelRequest,
     PatchTunnelRequest,
 )
-from cloud_api.models.sql import SqlTunnel
+from cloud_api.models.sql import SqlTunnel, SQLCluster, SQLNode
 from cloud_api.repository.base_repository import BaseRepository
 from sqlalchemy import select, update
 from datetime import datetime, timezone
@@ -33,11 +33,17 @@ class TunnelRepository(BaseRepository):
 
     async def query_tunnels(self, req: QueryTunnelRequest) -> list[Tunnel]:
         async with self.get_session() as session:
-            query = select(SqlTunnel)
+            query = (
+                select(SqlTunnel)
+                .join(SQLNode, SqlTunnel.node_id == SQLNode.id)
+                .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
+            )
             if req.name is not None:
                 query = query.filter(SqlTunnel.name == req.name)
             if req.node_id is not None:
                 query = query.filter(SqlTunnel.node_id == req.node_id)
+            if req.principal_account_id is not None:
+                query = query.filter(SQLCluster.principal_account_id == req.principal_account_id)
             result = await session.scalars(query)
             tunnels = result.all()
             return [Tunnel.model_validate(tunnel) for tunnel in tunnels]
