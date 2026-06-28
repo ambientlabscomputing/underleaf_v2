@@ -75,17 +75,26 @@ async def poll_token(
     except CandidateNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "invalid_grant", "error_description": "Unknown device_code"},
+            detail={
+                "error": "invalid_grant",
+                "error_description": "Unknown device_code",
+            },
         )
     except CandidateExpiredError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "expired_token", "error_description": "device_code has expired"},
+            detail={
+                "error": "expired_token",
+                "error_description": "device_code has expired",
+            },
         )
     except AuthorizationPendingError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "authorization_pending", "error_description": "User has not yet approved"},
+            detail={
+                "error": "authorization_pending",
+                "error_description": "User has not yet approved",
+            },
         )
     except SlowDownError:
         raise HTTPException(
@@ -112,9 +121,13 @@ async def get_candidate(
     try:
         return await svc.get_candidate(user_code)
     except CandidateNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
     except CandidateExpiredError:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Registration has expired")
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail="Registration has expired"
+        )
 
 
 @router.post(
@@ -130,9 +143,13 @@ async def approve_candidate(
     try:
         return await svc.approve_candidate(req.user_code, claims.azp)
     except CandidateNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found"
+        )
     except CandidateExpiredError:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Registration has expired")
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail="Registration has expired"
+        )
 
 
 @router.post(

@@ -78,7 +78,11 @@ class UserRepository(BaseRepository):
 
     async def patch_user(self, user_id: str, req: PatchUserRequest) -> User | None:
         async with self.get_session() as session:
-            update_stmt = update(SQLUser).where(SQLUser.id == user_id).values(updated_at=datetime.now(timezone.utc))
+            update_stmt = (
+                update(SQLUser)
+                .where(SQLUser.id == user_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
             if req.email is not None:

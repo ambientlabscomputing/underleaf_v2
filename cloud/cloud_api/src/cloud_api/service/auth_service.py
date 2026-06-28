@@ -17,7 +17,9 @@ class AuthService:
         logger.bind(email=req.email).info("User login attempt")
         sign_in_response = await self.auth_lib.sign_in(req)
         user = sign_in_response.user
-        access_token = self.auth_lib.mint_access_token(user.id, user.principal_account_id)
+        access_token = self.auth_lib.mint_access_token(
+            user.id, user.principal_account_id
+        )
         refresh_token = self.auth_lib.mint_refresh_token(user.id)
         logger.bind(user_id=user.id).info("User login successful")
         return TokenResponse(access_token=access_token, refresh_token=refresh_token)
@@ -34,7 +36,9 @@ class AuthService:
         user = await self.user_repo.get_user(claims.sub)
         if user is None:
             raise InvalidTokenError("User not found for token subject")
-        access_token = self.auth_lib.mint_access_token(user.id, user.principal_account_id)
+        access_token = self.auth_lib.mint_access_token(
+            user.id, user.principal_account_id
+        )
         new_refresh_token = self.auth_lib.mint_refresh_token(user.id)
         logger.bind(user_id=user.id).info("Token refreshed")
         return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)

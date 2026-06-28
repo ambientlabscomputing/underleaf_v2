@@ -9,7 +9,10 @@ from cloud_api.models.api import (
     Subscription,
     SubscriptionTier,
 )
-from cloud_api.service.subscription_service import SubscriptionNotFoundError, SubscriptionService
+from cloud_api.service.subscription_service import (
+    SubscriptionNotFoundError,
+    SubscriptionService,
+)
 from cloud_api.service_manager import get_subscription_service
 
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
@@ -62,7 +65,9 @@ async def get_subscription(
     try:
         return await subscription_service.get_subscription(subscription_id)
     except SubscriptionNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
 
 
 @router.patch(
@@ -79,7 +84,9 @@ async def patch_subscription(
     try:
         return await subscription_service.patch_subscription(subscription_id, req)
     except SubscriptionNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
 
 
 @router.delete(
@@ -95,4 +102,6 @@ async def delete_subscription(
     try:
         await subscription_service.delete_subscription(subscription_id)
     except SubscriptionNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )

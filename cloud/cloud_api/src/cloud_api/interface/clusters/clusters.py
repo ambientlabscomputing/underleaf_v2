@@ -62,7 +62,9 @@ async def get_cluster(
     try:
         return await cluster_service.get_cluster(cluster_id)
     except ClusterNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
+        )
 
 
 @router.patch(
@@ -79,7 +81,9 @@ async def patch_cluster(
     try:
         return await cluster_service.patch_cluster(cluster_id, req)
     except ClusterNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
+        )
 
 
 @router.post(
@@ -96,7 +100,9 @@ async def sync_nodes(
     try:
         return await cluster_service.sync_nodes(cluster_id, req.nodes)
     except ClusterNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
+        )
 
 
 @router.delete(
@@ -112,4 +118,6 @@ async def delete_cluster(
     try:
         await cluster_service.delete_cluster(cluster_id)
     except ClusterNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
+        )

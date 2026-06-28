@@ -1,6 +1,13 @@
 from pydantic import BaseModel, Field
 from cloud_api.models.base import Base, generate_id, IDPrefix
 from enum import StrEnum
+from datetime import datetime
+
+
+class Status(StrEnum):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    IN_PROGRESS = "in_progress"
 
 
 class PrincipalAccount(Base):
@@ -79,7 +86,8 @@ class CreateClusterRequest(BaseModel):
     id: str = Field(..., description="Unique identifier for the cluster")
     name: str = Field(..., description="Name of the cluster")
     principal_account_id: str | None = Field(
-        None, description="Principal account ID — injected server-side, not required in request body"
+        None,
+        description="Principal account ID — injected server-side, not required in request body",
     )
 
 
@@ -123,33 +131,46 @@ class QueryNodeRequest(BaseModel):
     cluster_id: str | None = Field(None, description="ID of the associated cluster")
 
 
-class Tunnel(Base):
-    id: str = Field(
-        default_factory=lambda: generate_id(IDPrefix.TUNNEL),
-        description="Unique identifier for the tunnel",
-    )
-    name: str = Field(..., description="Name of the tunnel")
+class StreamType(StrEnum):
+    SSH = "ssh"
+    GW = "gateway"
+    Tunnel = "tunnel"
+
+
+class CreateConnectionRequest(BaseModel):
+    name: str = Field(..., description="Name of the connection")
     node_id: str = Field(..., description="ID of the associated node")
 
 
-class CreateTunnelRequest(BaseModel):
-    name: str = Field(..., description="Name of the tunnel")
-    node_id: str = Field(..., description="ID of the associated node")
+class NewStreamRequest(BaseModel):
+    connection_id: str = Field(..., description="ID of the associated connection")
+    type_: StreamType = Field(..., description="Type of the stream", alias="type")
+    endpoint: str | None = Field(None, description="Optional endpoint for the stream")
+    port: int | None = Field(None, description="Optional port for the stream")
 
 
-class PatchTunnelRequest(BaseModel):
-    name: str | None = Field(None, description="Name of the tunnel")
+class TerminateConnRequest(BaseModel):
+    connection_id: str = Field(..., description="ID of the connection to terminate")
 
 
-class QueryTunnelRequest(BaseModel):
-    name: str | None = Field(None, description="Name of the tunnel")
-    node_id: str | None = Field(None, description="ID of the associated node")
-    principal_account_id: str | None = Field(None, description="Scope to a principal account")
+class TerminateConnResponse(BaseModel):
+    id: str = Field(..., description="ID of the terminated connection")
+    status: str = Field(..., description="Status of the termination request")
 
 
-class ListTunnelResponse(BaseModel):
-    items: list[Tunnel] = Field(..., description="List of tunnels")
-    total: int = Field(..., description="Total number of matching tunnels")
+class CloseStreamRequest(BaseModel):
+    stream_id: str = Field(..., description="ID of the stream to close")
+
+
+class CloseStreamResponse(BaseModel):
+    id: str = Field(..., description="ID of the closed stream")
+    status: str = Field(..., description="Status of the close request")
+
+
+class ConnectionState(StrEnum):
+    PROVISIONED = "provisioned"
+    RUNNING = "running"
+    CLOSED = "closed"
 
 
 class Connection(Base):
@@ -158,27 +179,105 @@ class Connection(Base):
         description="Unique identifier for the connection",
     )
     name: str = Field(..., description="Name of the connection")
-    tunnel_id: str = Field(..., description="ID of the associated tunnel")
-
-
-class CreateConnectionRequest(BaseModel):
-    name: str = Field(..., description="Name of the connection")
-    tunnel_id: str = Field(..., description="ID of the associated tunnel")
+    node_id: str = Field(..., description="ID of the associated node")
+    closed_at: datetime | None = Field(
+        default=None, description="Timestamp when the connection was closed"
+    )
+    state: ConnectionState = Field(
+        default=ConnectionState.PROVISIONED,
+        description="Current state of the connection",
+    )
+    status: Status = Field(
+        default=Status.IN_PROGRESS, description="Current status of the connection"
+    )
 
 
 class PatchConnectionRequest(BaseModel):
-    name: str | None = Field(None, description="Name of the connection")
+    name: str | None = Field(default=None, description="Name of the connection")
+    closed_at: datetime | None = Field(
+        default=None, description="Timestamp when the connection was closed"
+    )
+    state: ConnectionState | None = Field(
+        default=None, description="Current state of the connection"
+    )
+    status: Status | None = Field(
+        default=None, description="Current status of the connection"
+    )
 
 
 class QueryConnectionRequest(BaseModel):
     name: str | None = Field(None, description="Name of the connection")
-    tunnel_id: str | None = Field(None, description="ID of the associated tunnel")
-    principal_account_id: str | None = Field(None, description="Scope to a principal account")
+    node_id: str | None = Field(None, description="ID of the associated node")
+    principal_account_id: str | None = Field(
+        None, description="Scope to a principal account"
+    )
+    node_id: str | None = Field(None, description="Scope to a node")
+    state: ConnectionState | None = Field(None, description="State of the connection")
+    status: Status | None = Field(None, description="Status of the connection")
 
 
 class ListConnectionResponse(BaseModel):
     items: list[Connection] = Field(..., description="List of connections")
     total: int = Field(..., description="Total number of matching connections")
+
+
+class StreamState(StrEnum):
+    ACTIVE = "active"
+    CLOSED = "closed"
+
+
+class Stream(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.STREAM),
+        description="Unique identifier for the stream",
+    )
+    name: str = Field(..., description="Name of the stream")
+    connection_id: str = Field(..., description="ID of the associated connection")
+    type_: StreamType = Field(..., description="Type of the stream", alias="type")
+    state: StreamState = Field(
+        default=StreamState.ACTIVE, description="Current state of the stream"
+    )
+    status: Status = Field(
+        default=Status.IN_PROGRESS, description="Current status of the stream"
+    )
+    endpoint: str | None = Field(
+        default=None, description="Optional endpoint for the stream"
+    )
+    port: int | None = Field(
+        default=None, description="Optional port for the stream"
+    )
+    closed_at: datetime | None = Field(
+        default=None, description="Timestamp when the stream was closed"
+    )
+
+
+class PatchStreamRequest(BaseModel):
+    name: str | None = Field(default=None, description="Name of the stream")
+    state: StreamState | None = Field(default=None, description="Current state of the stream")
+    status: Status | None = Field(default=None, description="Current status of the stream")
+    closed_at: datetime | None = Field(
+        default=None, description="Timestamp when the stream was closed"
+    )
+
+
+class QueryStreamRequest(BaseModel):
+    name: str | None = Field(default=None, description="Name of the stream")
+    connection_id: str | None = Field(
+        default=None, description="ID of the associated connection"
+    )
+    principal_account_id: str | None = Field(
+        default=None, description="Scope to a principal account"
+    )
+    node_id: str | None = Field(default=None, description="Scope to a node")
+    state: StreamState | None = Field(default=None, description="State of the stream")
+    status: Status | None = Field(default=None, description="Status of the stream")
+    endpoint: str | None = Field(default=None, description="Endpoint of the stream")
+    port: int | None = Field(default=None, description="Port of the stream")
+
+
+class ListStreamResponse(BaseModel):
+    items: list[Stream] = Field(..., description="List of streams")
+    total: int = Field(..., description="Total number of matching streams")
 
 
 class BillingAccount(Base):
@@ -349,7 +448,9 @@ class QuerySubscriptionRequest(BaseModel):
         None, description="ID of the associated billing account"
     )
     tier: SubscriptionTier | None = Field(None, description="Subscription tier")
-    principal_account_id: str | None = Field(None, description="Scope to a principal account")
+    principal_account_id: str | None = Field(
+        None, description="Scope to a principal account"
+    )
 
 
 class ListSubscriptionResponse(BaseModel):
@@ -387,6 +488,7 @@ class TokenResponse(BaseModel):
 # Device Registration (RFC 8628 device authorization grant)
 # ---------------------------------------------------------------------------
 
+
 class CandidateStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
@@ -396,29 +498,47 @@ class CandidateStatus(StrEnum):
 
 class RegisterDeviceRequest(BaseModel):
     """Sent by orch-server to initiate the device-auth flow."""
-    proposed_cluster_name: str = Field(..., description="Human-readable name for the cluster")
-    proposed_cluster_id: str = Field(..., description="Stable ID pre-generated by orch-server")
+
+    proposed_cluster_name: str = Field(
+        ..., description="Human-readable name for the cluster"
+    )
+    proposed_cluster_id: str = Field(
+        ..., description="Stable ID pre-generated by orch-server"
+    )
 
 
 class DeviceAuthResponse(BaseModel):
     """RFC 8628 §3.2 device authorization response."""
-    device_code: str = Field(..., description="Secret opaque code, kept by orch-server only")
+
+    device_code: str = Field(
+        ..., description="Secret opaque code, kept by orch-server only"
+    )
     user_code: str = Field(..., description="Short code the user enters / URL carries")
     verification_uri: str = Field(..., description="Base URI for the account UI")
-    verification_uri_complete: str = Field(..., description="verification_uri with user_code appended")
-    expires_in: int = Field(..., description="Lifetime of device_code/user_code in seconds")
+    verification_uri_complete: str = Field(
+        ..., description="verification_uri with user_code appended"
+    )
+    expires_in: int = Field(
+        ..., description="Lifetime of device_code/user_code in seconds"
+    )
     interval: int = Field(default=5, description="Minimum polling interval in seconds")
 
 
 class PollTokenRequest(BaseModel):
     """Sent by orch-server while polling for user approval."""
+
     grant_type: str = Field(default="urn:ietf:params:oauth:grant-type:device_code")
-    device_code: str = Field(..., description="The device_code returned by /registration/device")
+    device_code: str = Field(
+        ..., description="The device_code returned by /registration/device"
+    )
 
 
 class PollTokenResponse(BaseModel):
     """Returned once the user has approved the registration."""
-    one_time_cluster_token: str = Field(..., description="Short-lived token for CSR signing")
+
+    one_time_cluster_token: str = Field(
+        ..., description="Short-lived token for CSR signing"
+    )
     cluster_id: str = Field(..., description="ID of the created Cluster")
 
 
@@ -444,9 +564,13 @@ class ApproveCandidateResponse(BaseModel):
 
 
 class IssueCertificateRequest(BaseModel):
-    csr_pem: str = Field(..., description="PEM-encoded PKCS#10 certificate signing request")
+    csr_pem: str = Field(
+        ..., description="PEM-encoded PKCS#10 certificate signing request"
+    )
 
 
 class IssueCertificateResponse(BaseModel):
-    certificate_pem: str = Field(..., description="Signed client certificate in PEM format")
+    certificate_pem: str = Field(
+        ..., description="Signed client certificate in PEM format"
+    )
     ca_chain_pem: str = Field(..., description="Root CA certificate in PEM format")

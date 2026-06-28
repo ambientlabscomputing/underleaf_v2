@@ -27,6 +27,13 @@ Microservices
 
 Premium Cloud Cockpit UI: the local Orchestrator UI, API and CLI interfaces are fully powered. The Cockpit UI is for advanced users that have more than one cluster or want to pay for advanced remote accesss features.
 
+## TODO
+
+- [ ] Flesh out connection worker
+    - [ ] implement real tunnels (yamux) mutiplexing connections
+- [ ] Flesh out cluster-cloud mTLS
+- [ ] App manifest features
+
 ## Architecture
 
 ```mermaid

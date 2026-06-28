@@ -54,9 +54,11 @@ class EntitlementsBucketRepository(BaseRepository):
         self, entitlements_bucket_id: str, req: PatchEntitlementsBucketRequest
     ) -> EntitlementsBucket | None:
         async with self.get_session() as session:
-            update_stmt = update(SQLEntitlementsBucket).where(
-                SQLEntitlementsBucket.id == entitlements_bucket_id
-            ).values(updated_at=datetime.now(timezone.utc))
+            update_stmt = (
+                update(SQLEntitlementsBucket)
+                .where(SQLEntitlementsBucket.id == entitlements_bucket_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
             if req.network_traffic_balance is not None:

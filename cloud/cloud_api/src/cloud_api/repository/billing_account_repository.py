@@ -54,9 +54,11 @@ class BillingAccountRepository(BaseRepository):
         self, billing_account_id: str, req: PatchBillingAccountRequest
     ) -> BillingAccount | None:
         async with self.get_session() as session:
-            update_stmt = update(SQLBillingAccount).where(
-                SQLBillingAccount.id == billing_account_id
-            ).values(updated_at=datetime.now(timezone.utc))
+            update_stmt = (
+                update(SQLBillingAccount)
+                .where(SQLBillingAccount.id == billing_account_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
             if req.stripe_customer_id is not None:

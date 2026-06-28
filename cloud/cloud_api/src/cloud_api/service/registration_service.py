@@ -36,6 +36,7 @@ from cloud_api.repository.registration_repository import RegistrationRepository
 # Custom exceptions (translated to HTTP in the router)
 # ---------------------------------------------------------------------------
 
+
 class CandidateNotFoundError(Exception):
     """No candidate found for the given code."""
 
@@ -64,12 +65,12 @@ class InvalidOneTimeTokenError(Exception):
 # Helpers
 # ---------------------------------------------------------------------------
 
-_DEVICE_CODE_BYTES = 32          # 256-bit device code
-_ONE_TIME_TOKEN_BYTES = 32       # 256-bit one-time token
-_DEVICE_CODE_TTL_SECONDS = 600   # 10 minutes
-_ONE_TIME_TOKEN_TTL_SECONDS = 60 # 1 minute
+_DEVICE_CODE_BYTES = 32  # 256-bit device code
+_ONE_TIME_TOKEN_BYTES = 32  # 256-bit one-time token
+_DEVICE_CODE_TTL_SECONDS = 600  # 10 minutes
+_ONE_TIME_TOKEN_TTL_SECONDS = 60  # 1 minute
 _POLL_INTERVAL_SECONDS = 5
-_MIN_POLL_INTERVAL_SECONDS = 5   # guard against fast pollers
+_MIN_POLL_INTERVAL_SECONDS = 5  # guard against fast pollers
 
 
 def _sha256(value: str) -> str:
@@ -86,6 +87,7 @@ def _generate_user_code() -> str:
 # ---------------------------------------------------------------------------
 # Service
 # ---------------------------------------------------------------------------
+
 
 class RegistrationService:
     def __init__(
@@ -139,7 +141,9 @@ class RegistrationService:
     async def poll_token(self, device_code: str) -> PollTokenResponse:
         """Poll for approval; returns one_time_cluster_token when approved."""
         device_code_hash = _sha256(device_code)
-        candidate = await self.registration_repo.get_by_device_code_hash(device_code_hash)
+        candidate = await self.registration_repo.get_by_device_code_hash(
+            device_code_hash
+        )
 
         if candidate is None:
             raise CandidateNotFoundError("Unknown device_code")
@@ -194,9 +198,7 @@ class RegistrationService:
                 one_time_token_expires_at=new_expires,
             )
 
-            logger.bind(candidate_id=candidate.id).info(
-                "One-time cluster token issued"
-            )
+            logger.bind(candidate_id=candidate.id).info("One-time cluster token issued")
             return PollTokenResponse(
                 one_time_cluster_token=new_token,
                 cluster_id=candidate.cluster_id or "",
@@ -245,7 +247,9 @@ class RegistrationService:
             raise CandidateExpiredError("Registration has expired")
 
         if candidate.status != "pending":
-            raise CandidateNotFoundError(f"Candidate is not pending (status={candidate.status})")
+            raise CandidateNotFoundError(
+                f"Candidate is not pending (status={candidate.status})"
+            )
 
         # Create the actual Cluster resource
         cluster = await self.cluster_repo.create_cluster(
@@ -284,6 +288,7 @@ class RegistrationService:
         candidate = None
         async with self.registration_repo.get_session() as session:
             from sqlalchemy import select as sa_select
+
             result = await session.scalars(
                 sa_select(SQLClusterCandidate).where(
                     SQLClusterCandidate.one_time_token_hash == token_hash,

@@ -18,7 +18,7 @@ from functools import lru_cache
 from cloud_api.lib.auth_lib import AuthLib
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.cluster_repository import ClusterRepository
-from cloud_api.repository.connection_repository import ConnectionRepository
+from cloud_api.repository.stream_repository import StreamRepository
 from cloud_api.repository.entitlements_bucket_repository import (
     EntitlementsBucketRepository,
 )
@@ -27,17 +27,17 @@ from cloud_api.repository.principal_account_repository import (
     PrincipalAccountRepository,
 )
 from cloud_api.repository.subscription_repository import SubscriptionRepository
-from cloud_api.repository.tunnel_repository import TunnelRepository
+from cloud_api.repository.connection_repository import ConnectionRepository
 from cloud_api.repository.usage_event_repository import UsageEventRepository
 from cloud_api.repository.user_repository import UserRepository
 from cloud_api.service.account_service import AccountService
 from cloud_api.service.auth_service import AuthService
 from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
-from cloud_api.service.connection_service import ConnectionService
+from cloud_api.service.stream_service import StreamService
 from cloud_api.service.registration_service import RegistrationService
 from cloud_api.service.subscription_service import SubscriptionService
-from cloud_api.service.tunnel_service import TunnelService
+from cloud_api.service.connection_service import ConnectionService
 
 
 # ---------------------------------------------------------------------------
@@ -131,23 +131,23 @@ def get_cluster_service() -> ClusterService:
 
 
 @lru_cache
-def get_tunnel_repo() -> TunnelRepository:
-    return TunnelRepository()
-
-
-@lru_cache
-def get_connection_repo() -> ConnectionRepository:
+def get_conn_repo() -> ConnectionRepository:
     return ConnectionRepository()
 
 
 @lru_cache
-def get_tunnel_service() -> TunnelService:
-    return TunnelService(tunnel_repo=get_tunnel_repo())
+def get_stream_repo() -> StreamRepository:
+    return StreamRepository()
 
 
 @lru_cache
 def get_connection_service() -> ConnectionService:
-    return ConnectionService(connection_repo=get_connection_repo())
+    return ConnectionService(conn_repo=get_conn_repo())
+
+
+@lru_cache
+def get_stream_service() -> StreamService:
+    return StreamService(stream_repo=get_stream_repo())
 
 
 @lru_cache
@@ -163,6 +163,7 @@ def get_subscription_service() -> SubscriptionService:
 @lru_cache
 def get_registration_repo():
     from cloud_api.repository.registration_repository import RegistrationRepository
+
     return RegistrationRepository()
 
 
@@ -170,6 +171,7 @@ def get_registration_repo():
 def get_cert_lib():
     from cloud_api.lib.cert_lib import CertLib
     from cloud_api import app_config
+
     if not app_config:
         raise RuntimeError("App config not loaded")
     return CertLib(

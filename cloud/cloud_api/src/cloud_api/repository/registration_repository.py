@@ -37,11 +37,15 @@ class RegistrationRepository(BaseRepository):
     async def get_by_user_code(self, user_code: str) -> SQLClusterCandidate | None:
         async with self.get_session() as session:
             result = await session.scalars(
-                select(SQLClusterCandidate).where(SQLClusterCandidate.user_code == user_code)
+                select(SQLClusterCandidate).where(
+                    SQLClusterCandidate.user_code == user_code
+                )
             )
             return result.first()
 
-    async def get_by_device_code_hash(self, device_code_hash: str) -> SQLClusterCandidate | None:
+    async def get_by_device_code_hash(
+        self, device_code_hash: str
+    ) -> SQLClusterCandidate | None:
         async with self.get_session() as session:
             result = await session.scalars(
                 select(SQLClusterCandidate).where(

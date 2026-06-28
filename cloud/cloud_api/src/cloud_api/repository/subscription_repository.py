@@ -35,9 +35,9 @@ class SubscriptionRepository(BaseRepository):
         self, req: QuerySubscriptionRequest
     ) -> list[Subscription]:
         async with self.get_session() as session:
-            query = (
-                select(SQLSubscription)
-                .join(SQLBillingAccount, SQLSubscription.billing_account_id == SQLBillingAccount.id)
+            query = select(SQLSubscription).join(
+                SQLBillingAccount,
+                SQLSubscription.billing_account_id == SQLBillingAccount.id,
             )
             if req.billing_account_id is not None:
                 query = query.filter(
@@ -60,9 +60,11 @@ class SubscriptionRepository(BaseRepository):
         self, subscription_id: str, req: PatchSubscriptionRequest
     ) -> Subscription | None:
         async with self.get_session() as session:
-            update_stmt = update(SQLSubscription).where(
-                SQLSubscription.id == subscription_id
-            ).values(updated_at=datetime.now(timezone.utc))
+            update_stmt = (
+                update(SQLSubscription)
+                .where(SQLSubscription.id == subscription_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
             if req.tier is not None:
                 update_stmt = update_stmt.values(tier=req.tier)
             result = await session.execute(update_stmt)

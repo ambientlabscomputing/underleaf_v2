@@ -26,7 +26,9 @@ router = APIRouter(prefix="/billing-accounts", tags=["Billing Accounts"])
 async def create_billing_account(
     req: CreateBillingAccountRequest,
     claims: AccessTokenClaims = Depends(get_access_claims),
-    billing_account_service: BillingAccountService = Depends(get_billing_account_service),
+    billing_account_service: BillingAccountService = Depends(
+        get_billing_account_service
+    ),
 ) -> BillingAccount:
     return await billing_account_service.create_billing_account(req, claims.azp)
 
@@ -39,7 +41,9 @@ async def create_billing_account(
 async def get_billing_accounts(
     name: str | None = None,
     claims: AccessTokenClaims = Depends(get_access_claims),
-    billing_account_service: BillingAccountService = Depends(get_billing_account_service),
+    billing_account_service: BillingAccountService = Depends(
+        get_billing_account_service
+    ),
 ) -> ListBillingAccountResponse:
     return await billing_account_service.get_billing_accounts(
         QueryBillingAccountRequest(name=name, principal_account_id=claims.azp)
@@ -54,12 +58,16 @@ async def get_billing_accounts(
 async def get_billing_account(
     billing_account_id: str,
     claims: AccessTokenClaims = Depends(get_access_claims),
-    billing_account_service: BillingAccountService = Depends(get_billing_account_service),
+    billing_account_service: BillingAccountService = Depends(
+        get_billing_account_service
+    ),
 ) -> BillingAccount:
     try:
         return await billing_account_service.get_billing_account(billing_account_id)
     except BillingAccountNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Billing account not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Billing account not found"
+        )
 
 
 @router.patch(
@@ -71,12 +79,18 @@ async def patch_billing_account(
     billing_account_id: str,
     req: PatchBillingAccountRequest,
     claims: AccessTokenClaims = Depends(get_access_claims),
-    billing_account_service: BillingAccountService = Depends(get_billing_account_service),
+    billing_account_service: BillingAccountService = Depends(
+        get_billing_account_service
+    ),
 ) -> BillingAccount:
     try:
-        return await billing_account_service.patch_billing_account(billing_account_id, req)
+        return await billing_account_service.patch_billing_account(
+            billing_account_id, req
+        )
     except BillingAccountNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Billing account not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Billing account not found"
+        )
 
 
 @router.delete(
@@ -87,9 +101,13 @@ async def patch_billing_account(
 async def delete_billing_account(
     billing_account_id: str,
     claims: AccessTokenClaims = Depends(get_access_claims),
-    billing_account_service: BillingAccountService = Depends(get_billing_account_service),
+    billing_account_service: BillingAccountService = Depends(
+        get_billing_account_service
+    ),
 ) -> None:
     try:
         await billing_account_service.delete_billing_account(billing_account_id)
     except BillingAccountNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Billing account not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Billing account not found"
+        )

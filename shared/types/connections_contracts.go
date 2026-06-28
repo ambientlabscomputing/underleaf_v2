@@ -1,25 +1,37 @@
 package types
 
-type CreateTunnelRequest struct {
+type CreateConnectionRequest struct {
 	NodeID string `json:"node_id"`
 	Name   string `json:"name"`
 }
 
-func (t *CreateTunnelRequest) ToTunnel() *Tunnel {
-	return &Tunnel{
-		ID:     GenerateID(TunnelIDPrefix), // Implement a function to generate unique IDs
+func (t *CreateConnectionRequest) ToConnection() *Connection {
+	return &Connection{
+		ID:     GenerateID(StreamIDPrefix), // Implement a function to generate unique IDs
 		NodeID: ForeignKey(t.NodeID),
 		Name:   t.Name,
-		State:  TunnelStateProvisioned,
+		State:  ConnectionStateProvisioned,
 		Status: StatusSucceeded,
 	}
 }
 
-type BeginConnRequest struct {
-	TunnelID string         `json:"tunnel_id"`
-	Type     ConnectionType `json:"type"`
-	Endpoint *string        `json:"endpoint"`
-	Port     *int           `json:"port"`
+type NewStreamRequest struct {
+	ConnectionID string     `json:"connection_id"`
+	Type         StreamType `json:"type"`
+	Endpoint     *string    `json:"endpoint"`
+	Port         *int       `json:"port"`
+}
+
+func (t *NewStreamRequest) ToStream() *Stream {
+	return &Stream{
+		ID:           GenerateID(StreamIDPrefix), // Implement a function to generate unique IDs
+		ConnectionID: ForeignKey(t.ConnectionID),
+		Type:         t.Type,
+		State:        StreamStateActive,
+		Status:       StatusSucceeded,
+		Endpoint:     t.Endpoint,
+		Port:         t.Port,
+	}
 }
 
 type TerminateConnRequest struct {
@@ -27,6 +39,15 @@ type TerminateConnRequest struct {
 }
 
 type TerminateConnResponse struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
+type CloseStreamRequest struct {
+	StreamID string `json:"stream_id"`
+}
+
+type CloseStreamResponse struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
 }

@@ -4,17 +4,20 @@ import (
 	"github.com/rs/xid"
 )
 
+type IDPrefix string
+
 const (
-	NodeIDPrefix       = "node"
-	AppIDPrefix        = "app"
-	ContainerIDPrefix  = "container"
-	VolumeIDPrefix     = "volume"
-	TunnelIDPrefix     = "tunnel"
-	ConnectionIDPrefix = "conn"
+	NodeIDPrefix       IDPrefix = "node"
+	AppIDPrefix        IDPrefix = "app"
+	ContainerIDPrefix  IDPrefix = "container"
+	VolumeIDPrefix     IDPrefix = "volume"
+	ConnectionIDPrefix IDPrefix = "conn"
+	StreamIDPrefix     IDPrefix = "stream"
+	RequestIDPrefix    IDPrefix = "req"
 )
 
 // GenerateID generates a unique ID with the given prefix.
-func GenerateID(prefix string) string {
+func GenerateID(prefix IDPrefix) string {
 	id := xid.New()
-	return prefix + "_" + id.String()
+	return string(prefix) + "_" + id.String()
 }

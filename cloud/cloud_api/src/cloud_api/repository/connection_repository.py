@@ -4,25 +4,29 @@ from cloud_api.models.api import (
     QueryConnectionRequest,
     PatchConnectionRequest,
 )
-from cloud_api.models.sql import SQLConnection, SQLCluster, SQLNode, SqlTunnel
+from cloud_api.models.sql import SQLConnection, SQLCluster, SQLNode
 from cloud_api.repository.base_repository import BaseRepository
 from sqlalchemy import select, update
 from datetime import datetime, timezone
 
 
 class ConnectionRepository(BaseRepository):
-    async def create_connection(self, req: CreateConnectionRequest) -> Connection:
+    async def create_connection(self, conn: Connection) -> Connection:
         async with self.get_session() as session:
-            new_connection = SQLConnection(
-                name=req.name,
-                tunnel_id=req.tunnel_id,
+            new_conn = SQLConnection(
+                id=conn.id,
+                name=conn.name,
+                node_id=conn.node_id,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
+                closed_at=conn.closed_at,
+                state=conn.state,
+                status=conn.status,
             )
-            session.add(new_connection)
+            session.add(new_conn)
             await session.commit()
-            await session.refresh(new_connection)
-            return Connection.model_validate(new_connection)
+            await session.refresh(new_conn)
+            return Connection.model_validate(new_conn)
 
     async def get_connection(self, connection_id: str) -> Connection | None:
         async with self.get_session() as session:
@@ -35,16 +39,20 @@ class ConnectionRepository(BaseRepository):
         async with self.get_session() as session:
             query = (
                 select(SQLConnection)
-                .join(SqlTunnel, SQLConnection.tunnel_id == SqlTunnel.id)
-                .join(SQLNode, SqlTunnel.node_id == SQLNode.id)
+                .join(SQLNode, SQLConnection.node_id == SQLNode.id)
                 .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
             )
-            if req.name is not None:
-                query = query.filter(SQLConnection.name == req.name)
-            if req.tunnel_id is not None:
-                query = query.filter(SQLConnection.tunnel_id == req.tunnel_id)
             if req.principal_account_id is not None:
-                query = query.filter(SQLCluster.principal_account_id == req.principal_account_id)
+                query = query.filter(
+                    SQLCluster.principal_account_id == req.principal_account_id
+                )
+            query = query.filter(
+                **req.model_dump(
+                    exclude_unset=True,
+                    exclude_none=True, 
+                    exclude={"principal_account_id"}
+                )
+            )
             result = await session.scalars(query)
             connections = result.all()
             return [Connection.model_validate(connection) for connection in connections]
@@ -53,7 +61,11 @@ class ConnectionRepository(BaseRepository):
         self, connection_id: str, req: PatchConnectionRequest
     ) -> Connection | None:
         async with self.get_session() as session:
-            update_stmt = update(SQLConnection).where(SQLConnection.id == connection_id).values(updated_at=datetime.now(timezone.utc))
+            update_stmt = (
+                update(SQLConnection)
+                .where(SQLConnection.id == connection_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
             result = await session.execute(update_stmt)

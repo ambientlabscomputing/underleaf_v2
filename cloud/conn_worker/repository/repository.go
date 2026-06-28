@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -29,8 +30,15 @@ func (r *Repository) Set(ctx context.Context, key string, value interface{}, tim
 	return r.rdb.Set(ctx, key, value, timeout).Err()
 }
 
-func (r *Repository) Get(ctx context.Context, key string) (string, error) {
-	return r.rdb.Get(ctx, key).Result()
+type RepositoryResult string
+
+func (rr RepositoryResult) Parse(v any) error {
+	return json.Unmarshal([]byte(rr), v)
+}
+
+func (r *Repository) Get(ctx context.Context, key string) (RepositoryResult, error) {
+	val, err := r.rdb.Get(ctx, key).Result()
+	return RepositoryResult(val), err
 }
 
 func (r *Repository) Delete(ctx context.Context, key string) error {

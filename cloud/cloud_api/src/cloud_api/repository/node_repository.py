@@ -45,7 +45,11 @@ class NodeRepository(BaseRepository):
 
     async def patch_node(self, node_id: str, req: PatchNodeRequest) -> Node | None:
         async with self.get_session() as session:
-            update_stmt = update(SQLNode).where(SQLNode.id == node_id).values(updated_at=datetime.now(timezone.utc))
+            update_stmt = (
+                update(SQLNode)
+                .where(SQLNode.id == node_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
             result = await session.execute(update_stmt)

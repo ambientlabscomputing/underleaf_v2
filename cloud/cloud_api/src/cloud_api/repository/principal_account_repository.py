@@ -49,9 +49,11 @@ class PrincipalAccountRepository(BaseRepository):
         self, principal_account_id: str, req: PatchPrincipalAccountRequest
     ) -> PrincipalAccount | None:
         async with self.get_session() as session:
-            update_stmt = update(SQLPrincipalAccount).where(
-                SQLPrincipalAccount.id == principal_account_id
-            ).values(updated_at=datetime.now(timezone.utc))
+            update_stmt = (
+                update(SQLPrincipalAccount)
+                .where(SQLPrincipalAccount.id == principal_account_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
             result = await session.execute(update_stmt)

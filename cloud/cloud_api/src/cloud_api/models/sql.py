@@ -16,7 +16,9 @@ class SQLPrincipalAccount(SQLBase):
     __tablename__ = "principal_accounts"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.PRINCIPAL_ACCOUNT))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.PRINCIPAL_ACCOUNT)
+    )
     name: Mapped[str]
     users: Mapped[list["SQLUser"]] = relationship(back_populates="principal_account")
     billing_account: Mapped["SQLBillingAccount"] = relationship(
@@ -28,7 +30,9 @@ class SQLBillingAccount(SQLBase):
     __tablename__ = "billing_accounts"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.BILLING_ACCOUNT))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.BILLING_ACCOUNT)
+    )
     name: Mapped[str]
     principal_account_id: Mapped[str] = mapped_column(
         ForeignKey("underleaf.principal_accounts.id")
@@ -50,7 +54,9 @@ class SQLSubscription(SQLBase):
     __tablename__ = "subscriptions"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.SUBSCRIPTION))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.SUBSCRIPTION)
+    )
     billing_account_id: Mapped[str] = mapped_column(
         ForeignKey("underleaf.billing_accounts.id")
     )
@@ -64,7 +70,9 @@ class SQLEntitlementsBucket(SQLBase):
     __tablename__ = "entitlements_buckets"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.ENTITLEMENTS_BUCKET))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.ENTITLEMENTS_BUCKET)
+    )
     name: Mapped[str]
     billing_account_id: Mapped[str] = mapped_column(
         ForeignKey("underleaf.billing_accounts.id")
@@ -81,7 +89,9 @@ class SQLUser(SQLBase):
     __tablename__ = "users"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.USER))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.USER)
+    )
     name: Mapped[str]
     email: Mapped[str]
     principal_account_id: Mapped[str] = mapped_column(
@@ -99,7 +109,9 @@ class SQLUserPassword(SQLBase):
     __tablename__ = "user_passwords"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.CREDENTIAL))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.CREDENTIAL)
+    )
     user_id: Mapped[str] = mapped_column(ForeignKey("underleaf.users.id"))
     password_hash: Mapped[str] = mapped_column()
     user: Mapped["SQLUser"] = relationship(back_populates="password")
@@ -125,31 +137,46 @@ class SQLNode(SQLBase):
     cluster: Mapped["SQLCluster"] = relationship(back_populates="nodes")
 
 
-class SqlTunnel(SQLBase):
-    __tablename__ = "tunnels"
-    __table_args__ = {"schema": "underleaf"}
-
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.TUNNEL))
-    name: Mapped[str]
-    node_id: Mapped[str] = mapped_column(ForeignKey("underleaf.nodes.id"))
-    connections: Mapped[list["SQLConnection"]] = relationship(back_populates="tunnel")
-
-
 class SQLConnection(SQLBase):
     __tablename__ = "connections"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.CONNECTION))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.CONNECTION)
+    )
+    node_id: Mapped[str] = mapped_column(ForeignKey("underleaf.nodes.id"))
     name: Mapped[str]
-    tunnel_id: Mapped[str] = mapped_column(ForeignKey("underleaf.tunnels.id"))
-    tunnel: Mapped["SqlTunnel"] = relationship(back_populates="connections")
+    state: Mapped[str]
+    status: Mapped[str]
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    streams: Mapped[list["SQLStream"]] = relationship(back_populates="connection")
+
+
+class SQLStream(SQLBase):
+    __tablename__ = "streams"
+    __table_args__ = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.STREAM)
+    )
+    name: Mapped[str]
+    connection_id: Mapped[str] = mapped_column(ForeignKey("underleaf.connections.id"))
+    type: Mapped[str]
+    state: Mapped[str]
+    status: Mapped[str]
+    endpoint: Mapped[Optional[str]] = mapped_column(nullable=True)
+    port: Mapped[Optional[int]] = mapped_column(nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    connection: Mapped["SQLConnection"] = relationship(back_populates="streams")
 
 
 class SQLUsageEvent(SQLBase):
     __tablename__ = "usage_events"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.USAGE_EVENT))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.USAGE_EVENT)
+    )
     billing_account_id: Mapped[str] = mapped_column(
         ForeignKey("underleaf.billing_accounts.id")
     )
@@ -162,12 +189,16 @@ class SQLClusterCandidate(SQLBase):
     __tablename__ = "cluster_candidates"
     __table_args__ = {"schema": "underleaf"}
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=lambda: generate_id(IDPrefix.CANDIDATE))
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.CANDIDATE)
+    )
     # user-facing short code carried in the verification URL
     user_code: Mapped[str] = mapped_column(unique=True)
     # SHA-256 hex digest of the plaintext device_code (never stored in clear)
     device_code_hash: Mapped[str] = mapped_column(unique=True)
-    status: Mapped[str] = mapped_column(default="pending")  # pending|approved|expired|consumed
+    status: Mapped[str] = mapped_column(
+        default="pending"
+    )  # pending|approved|expired|consumed
     proposed_cluster_name: Mapped[str]
     proposed_cluster_id: Mapped[str]
     # filled in when a user approves the request
@@ -177,7 +208,11 @@ class SQLClusterCandidate(SQLBase):
     )
     # one-time token used by orch-server to request a signed cert
     one_time_token_hash: Mapped[Optional[str]] = mapped_column(nullable=True)
-    one_time_token_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    one_time_token_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     device_code_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     poll_interval: Mapped[int] = mapped_column(default=5)
-    last_polled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_polled_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

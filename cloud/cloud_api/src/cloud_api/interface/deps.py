@@ -10,6 +10,7 @@ Usage:
         principal_account_id = claims.azp
         ...
 """
+
 from pydantic import Field
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
@@ -47,6 +48,7 @@ class AccessTokenClaims(JWTClaims):
     principal_account_id. Refresh tokens (which carry no azp) are rejected
     with HTTP 403 before the handler runs.
     """
+
     azp: str = Field(...)  # type: ignore[assignment]  # narrows str | None → str
 
 

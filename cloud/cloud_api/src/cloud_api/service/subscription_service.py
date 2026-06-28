@@ -24,7 +24,9 @@ class SubscriptionService:
         logger.bind(subscription_id=subscription.id).info("Subscription created")
         return subscription
 
-    async def get_subscriptions(self, req: QuerySubscriptionRequest) -> ListSubscriptionResponse:
+    async def get_subscriptions(
+        self, req: QuerySubscriptionRequest
+    ) -> ListSubscriptionResponse:
         items = await self.subscription_repo.query_subscriptions(req)
         return ListSubscriptionResponse(items=items, total=len(items))
 
@@ -37,7 +39,9 @@ class SubscriptionService:
     async def patch_subscription(
         self, subscription_id: str, req: PatchSubscriptionRequest
     ) -> Subscription:
-        subscription = await self.subscription_repo.patch_subscription(subscription_id, req)
+        subscription = await self.subscription_repo.patch_subscription(
+            subscription_id, req
+        )
         if subscription is None:
             raise SubscriptionNotFoundError(subscription_id)
         return subscription

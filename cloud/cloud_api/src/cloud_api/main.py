@@ -25,4 +25,3 @@ if __name__ == "__main__":
         port=cfg.api.port,
         reload=cfg.reload,
     )
-

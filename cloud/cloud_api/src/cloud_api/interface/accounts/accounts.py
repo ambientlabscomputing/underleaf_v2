@@ -18,4 +18,3 @@ async def sign_up(
     account_service: AccountService = Depends(get_account_service),
 ) -> UserSignUpResponse:
     return await account_service.sign_up(req)
-

@@ -58,9 +58,7 @@ class ClusterService:
             raise ClusterNotFoundError(cluster_id)
         return cluster
 
-    async def patch_cluster(
-        self, cluster_id: str, req: PatchClusterRequest
-    ) -> Cluster:
+    async def patch_cluster(self, cluster_id: str, req: PatchClusterRequest) -> Cluster:
         cluster = await self.cluster_repo.patch_cluster(cluster_id, req)
         if cluster is None:
             raise ClusterNotFoundError(cluster_id)

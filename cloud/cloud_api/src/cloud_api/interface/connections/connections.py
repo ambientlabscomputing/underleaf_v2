@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Annotated
 
 from cloud_api.interface.deps import AccessTokenClaims, get_access_claims
 from cloud_api.models.api import (
-    Connection,
     CreateConnectionRequest,
     ListConnectionResponse,
     PatchConnectionRequest,
     QueryConnectionRequest,
+    Connection,
 )
-from cloud_api.service.connection_service import ConnectionNotFoundError, ConnectionService
+from cloud_api.service.connection_service import (
+    ConnectionNotFoundError,
+    ConnectionService,
+)
 from cloud_api.service_manager import get_connection_service
 
 router = APIRouter(prefix="/connections", tags=["Connections"])
@@ -22,7 +26,7 @@ router = APIRouter(prefix="/connections", tags=["Connections"])
 )
 async def create_connection(
     req: CreateConnectionRequest,
-    claims: AccessTokenClaims = Depends(get_access_claims),
+    _: AccessTokenClaims = Depends(get_access_claims),
     connection_service: ConnectionService = Depends(get_connection_service),
 ) -> Connection:
     return await connection_service.create_connection(req)
@@ -34,14 +38,11 @@ async def create_connection(
     summary="List connections",
 )
 async def get_connections(
-    name: str | None = None,
-    tunnel_id: str | None = None,
-    claims: AccessTokenClaims = Depends(get_access_claims),
+    query: Annotated[QueryConnectionRequest, Query()],
+    _: AccessTokenClaims = Depends(get_access_claims),
     connection_service: ConnectionService = Depends(get_connection_service),
 ) -> ListConnectionResponse:
-    return await connection_service.get_connections(
-        QueryConnectionRequest(name=name, tunnel_id=tunnel_id, principal_account_id=claims.azp)
-    )
+    return await connection_service.get_connections(query)
 
 
 @router.get(
@@ -51,13 +52,15 @@ async def get_connections(
 )
 async def get_connection(
     connection_id: str,
-    claims: AccessTokenClaims = Depends(get_access_claims),
+    _: AccessTokenClaims = Depends(get_access_claims),
     connection_service: ConnectionService = Depends(get_connection_service),
 ) -> Connection:
     try:
         return await connection_service.get_connection(connection_id)
     except ConnectionNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+        )
 
 
 @router.patch(
@@ -68,14 +71,33 @@ async def get_connection(
 async def patch_connection(
     connection_id: str,
     req: PatchConnectionRequest,
-    claims: AccessTokenClaims = Depends(get_access_claims),
+    _: AccessTokenClaims = Depends(get_access_claims),
     connection_service: ConnectionService = Depends(get_connection_service),
 ) -> Connection:
     try:
         return await connection_service.patch_connection(connection_id, req)
     except ConnectionNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+        )
 
+
+@router.post(
+    "/{connection_id}/terminate",
+    response_model=Connection,
+    summary="Terminate a connection",
+)
+async def terminate_connection(
+    connection_id: str,
+    _: AccessTokenClaims = Depends(get_access_claims),
+    connection_service: ConnectionService = Depends(get_connection_service),
+) -> Connection:
+    try:
+        return await connection_service.terminate_connection(connection_id)
+    except ConnectionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+        )
 
 @router.delete(
     "/{connection_id}",
@@ -84,10 +106,12 @@ async def patch_connection(
 )
 async def delete_connection(
     connection_id: str,
-    claims: AccessTokenClaims = Depends(get_access_claims),
+    _: AccessTokenClaims = Depends(get_access_claims),
     connection_service: ConnectionService = Depends(get_connection_service),
 ) -> None:
     try:
         await connection_service.delete_connection(connection_id)
     except ConnectionNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+        )

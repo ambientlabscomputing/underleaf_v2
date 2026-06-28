@@ -24,9 +24,9 @@ class BillingAccountService:
     ) -> BillingAccount:
         full_req = req.model_copy(update={"principal_account_id": principal_account_id})
         account = await self.billing_account_repo.create_billing_account(full_req)
-        logger.bind(billing_account_id=account.id, principal_account_id=principal_account_id).info(
-            "BillingAccount created"
-        )
+        logger.bind(
+            billing_account_id=account.id, principal_account_id=principal_account_id
+        ).info("BillingAccount created")
         return account
 
     async def get_billing_accounts(
@@ -36,7 +36,9 @@ class BillingAccountService:
         return ListBillingAccountResponse(items=items, total=len(items))
 
     async def get_billing_account(self, billing_account_id: str) -> BillingAccount:
-        account = await self.billing_account_repo.get_billing_account(billing_account_id)
+        account = await self.billing_account_repo.get_billing_account(
+            billing_account_id
+        )
         if account is None:
             raise BillingAccountNotFoundError(billing_account_id)
         return account
@@ -44,13 +46,19 @@ class BillingAccountService:
     async def patch_billing_account(
         self, billing_account_id: str, req: PatchBillingAccountRequest
     ) -> BillingAccount:
-        account = await self.billing_account_repo.patch_billing_account(billing_account_id, req)
+        account = await self.billing_account_repo.patch_billing_account(
+            billing_account_id, req
+        )
         if account is None:
             raise BillingAccountNotFoundError(billing_account_id)
         return account
 
     async def delete_billing_account(self, billing_account_id: str) -> None:
-        deleted = await self.billing_account_repo.delete_billing_account(billing_account_id)
+        deleted = await self.billing_account_repo.delete_billing_account(
+            billing_account_id
+        )
         if not deleted:
             raise BillingAccountNotFoundError(billing_account_id)
-        logger.bind(billing_account_id=billing_account_id).info("BillingAccount deleted")
+        logger.bind(billing_account_id=billing_account_id).info(
+            "BillingAccount deleted"
+        )

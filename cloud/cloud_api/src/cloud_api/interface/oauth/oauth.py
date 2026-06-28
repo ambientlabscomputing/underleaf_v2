@@ -49,24 +49,38 @@ def _access_token_ttl_seconds() -> int:
 async def token(
     grant_type: str = Form(..., description="'password' or 'refresh_token'"),
     # password grant fields
-    username: str | None = Form(default=None, description="User email (password grant)"),
-    password: str | None = Form(default=None, description="User password (password grant)"),
+    username: str | None = Form(
+        default=None, description="User email (password grant)"
+    ),
+    password: str | None = Form(
+        default=None, description="User password (password grant)"
+    ),
     # refresh_token grant fields
-    refresh_token: str | None = Form(default=None, description="Refresh token (refresh_token grant)"),
+    refresh_token: str | None = Form(
+        default=None, description="Refresh token (refresh_token grant)"
+    ),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> OAuth2TokenResponse:
     if grant_type == "password":
         if not username or not password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "invalid_request", "error_description": "username and password are required"},
+                detail={
+                    "error": "invalid_request",
+                    "error_description": "username and password are required",
+                },
             )
         try:
-            token_resp = await auth_service.login(SignInRequest(email=username, password=password))
+            token_resp = await auth_service.login(
+                SignInRequest(email=username, password=password)
+            )
         except InvalidCredentialsError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"error": "invalid_grant", "error_description": "Invalid credentials"},
+                detail={
+                    "error": "invalid_grant",
+                    "error_description": "Invalid credentials",
+                },
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return OAuth2TokenResponse(
@@ -79,14 +93,20 @@ async def token(
         if not refresh_token:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "invalid_request", "error_description": "refresh_token is required"},
+                detail={
+                    "error": "invalid_request",
+                    "error_description": "refresh_token is required",
+                },
             )
         try:
             token_resp = await auth_service.refresh_token(refresh_token)
         except InvalidTokenError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"error": "invalid_grant", "error_description": "Token is invalid or expired"},
+                detail={
+                    "error": "invalid_grant",
+                    "error_description": "Token is invalid or expired",
+                },
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return OAuth2TokenResponse(
@@ -98,7 +118,10 @@ async def token(
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "unsupported_grant_type", "error_description": f"Unsupported grant_type: {grant_type}"},
+            detail={
+                "error": "unsupported_grant_type",
+                "error_description": f"Unsupported grant_type: {grant_type}",
+            },
         )
 
 
@@ -118,7 +141,9 @@ async def userinfo(
     except InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"error": "invalid_token", "error_description": "Token is invalid or expired"},
-            headers={"WWW-Authenticate": "Bearer error=\"invalid_token\""},
+            detail={
+                "error": "invalid_token",
+                "error_description": "Token is invalid or expired",
+            },
+            headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
         )
-

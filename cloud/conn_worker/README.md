@@ -69,9 +69,9 @@ TerminateConn(TerminateConnRequest) returns TerminateConnResponse;
 
 ```mermaid
 erDiagram
-    ConnWorker ||--|| Tunnel: ConnectsTo
-    Tunnel ||--o{ Connection : Multiplexes
-    Agent ||--|| Tunnel: ConnectsTo
+    ConnWorker ||--|| Connection: ConnectsTo
+    Connection ||--o{ Stream : Multiplexes
+    Agent ||--|| Connection: ConnectsTo
     Agent ||--o{ UserApp: Hosts
-    UserApp }o--o{ Connection: OneConnectionPerPort
+    UserApp }o--o{ Stream: OneStreamPerPort
 ```
