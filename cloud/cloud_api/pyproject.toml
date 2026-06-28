@@ -23,4 +23,6 @@ dependencies = [
     "uvicorn>=0.49.0",
     "aiohttp>=3.14.1",
     "async-lru>=2.3.0",
+    "protobuf>=6.33.6",
+    "grpcio-tools>=1.81.1",
 ]

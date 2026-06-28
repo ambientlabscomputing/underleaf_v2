@@ -9,7 +9,7 @@ from cloud_api.models.api import (
     TerminateConnRequest,
 )
 from cloud_api.repository.connection_repository import ConnectionRepository
-from cloud_api.lib.conn_worker_client import ConnWorkerClient
+from cloud_api.lib.conn_worker_client.conn_worker_client import ConnWorkerClient
 from cloud_api import logger
 from async_lru import alru_cache
 from itertools import batched
@@ -29,7 +29,9 @@ class ConnectionService:
         self.conn_client = conn_client
 
     async def create_connection(self, req: CreateConnectionRequest) -> Connection:
-        connection = await self.conn_client.new_connection(req)
+        connection = await self.conn_client.new_connection(
+            node_id=req.node_id, name=req.name
+        )
         connection = await self.conn_repo.create_connection(connection)
         logger.bind(connection_id=connection.id).info("Connection created")
         return connection
@@ -63,8 +65,7 @@ class ConnectionService:
             raise ConnectionNotFoundError(connection_id)
         if connection.state == ConnectionState.CLOSED:
             raise Exception(f"Connection '{connection_id}' is already closed.")
-        terminate_req = TerminateConnRequest(connection_id=connection_id)
-        terminate_resp = await self.conn_client.terminate_connection(terminate_req)
+        terminate_resp = await self.conn_client.terminate_connection(connection_id)
         if terminate_resp.status != "succeeded":
             raise Exception(
                 f"Failed to terminate connection '{connection_id}': {terminate_resp.status}"

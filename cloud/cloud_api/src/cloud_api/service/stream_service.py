@@ -10,7 +10,7 @@ from cloud_api.models.api import (
 )
 from cloud_api.repository.stream_repository import StreamRepository
 from cloud_api import logger
-from cloud_api.lib.conn_worker_client import ConnWorkerClient
+from cloud_api.lib.conn_worker_client.conn_worker_client import ConnWorkerClient
 from async_lru import alru_cache
 from itertools import batched
 
@@ -29,7 +29,12 @@ class StreamService:
         self.conn_worker_client = conn_worker_client
 
     async def create_stream(self, req: NewStreamRequest) -> Stream:
-        stream = await self.conn_worker_client.new_stream(req)
+        stream = await self.conn_worker_client.new_stream(
+            connection_id=req.connection_id,
+            type=req.type_,
+            endpoint=req.endpoint or "",
+            port=req.port or 0,
+        )
         stream = await self.stream_repo.create_stream(stream)
         logger.bind(stream_id=stream.id).info("Stream created")
 
@@ -57,8 +62,7 @@ class StreamService:
             raise StreamNotFoundError(stream_id)
         if stream.state == StreamState.CLOSED:
             raise Exception(f"Stream '{stream_id}' is already closed.")
-        close_req = CloseStreamRequest(stream_id=stream_id)
-        _ = await self.conn_worker_client.close_stream(close_req)
+        _ = await self.conn_worker_client.close_stream(stream_id)
         updated_stream = await self.stream_repo.patch_stream(
             stream_id, PatchStreamRequest(state=StreamState.CLOSED)
         )

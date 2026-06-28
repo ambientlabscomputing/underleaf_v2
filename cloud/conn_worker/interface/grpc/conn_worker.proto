@@ -1,0 +1,74 @@
+syntax="proto3";
+import "google/protobuf/empty.proto";
+package conn_worker;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/interface/grpc";
+
+message CreateConnectionRequest {
+    string node_id = 1;
+    string name = 2;
+}
+
+message Connection {
+    string id = 1;
+    string node_id = 2;
+    string name = 3;
+    string state = 4;
+    string status = 5;
+    string created_at = 6;
+    string closed_at = 7;
+}
+
+message GetConnectionRequest {
+    string id = 1;
+}
+
+message TerminateConnectionRequest {
+    string id = 1;
+}
+
+message NewStreamRequest {
+    string connection_id = 1;
+    string type = 2;
+    string endpoint = 3;
+    int32 port = 4;
+}
+
+message Stream {
+    string id = 1;
+    string connection_id = 2;
+    string type = 3;
+    string state = 4;
+    string status = 5;
+    string endpoint = 6;
+    int32 port = 7;
+    string created_at = 8;
+    string closed_at = 9;
+}
+
+message GetStreamRequest {
+    string id = 1;
+}
+
+message CloseStreamRequest {
+    string stream_id = 1;
+}
+
+message CloseStreamResponse {
+    string id = 1;
+    string status = 2;
+}
+
+service ConnectionWorker {
+    // Connections
+    rpc CreateConnection(CreateConnectionRequest) returns (Connection);
+    rpc GetConnection(GetConnectionRequest) returns (Connection);
+    rpc TerminateConnection(TerminateConnectionRequest) returns (google.protobuf.Empty);
+    rpc ListConnections(google.protobuf.Empty) returns (stream Connection);
+
+    // Streams
+    rpc NewStream(NewStreamRequest) returns (Stream);
+    rpc CloseStream(CloseStreamRequest) returns (CloseStreamResponse);
+    rpc ListStreams(google.protobuf.Empty) returns (stream Stream);
+    rpc GetStream(GetStreamRequest) returns (Stream);
+}

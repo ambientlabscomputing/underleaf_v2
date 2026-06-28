@@ -24,10 +24,15 @@ type RedisConfig struct {
 	TTLSeconds int    `yaml:"ttl_seconds"`
 }
 
+type GRPCConfig struct {
+	Port int `yaml:"port"`
+}
+
 type Config struct {
 	Http                     HttpConfig         `yaml:"http"`
 	Connections              *ConnectionsConfig `yaml:"gateway"`
 	Redis                    *RedisConfig       `yaml:"redis"`
+	GRPC                     *GRPCConfig        `yaml:"grpc"`
 	DBPath                   string             `yaml:"db_path"`
 	ContainerSyncIntervalSec int                `yaml:"container_sync_interval_sec"`
 	CloudAPIBaseURL          string             `yaml:"cloud_api_base_url"`
@@ -84,6 +89,9 @@ func init() {
 			Password:   "",
 			DB:         0,
 			TTLSeconds: 3600 * 24, // 1 day
+		},
+		GRPC: &GRPCConfig{
+			Port: 50102,
 		},
 		DBPath:                   "conn_worker.db",
 		ContainerSyncIntervalSec: 60,

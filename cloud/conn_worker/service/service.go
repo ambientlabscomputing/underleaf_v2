@@ -24,6 +24,8 @@ type Service interface {
 	TerminateConnection(ctx context.Context, req types.TerminateConnRequest) (*types.TerminateConnResponse, error)
 	NewStream(ctx context.Context, req types.NewStreamRequest) (*types.Stream, error)
 	CloseStream(ctx context.Context, req types.CloseStreamRequest) (*types.CloseStreamResponse, error)
+	ListStreams(ctx context.Context) ([]types.Stream, error)
+	GetStream(ctx context.Context, id string) (*types.Stream, error)
 }
 
 type AppService struct {
