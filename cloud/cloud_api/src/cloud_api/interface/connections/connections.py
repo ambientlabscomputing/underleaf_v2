@@ -99,6 +99,7 @@ async def terminate_connection(
             status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
         )
 
+
 @router.delete(
     "/{connection_id}",
     status_code=status.HTTP_204_NO_CONTENT,

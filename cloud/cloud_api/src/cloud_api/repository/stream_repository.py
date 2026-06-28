@@ -3,9 +3,15 @@ from cloud_api.models.api import (
     QueryStreamRequest,
     PatchStreamRequest,
 )
-from cloud_api.models.sql import SQLConnection, SQLConnection, SQLStream, SQLCluster, SQLNode
+from cloud_api.models.sql import (
+    SQLConnection,
+    SQLConnection,
+    SQLStream,
+    SQLCluster,
+    SQLNode,
+)
 from cloud_api.repository.base_repository import BaseRepository
-from sqlalchemy import select, update
+from sqlalchemy import select, update, insert, delete
 from datetime import datetime, timezone
 
 
@@ -52,8 +58,8 @@ class StreamRepository(BaseRepository):
             query = query.filter(
                 **req.model_dump(
                     exclude_unset=True,
-                    exclude_none=True, 
-                    exclude={"principal_account_id", "node_id"}
+                    exclude_none=True,
+                    exclude={"principal_account_id", "node_id"},
                 )
             )
             result = await session.scalars(query)
@@ -86,3 +92,44 @@ class StreamRepository(BaseRepository):
             await session.delete(stream)
             await session.commit()
             return True
+
+    async def search_stream_ids(self, search_ids: list[str]) -> list[str]:
+        async with self.get_session() as session:
+            query = select(SQLStream.id).where(SQLStream.id.in_(search_ids))
+            result = await session.scalars(query)
+            return [str(id) for id in result.all()]
+
+    async def batch_create(self, streams: list[Stream]) -> None:
+        batch = [stream.model_dump(mode="json", by_alias=True) for stream in streams]
+        async with self.get_session() as session:
+            await session.execute(insert(SQLStream), batch)
+            await session.commit()
+
+    async def get_streams_by_ids(self, stream_ids: list[str]) -> list[Stream]:
+        async with self.get_session() as session:
+            query = select(SQLStream).where(SQLStream.id.in_(stream_ids))
+            result = await session.scalars(query)
+            streams = result.all()
+            return [Stream.model_validate(stream) for stream in streams]
+
+    async def batch_patch_streams(self, changes: dict[str, PatchStreamRequest]) -> None:
+        async with self.get_session() as session:
+            batch = [
+                {
+                    "id": stream_id,
+                    **change.model_dump(
+                        mode="json",
+                        exclude_unset=True,
+                        exclude_none=True,
+                    ),
+                    "updated_at": datetime.now(timezone.utc),
+                }
+                for stream_id, change in changes.items()
+            ]
+            await session.execute(update(SQLStream), batch)
+            await session.commit()
+
+    async def batch_delete_streams(self, stream_ids: list[str]) -> None:
+        async with self.get_session() as session:
+            await session.execute(delete(SQLStream).where(SQLStream.id.in_(stream_ids)))
+            await session.commit()

@@ -243,9 +243,7 @@ class Stream(Base):
     endpoint: str | None = Field(
         default=None, description="Optional endpoint for the stream"
     )
-    port: int | None = Field(
-        default=None, description="Optional port for the stream"
-    )
+    port: int | None = Field(default=None, description="Optional port for the stream")
     closed_at: datetime | None = Field(
         default=None, description="Timestamp when the stream was closed"
     )
@@ -253,8 +251,12 @@ class Stream(Base):
 
 class PatchStreamRequest(BaseModel):
     name: str | None = Field(default=None, description="Name of the stream")
-    state: StreamState | None = Field(default=None, description="Current state of the stream")
-    status: Status | None = Field(default=None, description="Current status of the stream")
+    state: StreamState | None = Field(
+        default=None, description="Current state of the stream"
+    )
+    status: Status | None = Field(
+        default=None, description="Current status of the stream"
+    )
     closed_at: datetime | None = Field(
         default=None, description="Timestamp when the stream was closed"
     )

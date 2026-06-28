@@ -148,7 +148,9 @@ class SQLConnection(SQLBase):
     name: Mapped[str]
     state: Mapped[str]
     status: Mapped[str]
-    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     streams: Mapped[list["SQLStream"]] = relationship(back_populates="connection")
 
 
@@ -166,7 +168,9 @@ class SQLStream(SQLBase):
     status: Mapped[str]
     endpoint: Mapped[Optional[str]] = mapped_column(nullable=True)
     port: Mapped[Optional[int]] = mapped_column(nullable=True)
-    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     connection: Mapped["SQLConnection"] = relationship(back_populates="streams")
 
 

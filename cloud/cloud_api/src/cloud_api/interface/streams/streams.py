@@ -80,6 +80,7 @@ async def patch_stream(
             status_code=status.HTTP_404_NOT_FOUND, detail="Stream not found"
         )
 
+
 @router.post(
     "/{stream_id}/close",
     response_model=Stream,
