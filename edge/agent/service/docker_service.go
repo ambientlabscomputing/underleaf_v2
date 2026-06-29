@@ -25,7 +25,7 @@ type DockerService struct {
 // persists them to the agent repository, pushes them to the orchestrator, and returns
 // the full list.
 func (s *DockerService) IngestContainers(ctx context.Context) ([]*types.Container, error) {
-	node, err := s.repository.Nodes.GetNode()
+	node, err := s.repository.Node.GetNode()
 	if err != nil {
 		return nil, fmt.Errorf("docker: get local node: %w", err)
 	}

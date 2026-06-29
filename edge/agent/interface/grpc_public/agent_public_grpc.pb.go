@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -22,6 +23,7 @@ const (
 	AgentPublic_GetStatus_FullMethodName           = "/agent.public.v1.AgentPublic/GetStatus"
 	AgentPublic_Ping_FullMethodName                = "/agent.public.v1.AgentPublic/Ping"
 	AgentPublic_IngestContainers_FullMethodName    = "/agent.public.v1.AgentPublic/IngestContainers"
+	AgentPublic_GetNode_FullMethodName             = "/agent.public.v1.AgentPublic/GetNode"
 	AgentPublic_GetContainerLogs_FullMethodName    = "/agent.public.v1.AgentPublic/GetContainerLogs"
 	AgentPublic_StreamContainerLogs_FullMethodName = "/agent.public.v1.AgentPublic/StreamContainerLogs"
 )
@@ -35,6 +37,7 @@ type AgentPublicClient interface {
 	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	IngestContainers(ctx context.Context, in *IngestContainersRequest, opts ...grpc.CallOption) (*IngestContainersResponse, error)
+	GetNode(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Node, error)
 	// Log RPCs — agent is the source of truth for container logs.
 	GetContainerLogs(ctx context.Context, in *GetContainerLogsRequest, opts ...grpc.CallOption) (*GetContainerLogsResponse, error)
 	StreamContainerLogs(ctx context.Context, in *StreamContainerLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error)
@@ -72,6 +75,16 @@ func (c *agentPublicClient) IngestContainers(ctx context.Context, in *IngestCont
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(IngestContainersResponse)
 	err := c.cc.Invoke(ctx, AgentPublic_IngestContainers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) GetNode(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Node, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Node)
+	err := c.cc.Invoke(ctx, AgentPublic_GetNode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +129,7 @@ type AgentPublicServer interface {
 	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error)
+	GetNode(context.Context, *emptypb.Empty) (*Node, error)
 	// Log RPCs — agent is the source of truth for container logs.
 	GetContainerLogs(context.Context, *GetContainerLogsRequest) (*GetContainerLogsResponse, error)
 	StreamContainerLogs(*StreamContainerLogsRequest, grpc.ServerStreamingServer[LogLine]) error
@@ -137,6 +151,9 @@ func (UnimplementedAgentPublicServer) Ping(context.Context, *PingRequest) (*Ping
 }
 func (UnimplementedAgentPublicServer) IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IngestContainers not implemented")
+}
+func (UnimplementedAgentPublicServer) GetNode(context.Context, *emptypb.Empty) (*Node, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNode not implemented")
 }
 func (UnimplementedAgentPublicServer) GetContainerLogs(context.Context, *GetContainerLogsRequest) (*GetContainerLogsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContainerLogs not implemented")
@@ -219,6 +236,24 @@ func _AgentPublic_IngestContainers_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentPublic_GetNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).GetNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_GetNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).GetNode(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentPublic_GetContainerLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetContainerLogsRequest)
 	if err := dec(in); err != nil {
@@ -266,6 +301,10 @@ var AgentPublic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "IngestContainers",
 			Handler:    _AgentPublic_IngestContainers_Handler,
+		},
+		{
+			MethodName: "GetNode",
+			Handler:    _AgentPublic_GetNode_Handler,
 		},
 		{
 			MethodName: "GetContainerLogs",

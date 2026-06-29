@@ -20,6 +20,10 @@ func NewService() Service {
 	}
 
 	cloudClient := clients.NewCloudClient()
+	agentClient, err := clients.NewAgentClient()
+	if err != nil {
+		panic("orchestrator: failed to create agent gRPC client: " + err.Error())
+	}
 
 	return &AppService{
 		Repository:   repo,
@@ -27,7 +31,7 @@ func NewService() Service {
 		health:       &HealthService{peer: peer},
 		containers:   &ContainerService{Repository: repo},
 		logs:         &LogService{peer: peer},
-		registration: NewRegistrationService(repo.Registration, cloudClient),
+		registration: NewRegistrationService(repo.Registration, cloudClient, agentClient),
 	}
 }
 

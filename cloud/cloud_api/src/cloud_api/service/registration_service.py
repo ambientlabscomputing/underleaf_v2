@@ -13,6 +13,7 @@ import hashlib
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 from cloud_api import app_config, logger
 from cloud_api.lib.cert_lib import CertLib
@@ -275,29 +276,16 @@ class RegistrationService:
         return ApproveCandidateResponse(cluster=cluster)
 
     async def issue_certificate(
-        self, one_time_token: str, csr_pem: str
+        self, one_time_token: str, csr_pem: str, node_id: str
     ) -> IssueCertificateResponse:
         """Sign the CSR if the one-time token is valid, then consume the candidate."""
         token_hash = _sha256(one_time_token)
-        # We need to look up by one_time_token_hash — add a helper in repo
-        from sqlalchemy import select
-        from cloud_api.models.sql import SQLClusterCandidate
-        from cloud_api.repository.base_repository import BaseRepository
 
-        # Use the repo's session directly via a small inline query
-        candidate = None
-        async with self.registration_repo.get_session() as session:
-            from sqlalchemy import select as sa_select
-
-            result = await session.scalars(
-                sa_select(SQLClusterCandidate).where(
-                    SQLClusterCandidate.one_time_token_hash == token_hash,
-                    SQLClusterCandidate.status == "approved",
-                )
-            )
-            candidate = result.first()
-
+        candidate = await self.registration_repo.find_candidate_by_token_hash(
+            token_hash, status="approved"
+        )
         if candidate is None:
+            logger.error("Invalid or already-used one-time token", token_hash=token_hash)
             raise InvalidOneTimeTokenError("Invalid or already-used token")
 
         now = datetime.now(timezone.utc)
@@ -305,17 +293,20 @@ class RegistrationService:
         if expires and expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         if expires is None or now > expires:
+            logger.error("One-time token has expired", candidate_id=candidate.id, token_hash=token_hash)
             raise InvalidOneTimeTokenError("One-time token has expired")
 
-        cluster_id = candidate.cluster_id or candidate.proposed_cluster_id
-        cert_pem, ca_chain_pem = self.cert_lib.sign_csr(csr_pem, cluster_id)
+        subject_id = candidate.cluster_id or candidate.proposed_cluster_id
+        cert_pem, ca_chain_pem = self.cert_lib.sign_csr(csr_pem, subject_id)
+        node_cert_pem, _ = self.cert_lib.sign_csr(csr_pem, node_id)
 
         await self.registration_repo.consume(candidate.id)
 
-        logger.bind(candidate_id=candidate.id, cluster_id=cluster_id).info(
+        logger.bind(candidate_id=candidate.id, subject_id=subject_id).info(
             "Certificate issued, candidate consumed"
         )
         return IssueCertificateResponse(
             certificate_pem=cert_pem,
+            node_certificate_pem=node_cert_pem,
             ca_chain_pem=ca_chain_pem,
         )

@@ -6,10 +6,12 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	agentpb "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
 )
 
+// TODO: we need to grab this dynamically from the db, ok for now with one node only mode
 const agentAddr = "localhost:50101"
 
 // AgentClient is a gRPC client for the AgentPublic service.
@@ -73,4 +75,12 @@ func (c *AgentClient) StreamContainerLogs(ctx context.Context, dockerID string, 
 		DockerId: dockerID,
 		SinceMs:  sinceMs,
 	})
+}
+
+func (c *AgentClient) GetNode(ctx context.Context) (*agentpb.Node, error) {
+	resp, err := c.client.GetNode(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

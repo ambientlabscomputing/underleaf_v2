@@ -11,7 +11,6 @@ from cloud_api.lib.conn_worker_client.conn_worker_pb2 import (
     NewStreamRequest,
     Stream,
     TerminateConnectionRequest,
-    TerminateConnectionResponse,
 )
 from cloud_api.lib.conn_worker_client.conn_worker_pb2_grpc import ConnectionWorkerStub
 
@@ -31,11 +30,10 @@ class ConnWorkerClient:
             GetConnectionRequest(id=connection_id)
         )
 
-    async def terminate_connection(self, connection_id: str) -> TerminateConnectionResponse:
-        resp = await self._stub.TerminateConnection(
-            TerminateConnectionRequest(connection_id=connection_id)
+    async def terminate_connection(self, connection_id: str) -> None:
+        await self._stub.TerminateConnection(
+            TerminateConnectionRequest(id=connection_id)
         )
-        return resp
 
     async def list_connections(self) -> list[Connection]:
         result = []

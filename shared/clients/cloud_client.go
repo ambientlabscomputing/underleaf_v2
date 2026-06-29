@@ -3,12 +3,16 @@ package clients
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
@@ -26,6 +30,45 @@ func NewCloudClient() *CloudClient {
 			Timeout: 15 * time.Second,
 		},
 	}
+}
+
+func NewCloudClientWithCert() (*CloudClient, error) {
+	cfg := utils.GetConfig(utils.OrchestratorConfig)
+	crtPath := cfg.CertDir + "/" + string(types.CertFileNameCAChain)
+	keyPath := cfg.CertDir + "/" + string(types.CertFileNameClusterKey)
+	caPath := cfg.CertDir + "/" + string(types.CertFileNameCAChain)
+
+	clientCert, err := tls.LoadX509KeyPair(crtPath, keyPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load client certificate: %v", err))
+	}
+
+	caCert, err := os.ReadFile(caPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read CA certificate: %v", err))
+	}
+
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCert) {
+		panic("failed to append CA certificate to pool")
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{clientCert},
+		RootCAs:      caCertPool,
+	}
+
+	hc := &http.Client{
+		Timeout: 15 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	return &CloudClient{
+		baseURL:    cfg.CloudAPIBaseURL,
+		httpClient: hc,
+	}, nil
 }
 
 // ---- Request / Response types ----
@@ -62,11 +105,13 @@ type ErrorResponse struct {
 
 type IssueCertificateRequest struct {
 	CSRPEM string `json:"csr_pem"`
+	NodeID string `json:"node_id"`
 }
 
 type IssueCertificateResponse struct {
-	CertificatePEM string `json:"certificate_pem"`
-	CAChainPEM     string `json:"ca_chain_pem"`
+	CertificatePEM     string `json:"certificate_pem"`
+	NodeCertificatePEM string `json:"node_certificate_pem"`
+	CAChainPEM         string `json:"ca_chain_pem"`
 }
 
 // ---- Client methods ----
@@ -74,7 +119,7 @@ type IssueCertificateResponse struct {
 // RegisterDevice calls POST /api/v2/registration/device.
 func (c *CloudClient) RegisterDevice(ctx context.Context, req RegisterDeviceRequest) (*DeviceAuthResponse, error) {
 	var resp DeviceAuthResponse
-	if err := c.post(ctx, "/api/v2/registration/device", req, &resp, ""); err != nil {
+	if err := c.postWithClusterToken(ctx, "/api/v2/registration/device", req, &resp, ""); err != nil {
 		return nil, fmt.Errorf("cloud: register device: %w", err)
 	}
 	return &resp, nil
@@ -127,17 +172,79 @@ func (c *CloudClient) PollToken(ctx context.Context, deviceCode string) (*PollTo
 }
 
 // RequestCertificate calls POST /api/v2/registration/certificate with the one-time token.
-func (c *CloudClient) RequestCertificate(ctx context.Context, oneTimeToken string, csrPEM string) (*IssueCertificateResponse, error) {
+func (c *CloudClient) RequestCertificate(ctx context.Context, oneTimeToken string, csrPEM, nodeID string) (*IssueCertificateResponse, error) {
 	var resp IssueCertificateResponse
-	if err := c.post(ctx, "/api/v2/registration/certificate", IssueCertificateRequest{CSRPEM: csrPEM}, &resp, oneTimeToken); err != nil {
+	if err := c.postWithClusterToken(
+		ctx,
+		"/api/v2/registration/certificate",
+		IssueCertificateRequest{
+			CSRPEM: csrPEM,
+			NodeID: nodeID,
+		},
+		&resp,
+		oneTimeToken,
+	); err != nil {
 		return nil, fmt.Errorf("cloud: request certificate: %w", err)
 	}
 	return &resp, nil
 }
 
 // ---- Internal helpers ----
+func (c *CloudClient) post(ctx context.Context, path string, reqBody any, respBody any) error {
+	return c.httpRequest(ctx, http.MethodPost, path, reqBody, respBody, nil)
+}
 
-func (c *CloudClient) post(ctx context.Context, path string, reqBody any, respBody any, clusterToken string) error {
+func (c *CloudClient) patch(ctx context.Context, path string, reqBody any, respBody any) error {
+	return c.httpRequest(ctx, http.MethodPatch, path, reqBody, respBody, nil)
+}
+
+func (c *CloudClient) put(ctx context.Context, path string, reqBody any, respBody any) error {
+	return c.httpRequest(ctx, http.MethodPut, path, reqBody, respBody, nil)
+}
+
+func (c *CloudClient) get(ctx context.Context, path string, respBody any, params map[string]string) error {
+	return c.httpRequest(ctx, http.MethodGet, path, nil, respBody, params)
+}
+
+func (c *CloudClient) delete(ctx context.Context, path string, respBody any) error {
+	return c.httpRequest(ctx, http.MethodDelete, path, nil, respBody, nil)
+}
+
+// httpRequest sends a HTTP request, it is assumed that the http client uses mTLS, so no auth headers are needed.
+func (c *CloudClient) httpRequest(ctx context.Context, httpMethod, path string, reqBody any, respBody any, params map[string]string) error {
+	if len(params) > 0 {
+		q := "?"
+		for k, v := range params {
+			q += fmt.Sprintf("%s=%s&", k, v)
+		}
+		path += q[:len(q)-1]
+	}
+	b, err := json.Marshal(reqBody)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, httpMethod, c.baseURL+path, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("status %d: %s", resp.StatusCode, body)
+	}
+	return json.Unmarshal(body, respBody)
+}
+
+// postWithClusterToken sends a post with the given cluster token (or no token if empty) and decodes the JSON response into respBody.
+// Token is ONLY for the onboarding flow; normal requests should use the standard post() method.
+func (c *CloudClient) postWithClusterToken(ctx context.Context, path string, reqBody any, respBody any, clusterToken string) error {
 	b, err := json.Marshal(reqBody)
 	if err != nil {
 		return err

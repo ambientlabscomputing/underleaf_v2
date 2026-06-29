@@ -44,7 +44,7 @@ func (s *OrchestratorService) RegisterNode(ctx context.Context) (*types.Node, er
 		return nil, err
 	}
 	utils.Logger.Info("Node registered with orchestrator: " + node.ID)
-	if err := s.repository.Nodes.CreateNode(node); err != nil {
+	if err := s.repository.Node.CreateNode(node); err != nil {
 		utils.Logger.Error("failed to create node in repository: " + err.Error())
 		return nil, err
 	}

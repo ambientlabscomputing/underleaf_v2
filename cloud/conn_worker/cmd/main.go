@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/interface/rest"
 	"github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/service"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
@@ -20,13 +19,6 @@ func main() {
 	err := service.Start(context.Background())
 	if err != nil {
 		fmt.Println("Failed to start service:", err)
-		return
-	}
-
-	restServer := rest.NewRESTServer(service)
-	err = restServer.Serve()
-	if err != nil {
-		fmt.Println("Failed to start REST server:", err)
 		return
 	}
 }

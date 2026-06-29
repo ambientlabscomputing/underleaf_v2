@@ -16,6 +16,7 @@ Usage in a router:
 from functools import lru_cache
 
 from cloud_api.lib.auth_lib import AuthLib
+from cloud_api.lib.conn_worker_client import ConnWorkerClient
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.cluster_repository import ClusterRepository
 from cloud_api.repository.stream_repository import StreamRepository
@@ -87,6 +88,14 @@ def get_auth_lib() -> AuthLib:
     """AuthLib is expensive to construct (RSA cert load/generate). One instance."""
     return AuthLib(get_user_repo())
 
+@lru_cache
+def get_conn_worker_client() -> ConnWorkerClient:
+    from cloud_api import app_config
+
+    if not app_config:
+        raise RuntimeError("App config not loaded")
+    return ConnWorkerClient(target=app_config.conn_worker.grpc_target)
+
 
 # ---------------------------------------------------------------------------
 # Service singletons
@@ -142,12 +151,12 @@ def get_stream_repo() -> StreamRepository:
 
 @lru_cache
 def get_connection_service() -> ConnectionService:
-    return ConnectionService(conn_repo=get_conn_repo())
+    return ConnectionService(conn_repo=get_conn_repo(), conn_client=get_conn_worker_client())
 
 
 @lru_cache
 def get_stream_service() -> StreamService:
-    return StreamService(stream_repo=get_stream_repo())
+    return StreamService(stream_repo=get_stream_repo(), conn_worker_client=get_conn_worker_client())
 
 
 @lru_cache

@@ -210,6 +210,9 @@ class SQLClusterCandidate(SQLBase):
     cluster_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey("underleaf.clusters.id"), nullable=True
     )
+    node_id: Mapped[Optional[str]] = mapped_column( # for node-specific registration requestsd
+        ForeignKey("underleaf.nodes.id"), nullable=True
+    )
     # one-time token used by orch-server to request a signed cert
     one_time_token_hash: Mapped[Optional[str]] = mapped_column(nullable=True)
     one_time_token_expires_at: Mapped[Optional[datetime]] = mapped_column(

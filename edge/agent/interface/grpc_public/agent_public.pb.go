@@ -9,6 +9,7 @@ package grpc_public
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -617,11 +618,87 @@ func (x *StreamContainerLogsRequest) GetSinceMs() int64 {
 	return 0
 }
 
+type Node struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	IpAddress     string                 `protobuf:"bytes,3,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
+	Os            string                 `protobuf:"bytes,4,opt,name=os,proto3" json:"os,omitempty"`
+	Arch          string                 `protobuf:"bytes,5,opt,name=arch,proto3" json:"arch,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Node) Reset() {
+	*x = Node{}
+	mi := &file_agent_public_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Node) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Node) ProtoMessage() {}
+
+func (x *Node) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Node.ProtoReflect.Descriptor instead.
+func (*Node) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *Node) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Node) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Node) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *Node) GetOs() string {
+	if x != nil {
+		return x.Os
+	}
+	return ""
+}
+
+func (x *Node) GetArch() string {
+	if x != nil {
+		return x.Arch
+	}
+	return ""
+}
+
 var File_agent_public_proto protoreflect.FileDescriptor
 
 const file_agent_public_proto_rawDesc = "" +
 	"\n" +
-	"\x12agent_public.proto\x12\x0fagent.public.v1\"\x12\n" +
+	"\x12agent_public.proto\x12\x0fagent.public.v1\x1a\x1bgoogle/protobuf/empty.proto\"\x12\n" +
 	"\x10GetStatusRequest\"+\n" +
 	"\x11GetStatusResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"Q\n" +
@@ -660,11 +737,19 @@ const file_agent_public_proto_rawDesc = "" +
 	"nextCursor\"T\n" +
 	"\x1aStreamContainerLogsRequest\x12\x1b\n" +
 	"\tdocker_id\x18\x01 \x01(\tR\bdockerId\x12\x19\n" +
-	"\bsince_ms\x18\x02 \x01(\x03R\asinceMs2\xd8\x03\n" +
+	"\bsince_ms\x18\x02 \x01(\x03R\asinceMs\"m\n" +
+	"\x04Node\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x03 \x01(\tR\tipAddress\x12\x0e\n" +
+	"\x02os\x18\x04 \x01(\tR\x02os\x12\x12\n" +
+	"\x04arch\x18\x05 \x01(\tR\x04arch2\x92\x04\n" +
 	"\vAgentPublic\x12R\n" +
 	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponse\x12C\n" +
 	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponse\x12g\n" +
-	"\x10IngestContainers\x12(.agent.public.v1.IngestContainersRequest\x1a).agent.public.v1.IngestContainersResponse\x12g\n" +
+	"\x10IngestContainers\x12(.agent.public.v1.IngestContainersRequest\x1a).agent.public.v1.IngestContainersResponse\x128\n" +
+	"\aGetNode\x12\x16.google.protobuf.Empty\x1a\x15.agent.public.v1.Node\x12g\n" +
 	"\x10GetContainerLogs\x12(.agent.public.v1.GetContainerLogsRequest\x1a).agent.public.v1.GetContainerLogsResponse\x12^\n" +
 	"\x13StreamContainerLogs\x12+.agent.public.v1.StreamContainerLogsRequest\x1a\x18.agent.public.v1.LogLine0\x01BOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
 
@@ -680,7 +765,7 @@ func file_agent_public_proto_rawDescGZIP() []byte {
 	return file_agent_public_proto_rawDescData
 }
 
-var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_agent_public_proto_goTypes = []any{
 	(*GetStatusRequest)(nil),           // 0: agent.public.v1.GetStatusRequest
 	(*GetStatusResponse)(nil),          // 1: agent.public.v1.GetStatusResponse
@@ -693,6 +778,8 @@ var file_agent_public_proto_goTypes = []any{
 	(*GetContainerLogsRequest)(nil),    // 8: agent.public.v1.GetContainerLogsRequest
 	(*GetContainerLogsResponse)(nil),   // 9: agent.public.v1.GetContainerLogsResponse
 	(*StreamContainerLogsRequest)(nil), // 10: agent.public.v1.StreamContainerLogsRequest
+	(*Node)(nil),                       // 11: agent.public.v1.Node
+	(*emptypb.Empty)(nil),              // 12: google.protobuf.Empty
 }
 var file_agent_public_proto_depIdxs = []int32{
 	4,  // 0: agent.public.v1.IngestContainersResponse.containers:type_name -> agent.public.v1.Container
@@ -700,15 +787,17 @@ var file_agent_public_proto_depIdxs = []int32{
 	0,  // 2: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
 	2,  // 3: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
 	5,  // 4: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
-	8,  // 5: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
-	10, // 6: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
-	1,  // 7: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
-	3,  // 8: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
-	6,  // 9: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
-	9,  // 10: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
-	7,  // 11: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
-	7,  // [7:12] is the sub-list for method output_type
-	2,  // [2:7] is the sub-list for method input_type
+	12, // 5: agent.public.v1.AgentPublic.GetNode:input_type -> google.protobuf.Empty
+	8,  // 6: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
+	10, // 7: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
+	1,  // 8: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
+	3,  // 9: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
+	6,  // 10: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
+	11, // 11: agent.public.v1.AgentPublic.GetNode:output_type -> agent.public.v1.Node
+	9,  // 12: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
+	7,  // 13: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
+	8,  // [8:14] is the sub-list for method output_type
+	2,  // [2:8] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -725,7 +814,7 @@ func file_agent_public_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_public_proto_rawDesc), len(file_agent_public_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

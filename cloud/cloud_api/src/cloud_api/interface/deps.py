@@ -11,12 +11,16 @@ Usage:
         ...
 """
 
+from functools import lru_cache
+
+from cloud_api.models.api import Cluster, Node
+from cloud_api.repository.user_repository import UserRepository
 from pydantic import Field
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, Request, status
 from fastapi.security import APIKeyHeader
 
 from cloud_api.lib.auth_lib import AuthLib, InvalidTokenError, JWTClaims
-from cloud_api.service_manager import get_auth_lib
+from cloud_api.service_manager import get_auth_lib, get_cluster_repo, get_node_repo, get_user_repo
 
 # Reads the Authorization header and surfaces a single token field in Swagger.
 _auth_header = APIKeyHeader(name="Authorization", auto_error=True)
@@ -62,3 +66,79 @@ async def get_access_claims(
             detail={"error": "forbidden", "error_description": "Access token required"},
         )
     return AccessTokenClaims(**claims.model_dump())
+
+
+@lru_cache
+def get_auth_lib(user_repo: UserRepository):
+    return AuthLib(user_repo=user_repo)
+
+@lru_cache
+def mint_token(auth_lib: AuthLib, principal_account_id: str, node_id: str | None = None, cluster_id: str | None = None) -> str:
+    user_id = node_id or cluster_id or ""
+    return auth_lib.mint_access_token(
+        user_id=user_id,
+        principal_account_id=principal_account_id,
+    )
+
+async def fetch_data_for_node_or_cluster(subject_id: str) -> tuple[Node | None, Cluster]:
+    node: Node | None = None
+    cluster: Cluster | None = None
+    if subject_id.startswith("node_"):
+        node_repo = get_node_repo()
+        node = await node_repo.get_node(subject_id)
+        if not node:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Node with ID {subject_id} not found",
+            )
+        node_id = node.id
+        cluster = await get_cluster_repo().get_cluster(node.cluster_id)
+        if not cluster:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Cluster with ID {node.cluster_id} not found",
+            )
+    elif subject_id.startswith("cluster_"):
+        cluster = await get_cluster_repo().get_cluster(subject_id)
+        if not cluster:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Cluster with ID {subject_id} not found",
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid X-Subject-Id header value: {subject_id}",
+        )
+    
+    return node, cluster
+
+async def x_subject_id_token_middleware_(request: Request, call_next):
+    if "X-Subject-Id" not in request.headers:
+        # skip this helper if the header is not present
+        pass
+    elif request.headers.get("Authorization"):
+        # skip this helper if the Authorization header is already present
+        pass
+    else:
+        subject_id = request.headers["X-Subject-Id"]
+        node, cluster = await fetch_data_for_node_or_cluster(subject_id)
+        if not cluster:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Cluster not found",
+            )
+
+        auth_lib = get_auth_lib(get_user_repo())
+        token = mint_token(
+            auth_lib, 
+            principal_account_id=cluster.principal_account_id, 
+            node_id=node.id if node else None,
+            cluster_id=cluster.id
+        )
+        request.headers.__dict__["_list"].append(
+            (b"Authorization", f"Bearer {token}".encode())
+        )
+
+    response = await call_next(request)
+    return response

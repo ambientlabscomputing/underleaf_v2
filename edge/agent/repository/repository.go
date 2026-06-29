@@ -14,8 +14,7 @@ type Repository struct {
 	db       *sql.DB
 	Migrator *migrator.Migrator
 
-	// Add other repositories here
-	Nodes         *NodeRepository
+	Node          *NodeRepository
 	Containers    *ContainerRepository
 	ContainerLogs *ContainerLogRepository
 }
@@ -49,7 +48,7 @@ func NewRepository() (*Repository, error) {
 	return &Repository{
 		db:            db,
 		Migrator:      migrator.NewMigrator(db),
-		Nodes:         nodeRepo,
+		Node:          nodeRepo,
 		Containers:    containerRepo,
 		ContainerLogs: containerLogRepo,
 	}, nil

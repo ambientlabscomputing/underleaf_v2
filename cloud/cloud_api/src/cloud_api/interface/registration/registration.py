@@ -163,7 +163,7 @@ async def issue_certificate(
     svc: RegistrationService = Depends(get_registration_service),
 ) -> IssueCertificateResponse:
     try:
-        return await svc.issue_certificate(one_time_token, req.csr_pem)
+        return await svc.issue_certificate(one_time_token, req.csr_pem, req.node_id)
     except InvalidOneTimeTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

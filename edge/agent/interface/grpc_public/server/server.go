@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository"
@@ -153,4 +154,18 @@ func (s *AgentGRPCPublicServer) StreamContainerLogs(req *grpc_public.StreamConta
 			}
 		}
 	}
+}
+
+func (s *AgentGRPCPublicServer) GetNode(ctx context.Context, _ *emptypb.Empty) (*grpc_public.Node, error) {
+	node, err := s.Service.GetNode()
+	if err != nil {
+		return nil, err
+	}
+	return &grpc_public.Node{
+		Id:        node.ID,
+		Name:      node.Name,
+		IpAddress: node.IPAddr,
+		Os:        node.OS,
+		Arch:      node.Arch,
+	}, nil
 }

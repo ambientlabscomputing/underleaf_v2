@@ -569,10 +569,16 @@ class IssueCertificateRequest(BaseModel):
     csr_pem: str = Field(
         ..., description="PEM-encoded PKCS#10 certificate signing request"
     )
+    node_id: str = Field(
+        ..., description="Optional node ID for node-specific registration"
+    )
 
 
 class IssueCertificateResponse(BaseModel):
     certificate_pem: str = Field(
         ..., description="Signed client certificate in PEM format"
+    )
+    node_certificate_pem: str = Field(
+        ..., description="Signed node certificate in PEM format"
     )
     ca_chain_pem: str = Field(..., description="Root CA certificate in PEM format")

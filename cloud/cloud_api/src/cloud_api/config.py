@@ -105,6 +105,13 @@ class APIConfig(BaseModel):
     )
 
 
+class ConnWorkerConfig(BaseModel):
+    grpc_target: str = Field(
+        default="localhost:50102",
+        description="gRPC target address for the connection worker service",
+    )
+
+
 class AppConfig(BaseModel):
     reload: bool = Field(
         default=True,
@@ -128,6 +135,10 @@ class AppConfig(BaseModel):
     )
     api: APIConfig = Field(
         default_factory=APIConfig, description="API server configuration settings"
+    )
+    conn_worker: ConnWorkerConfig = Field(
+        default_factory=ConnWorkerConfig,
+        description="Connection worker service configuration settings",
     )
 
 

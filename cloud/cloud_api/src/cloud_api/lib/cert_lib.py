@@ -28,15 +28,15 @@ class CertLib:
     def sign_csr(
         self,
         csr_pem: str,
-        cluster_id: str,
+        subject_id: str,
         validity_days: int = 730,
     ) -> tuple[str, str]:
         """Sign a PEM-encoded CSR and return (certificate_pem, ca_chain_pem).
 
         The issued certificate has:
-        - CN = cluster_id
+        - CN = subject_id
         - extendedKeyUsage = clientAuth (critical)
-        - subjectAltName = DNS:cluster_id
+        - subjectAltName = DNS:subject_id
         - validity = validity_days from now
         """
         csr = x509.load_pem_x509_csr(csr_pem.encode())
@@ -45,7 +45,7 @@ class CertLib:
         cert = (
             x509.CertificateBuilder()
             .subject_name(
-                x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, cluster_id)])
+                x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, subject_id)])
             )
             .issuer_name(self._ca_cert.subject)
             .public_key(csr.public_key())
@@ -57,7 +57,7 @@ class CertLib:
                 critical=True,
             )
             .add_extension(
-                x509.SubjectAlternativeName([x509.DNSName(cluster_id)]),
+                x509.SubjectAlternativeName([x509.DNSName(subject_id)]),
                 critical=False,
             )
             .sign(self._ca_key, hashes.SHA256())

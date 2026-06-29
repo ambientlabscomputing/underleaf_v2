@@ -98,3 +98,13 @@ class RegistrationRepository(BaseRepository):
                 )
             )
             await session.commit()
+
+    async def find_candidate_by_token_hash(self, token_hash: str, status: str = "approved") -> SQLClusterCandidate | None:
+        async with self.get_session() as session:
+            result = await session.scalars(
+                select(SQLClusterCandidate).where(
+                    SQLClusterCandidate.one_time_token_hash == token_hash,
+                    SQLClusterCandidate.status == status
+                )
+            )
+            return result.first()

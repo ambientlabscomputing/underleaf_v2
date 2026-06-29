@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 
 package agent.public.v1;
 
@@ -9,6 +10,7 @@ service AgentPublic {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc Ping(PingRequest) returns (PingResponse);
   rpc IngestContainers(IngestContainersRequest) returns (IngestContainersResponse);
+  rpc GetNode(google.protobuf.Empty) returns (Node);
 
   // Log RPCs — agent is the source of truth for container logs.
   rpc GetContainerLogs(GetContainerLogsRequest) returns (GetContainerLogsResponse);
@@ -71,4 +73,12 @@ message GetContainerLogsResponse {
 message StreamContainerLogsRequest {
   string docker_id = 1;
   int64  since_ms  = 2; // 0 = tail only (no history replay)
+}
+
+message Node {
+  string id          = 1;
+  string name        = 2;
+  string ip_address  = 3;
+  string os          = 4;
+  string arch        = 5;
 }
