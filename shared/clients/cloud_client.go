@@ -3,13 +3,10 @@ package clients
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -32,39 +29,11 @@ func NewCloudClient() *CloudClient {
 	}
 }
 
-func NewCloudClientWithCert() (*CloudClient, error) {
-	cfg := utils.GetConfig(utils.OrchestratorConfig)
-	crtPath := cfg.CertDir + "/" + string(types.CertFileNameCAChain)
-	keyPath := cfg.CertDir + "/" + string(types.CertFileNameClusterKey)
-	caPath := cfg.CertDir + "/" + string(types.CertFileNameCAChain)
-
-	clientCert, err := tls.LoadX509KeyPair(crtPath, keyPath)
+func NewCloudClientWithCert(cfg utils.Config) (*CloudClient, error) {
+	hc, err := HttpClientWithCert(cfg)
 	if err != nil {
-		panic(fmt.Sprintf("failed to load client certificate: %v", err))
+		return nil, fmt.Errorf("failed to create HTTP client with cert: %w", err)
 	}
-
-	caCert, err := os.ReadFile(caPath)
-	if err != nil {
-		panic(fmt.Sprintf("failed to read CA certificate: %v", err))
-	}
-
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCert) {
-		panic("failed to append CA certificate to pool")
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{clientCert},
-		RootCAs:      caCertPool,
-	}
-
-	hc := &http.Client{
-		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-	}
-
 	return &CloudClient{
 		baseURL:    cfg.CloudAPIBaseURL,
 		httpClient: hc,
@@ -189,6 +158,70 @@ func (c *CloudClient) RequestCertificate(ctx context.Context, oneTimeToken strin
 	return &resp, nil
 }
 
+func (c *CloudClient) CreateConnection(ctx context.Context, req types.CreateConnectionRequest) (*types.Connection, error) {
+	var resp types.Connection
+	if err := c.post(ctx, "/api/v2/connections", req, &resp); err != nil {
+		return nil, fmt.Errorf("cloud: create connection: %w", err)
+	}
+	return &resp, nil
+}
+
+func (c *CloudClient) GetConnection(ctx context.Context, connectionID string) (*types.Connection, error) {
+	var resp types.Connection
+	if err := c.get(ctx, fmt.Sprintf("/api/v2/connections/%s", connectionID), &resp, nil); err != nil {
+		return nil, fmt.Errorf("cloud: get connection: %w", err)
+	}
+	return &resp, nil
+}
+
+func (c *CloudClient) TerminateConnection(ctx context.Context, connectionID string) error {
+	if err := c.delete(ctx, fmt.Sprintf("/api/v2/connections/%s", connectionID), nil); err != nil {
+		return fmt.Errorf("cloud: terminate connection: %w", err)
+	}
+	return nil
+}
+
+func (c *CloudClient) ListConnections(ctx context.Context, query types.QueryConnectionsRequest) ([]types.Connection, error) {
+	params := make(map[string]string)
+	if query.NodeID != nil {
+		params["node_id"] = *query.NodeID
+	}
+	if query.Name != nil {
+		params["name"] = *query.Name
+	}
+	var listResp types.QueryConnectionsResponse
+	if err := c.get(ctx, "/api/v2/connections", &listResp, params); err != nil {
+		return nil, fmt.Errorf("cloud: list connections: %w", err)
+	}
+	conns := make([]types.Connection, len(listResp.Items))
+	for i, c := range listResp.Items {
+		conns[i] = types.Connection{
+			ID:        c.ID,
+			NodeID:    c.NodeID,
+			Name:      c.Name,
+			State:     c.State,
+			Status:    c.Status,
+			CreatedAt: c.CreatedAt,
+		}
+	}
+	return conns, nil
+}
+
+func (c *CloudClient) NewStream(ctx context.Context, req types.NewStreamRequest) (*types.Stream, error) {
+	var resp types.Stream
+	if err := c.post(ctx, "/api/v2/streams", req, &resp); err != nil {
+		return nil, fmt.Errorf("cloud: new stream: %w", err)
+	}
+	return &resp, nil
+}
+
+func (c *CloudClient) CloseStream(ctx context.Context, streamID string) error {
+	if err := c.delete(ctx, fmt.Sprintf("/api/v2/streams/%s", streamID), nil); err != nil {
+		return fmt.Errorf("cloud: close stream: %w", err)
+	}
+	return nil
+}
+
 // ---- Internal helpers ----
 func (c *CloudClient) post(ctx context.Context, path string, reqBody any, respBody any) error {
 	return c.httpRequest(ctx, http.MethodPost, path, reqBody, respBody, nil)
@@ -212,6 +245,7 @@ func (c *CloudClient) delete(ctx context.Context, path string, respBody any) err
 
 // httpRequest sends a HTTP request, it is assumed that the http client uses mTLS, so no auth headers are needed.
 func (c *CloudClient) httpRequest(ctx context.Context, httpMethod, path string, reqBody any, respBody any, params map[string]string) error {
+	logger := utils.LoggerFromContext(ctx).With("method", httpMethod, "path", path)
 	if len(params) > 0 {
 		q := "?"
 		for k, v := range params {
@@ -221,22 +255,28 @@ func (c *CloudClient) httpRequest(ctx context.Context, httpMethod, path string, 
 	}
 	b, err := json.Marshal(reqBody)
 	if err != nil {
+		logger.Error("failed to marshal request body", "error", err)
 		return err
 	}
+	logger.Debug("sending HTTP request", "body", string(b))
 	req, err := http.NewRequestWithContext(ctx, httpMethod, c.baseURL+path, bytes.NewReader(b))
 	if err != nil {
+		logger.Error("failed to create HTTP request", "error", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		logger.Error("failed to do HTTP request", "error", err)
 		return err
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
+	logger.Debug("received HTTP response", "status", resp.StatusCode, "body", string(body))
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		logger.Error("HTTP request failed", "status", resp.StatusCode, "body", string(body))
 		return fmt.Errorf("status %d: %s", resp.StatusCode, body)
 	}
 	return json.Unmarshal(body, respBody)

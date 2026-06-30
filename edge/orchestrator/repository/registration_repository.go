@@ -79,6 +79,7 @@ func (r *RegistrationRepository) UpdateStatus(deviceCode, status, clusterID, cer
 	return err
 }
 
+// scanRegistration scans a single row into a ClusterRegistration struct.
 func scanRegistration(row *sql.Row) (*ClusterRegistration, error) {
 	var reg ClusterRegistration
 	var expiresUnix, createdUnix int64

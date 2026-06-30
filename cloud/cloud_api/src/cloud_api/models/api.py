@@ -80,6 +80,9 @@ class Cluster(Base):
     principal_account_id: str = Field(
         ..., description="ID of the associated principal account"
     )
+    manager_node_id: str | None = Field(
+        None, description="ID of the manager node for the cluster"
+    )
 
 
 class CreateClusterRequest(BaseModel):
@@ -211,7 +214,6 @@ class QueryConnectionRequest(BaseModel):
     principal_account_id: str | None = Field(
         None, description="Scope to a principal account"
     )
-    node_id: str | None = Field(None, description="Scope to a node")
     state: ConnectionState | None = Field(None, description="State of the connection")
     status: Status | None = Field(None, description="Status of the connection")
 

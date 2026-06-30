@@ -1,19 +1,32 @@
 package utils
 
+type NamedPort int
+
+const (
+	OrchestratorHttpPort   NamedPort = 9090
+	ConnectionsNodePort    NamedPort = 9021
+	ConnectionsGatewayPort NamedPort = 9020
+	ConnWorkerHttpPort     NamedPort = 9070
+	AgentHttpPort          NamedPort = 9091
+	OrchestratorGRPCPort   NamedPort = 50101
+	ConnWorkerGRPCPort     NamedPort = 50102
+	AgentGRPCPort          NamedPort = 50103
+)
+
 type HttpConfig struct {
-	Port         int    `yaml:"port"`
-	ReadTimeout  string `yaml:"read_timeout"` // Duration string (e.g., "30s", "1m") for read timeout
-	WriteTimeout string `yaml:"write_timeout"`
-	IdleTimeout  string `yaml:"idle_timeout"`
+	Port         NamedPort `yaml:"port"`
+	ReadTimeout  string    `yaml:"read_timeout"` // Duration string (e.g., "30s", "1m") for read timeout
+	WriteTimeout string    `yaml:"write_timeout"`
+	IdleTimeout  string    `yaml:"idle_timeout"`
 }
 
 type ConnectionsConfig struct {
-	GatewayPort         int    `yaml:"gateway_port"`
-	NodeConnectionsPort int    `yaml:"node_connections_port"`
-	ReadTimeout         string `yaml:"read_timeout"` // Duration string (e.g., "30s", "1m") for read timeout
-	WriteTimeout        string `yaml:"write_timeout"`
-	IdleTimeout         string `yaml:"idle_timeout"`
-	Domain              string `yaml:"domain"` // Domain for the gateway server (e.g., "underleafapp.com")
+	GatewayPort         NamedPort `yaml:"gateway_port"`
+	NodeConnectionsPort NamedPort `yaml:"node_connections_port"`
+	ReadTimeout         string    `yaml:"read_timeout"` // Duration string (e.g., "30s", "1m") for read timeout
+	WriteTimeout        string    `yaml:"write_timeout"`
+	IdleTimeout         string    `yaml:"idle_timeout"`
+	Domain              string    `yaml:"domain"` // Domain for the gateway server (e.g., "underleafapp.com")
 }
 
 type RedisConfig struct {
@@ -25,12 +38,19 @@ type RedisConfig struct {
 }
 
 type GRPCConfig struct {
-	Port int `yaml:"port"`
+	Port NamedPort `yaml:"port"`
+}
+
+type ConnectionsClient struct {
+	Host string    `yaml:"host"`
+	Port NamedPort `yaml:"port"`
 }
 
 type Config struct {
+	ConfigType               ConfigType         `yaml:"config_type"`
 	Http                     HttpConfig         `yaml:"http"`
 	Connections              *ConnectionsConfig `yaml:"gateway"`
+	ConnectionsClient        *ConnectionsClient `yaml:"connections_client"`
 	Redis                    *RedisConfig       `yaml:"redis"`
 	GRPC                     *GRPCConfig        `yaml:"grpc"`
 	DBPath                   string             `yaml:"db_path"`
@@ -46,8 +66,9 @@ var defaultConnWorkerConfig Config
 
 func init() {
 	defaultOrchConfig = Config{
+		ConfigType: OrchestratorConfig,
 		Http: HttpConfig{
-			Port:         9090,
+			Port:         OrchestratorHttpPort,
 			ReadTimeout:  "5s",
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
@@ -59,8 +80,13 @@ func init() {
 		CertDir:                  "./certs",
 	}
 	defaultAgentConfig = Config{
+		ConfigType: AgentConfig,
+		ConnectionsClient: &ConnectionsClient{
+			Host: "localhost",
+			Port: ConnectionsNodePort,
+		},
 		Http: HttpConfig{
-			Port:         9091,
+			Port:         AgentHttpPort,
 			ReadTimeout:  "5s",
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
@@ -69,15 +95,16 @@ func init() {
 		ContainerSyncIntervalSec: 60,
 	}
 	defaultConnWorkerConfig = Config{
+		ConfigType: ConnWorkerConfig,
 		Http: HttpConfig{
-			Port:         9070,
+			Port:         ConnWorkerHttpPort,
 			ReadTimeout:  "5s",
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
 		},
 		Connections: &ConnectionsConfig{
-			NodeConnectionsPort: 9021,
-			GatewayPort:         9020,
+			NodeConnectionsPort: ConnectionsNodePort,
+			GatewayPort:         ConnectionsGatewayPort,
 			ReadTimeout:         "5s",
 			WriteTimeout:        "10s",
 			IdleTimeout:         "15s",
@@ -91,7 +118,7 @@ func init() {
 			TTLSeconds: 3600 * 24, // 1 day
 		},
 		GRPC: &GRPCConfig{
-			Port: 50102,
+			Port: ConnWorkerGRPCPort,
 		},
 		DBPath:                   "conn_worker.db",
 		ContainerSyncIntervalSec: 60,

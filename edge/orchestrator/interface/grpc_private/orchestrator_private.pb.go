@@ -9,6 +9,7 @@ package grpc_private
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -781,11 +782,327 @@ func (x *GetCloudRegistrationStatusResponse) GetClusterId() string {
 	return ""
 }
 
+type NewStreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Port          int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NewStreamRequest) Reset() {
+	*x = NewStreamRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NewStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NewStreamRequest) ProtoMessage() {}
+
+func (x *NewStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NewStreamRequest.ProtoReflect.Descriptor instead.
+func (*NewStreamRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *NewStreamRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *NewStreamRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *NewStreamRequest) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+type CloseStreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StreamId      string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseStreamRequest) Reset() {
+	*x = CloseStreamRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseStreamRequest) ProtoMessage() {}
+
+func (x *CloseStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseStreamRequest.ProtoReflect.Descriptor instead.
+func (*CloseStreamRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CloseStreamRequest) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+type StreamState struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StreamId      string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	ConnectionId  string                 `protobuf:"bytes,3,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
+	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamState) Reset() {
+	*x = StreamState{}
+	mi := &file_orchestrator_private_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamState) ProtoMessage() {}
+
+func (x *StreamState) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamState.ProtoReflect.Descriptor instead.
+func (*StreamState) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *StreamState) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+func (x *StreamState) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *StreamState) GetConnectionId() string {
+	if x != nil {
+		return x.ConnectionId
+	}
+	return ""
+}
+
+func (x *StreamState) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+type GetStreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StreamId      string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStreamRequest) Reset() {
+	*x = GetStreamRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStreamRequest) ProtoMessage() {}
+
+func (x *GetStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStreamRequest.ProtoReflect.Descriptor instead.
+func (*GetStreamRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetStreamRequest) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+type Stream struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ConnectionId  string                 `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Port          int32                  `protobuf:"varint,6,opt,name=port,proto3" json:"port,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ClosedAt      string                 `protobuf:"bytes,8,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Stream) Reset() {
+	*x = Stream{}
+	mi := &file_orchestrator_private_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Stream) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Stream) ProtoMessage() {}
+
+func (x *Stream) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Stream.ProtoReflect.Descriptor instead.
+func (*Stream) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *Stream) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Stream) GetConnectionId() string {
+	if x != nil {
+		return x.ConnectionId
+	}
+	return ""
+}
+
+func (x *Stream) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *Stream) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *Stream) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Stream) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *Stream) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *Stream) GetClosedAt() string {
+	if x != nil {
+		return x.ClosedAt
+	}
+	return ""
+}
+
 var File_orchestrator_private_proto protoreflect.FileDescriptor
 
 const file_orchestrator_private_proto_rawDesc = "" +
 	"\n" +
-	"\x1aorchestrator_private.proto\x12\x17orchestrator.private.v1\"\xb8\x02\n" +
+	"\x1aorchestrator_private.proto\x12\x17orchestrator.private.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xb8\x02\n" +
 	"\x0fGetNodesRequest\x12\x19\n" +
 	"\x05limit\x18\x01 \x01(\x03H\x00R\x05limit\x88\x01\x01\x12\x1b\n" +
 	"\x06offset\x18\x02 \x01(\x03H\x01R\x06offset\x88\x01\x01\x12\x1e\n" +
@@ -844,13 +1161,40 @@ const file_orchestrator_private_proto_rawDesc = "" +
 	"\"GetCloudRegistrationStatusResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
-	"cluster_id\x18\x02 \x01(\tR\tclusterId2\xe7\x05\n" +
+	"cluster_id\x18\x02 \x01(\tR\tclusterId\"S\n" +
+	"\x10NewStreamRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12\x12\n" +
+	"\x04port\x18\x03 \x01(\x05R\x04port\"1\n" +
+	"\x12CloseStreamRequest\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\"y\n" +
+	"\vStreamState\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12#\n" +
+	"\rconnection_id\x18\x03 \x01(\tR\fconnectionId\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\"/\n" +
+	"\x10GetStreamRequest\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\"\xcf\x01\n" +
+	"\x06Stream\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rconnection_id\x18\x02 \x01(\tR\fconnectionId\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x12\n" +
+	"\x04port\x18\x06 \x01(\x05R\x04port\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x1b\n" +
+	"\tclosed_at\x18\b \x01(\tR\bclosedAt2\xc1\b\n" +
 	"\x13OrchestratorPrivate\x12_\n" +
 	"\bGetNodes\x12(.orchestrator.private.v1.GetNodesRequest\x1a).orchestrator.private.v1.GetNodesResponse\x12_\n" +
 	"\bSqlQuery\x12(.orchestrator.private.v1.SqlQueryRequest\x1a).orchestrator.private.v1.SqlQueryResponse\x12n\n" +
 	"\rTriggerIngest\x12-.orchestrator.private.v1.TriggerIngestRequest\x1a..orchestrator.private.v1.TriggerIngestResponse\x12q\n" +
 	"\x0eListContainers\x12..orchestrator.private.v1.ListContainersRequest\x1a/.orchestrator.private.v1.ListContainersResponse\x12\x92\x01\n" +
-	"\x19InitiateCloudRegistration\x129.orchestrator.private.v1.InitiateCloudRegistrationRequest\x1a:.orchestrator.private.v1.InitiateCloudRegistrationResponse\x12\x95\x01\n" +
+	"\x19InitiateCloudRegistration\x129.orchestrator.private.v1.InitiateCloudRegistrationRequest\x1a:.orchestrator.private.v1.InitiateCloudRegistrationResponse\x12W\n" +
+	"\tNewStream\x12).orchestrator.private.v1.NewStreamRequest\x1a\x1f.orchestrator.private.v1.Stream\x12R\n" +
+	"\vCloseStream\x12+.orchestrator.private.v1.CloseStreamRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
+	"\tGetStream\x12).orchestrator.private.v1.GetStreamRequest\x1a$.orchestrator.private.v1.StreamState\x12M\n" +
+	"\vListStreams\x12\x16.google.protobuf.Empty\x1a$.orchestrator.private.v1.StreamState0\x01\x12\x95\x01\n" +
 	"\x1aGetCloudRegistrationStatus\x12:.orchestrator.private.v1.GetCloudRegistrationStatusRequest\x1a;.orchestrator.private.v1.GetCloudRegistrationStatusResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
 
 var (
@@ -865,7 +1209,7 @@ func file_orchestrator_private_proto_rawDescGZIP() []byte {
 	return file_orchestrator_private_proto_rawDescData
 }
 
-var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_orchestrator_private_proto_goTypes = []any{
 	(*GetNodesRequest)(nil),                    // 0: orchestrator.private.v1.GetNodesRequest
 	(*GetNodesResponse)(nil),                   // 1: orchestrator.private.v1.GetNodesResponse
@@ -881,6 +1225,12 @@ var file_orchestrator_private_proto_goTypes = []any{
 	(*InitiateCloudRegistrationResponse)(nil),  // 11: orchestrator.private.v1.InitiateCloudRegistrationResponse
 	(*GetCloudRegistrationStatusRequest)(nil),  // 12: orchestrator.private.v1.GetCloudRegistrationStatusRequest
 	(*GetCloudRegistrationStatusResponse)(nil), // 13: orchestrator.private.v1.GetCloudRegistrationStatusResponse
+	(*NewStreamRequest)(nil),                   // 14: orchestrator.private.v1.NewStreamRequest
+	(*CloseStreamRequest)(nil),                 // 15: orchestrator.private.v1.CloseStreamRequest
+	(*StreamState)(nil),                        // 16: orchestrator.private.v1.StreamState
+	(*GetStreamRequest)(nil),                   // 17: orchestrator.private.v1.GetStreamRequest
+	(*Stream)(nil),                             // 18: orchestrator.private.v1.Stream
+	(*emptypb.Empty)(nil),                      // 19: google.protobuf.Empty
 }
 var file_orchestrator_private_proto_depIdxs = []int32{
 	2,  // 0: orchestrator.private.v1.GetNodesResponse.results:type_name -> orchestrator.private.v1.Node
@@ -891,15 +1241,23 @@ var file_orchestrator_private_proto_depIdxs = []int32{
 	5,  // 5: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
 	8,  // 6: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
 	10, // 7: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:input_type -> orchestrator.private.v1.InitiateCloudRegistrationRequest
-	12, // 8: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:input_type -> orchestrator.private.v1.GetCloudRegistrationStatusRequest
-	1,  // 9: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
-	4,  // 10: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
-	6,  // 11: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
-	9,  // 12: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
-	11, // 13: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:output_type -> orchestrator.private.v1.InitiateCloudRegistrationResponse
-	13, // 14: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:output_type -> orchestrator.private.v1.GetCloudRegistrationStatusResponse
-	9,  // [9:15] is the sub-list for method output_type
-	3,  // [3:9] is the sub-list for method input_type
+	14, // 8: orchestrator.private.v1.OrchestratorPrivate.NewStream:input_type -> orchestrator.private.v1.NewStreamRequest
+	15, // 9: orchestrator.private.v1.OrchestratorPrivate.CloseStream:input_type -> orchestrator.private.v1.CloseStreamRequest
+	17, // 10: orchestrator.private.v1.OrchestratorPrivate.GetStream:input_type -> orchestrator.private.v1.GetStreamRequest
+	19, // 11: orchestrator.private.v1.OrchestratorPrivate.ListStreams:input_type -> google.protobuf.Empty
+	12, // 12: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:input_type -> orchestrator.private.v1.GetCloudRegistrationStatusRequest
+	1,  // 13: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
+	4,  // 14: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
+	6,  // 15: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
+	9,  // 16: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
+	11, // 17: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:output_type -> orchestrator.private.v1.InitiateCloudRegistrationResponse
+	18, // 18: orchestrator.private.v1.OrchestratorPrivate.NewStream:output_type -> orchestrator.private.v1.Stream
+	19, // 19: orchestrator.private.v1.OrchestratorPrivate.CloseStream:output_type -> google.protobuf.Empty
+	16, // 20: orchestrator.private.v1.OrchestratorPrivate.GetStream:output_type -> orchestrator.private.v1.StreamState
+	16, // 21: orchestrator.private.v1.OrchestratorPrivate.ListStreams:output_type -> orchestrator.private.v1.StreamState
+	13, // 22: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:output_type -> orchestrator.private.v1.GetCloudRegistrationStatusResponse
+	13, // [13:23] is the sub-list for method output_type
+	3,  // [3:13] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -917,7 +1275,7 @@ func file_orchestrator_private_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orchestrator_private_proto_rawDesc), len(file_orchestrator_private_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

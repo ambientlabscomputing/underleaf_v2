@@ -694,6 +694,230 @@ func (x *Node) GetArch() string {
 	return ""
 }
 
+type NewStreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConnectionId  string                 `protobuf:"bytes,1,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
+	StreamId      string                 `protobuf:"bytes,2,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Port          int32                  `protobuf:"varint,4,opt,name=port,proto3" json:"port,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NewStreamRequest) Reset() {
+	*x = NewStreamRequest{}
+	mi := &file_agent_public_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NewStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NewStreamRequest) ProtoMessage() {}
+
+func (x *NewStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NewStreamRequest.ProtoReflect.Descriptor instead.
+func (*NewStreamRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *NewStreamRequest) GetConnectionId() string {
+	if x != nil {
+		return x.ConnectionId
+	}
+	return ""
+}
+
+func (x *NewStreamRequest) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+func (x *NewStreamRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *NewStreamRequest) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+type CloseStreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StreamId      string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseStreamRequest) Reset() {
+	*x = CloseStreamRequest{}
+	mi := &file_agent_public_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseStreamRequest) ProtoMessage() {}
+
+func (x *CloseStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseStreamRequest.ProtoReflect.Descriptor instead.
+func (*CloseStreamRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *CloseStreamRequest) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+type StreamState struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StreamId      string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	ConnectionId  string                 `protobuf:"bytes,3,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
+	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamState) Reset() {
+	*x = StreamState{}
+	mi := &file_agent_public_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamState) ProtoMessage() {}
+
+func (x *StreamState) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamState.ProtoReflect.Descriptor instead.
+func (*StreamState) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *StreamState) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+func (x *StreamState) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *StreamState) GetConnectionId() string {
+	if x != nil {
+		return x.ConnectionId
+	}
+	return ""
+}
+
+func (x *StreamState) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+type GetStreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StreamId      string                 `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStreamRequest) Reset() {
+	*x = GetStreamRequest{}
+	mi := &file_agent_public_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStreamRequest) ProtoMessage() {}
+
+func (x *GetStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStreamRequest.ProtoReflect.Descriptor instead.
+func (*GetStreamRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetStreamRequest) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
 var File_agent_public_proto protoreflect.FileDescriptor
 
 const file_agent_public_proto_rawDesc = "" +
@@ -744,12 +968,30 @@ const file_agent_public_proto_rawDesc = "" +
 	"\n" +
 	"ip_address\x18\x03 \x01(\tR\tipAddress\x12\x0e\n" +
 	"\x02os\x18\x04 \x01(\tR\x02os\x12\x12\n" +
-	"\x04arch\x18\x05 \x01(\tR\x04arch2\x92\x04\n" +
+	"\x04arch\x18\x05 \x01(\tR\x04arch\"|\n" +
+	"\x10NewStreamRequest\x12#\n" +
+	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\x12\x1b\n" +
+	"\tstream_id\x18\x02 \x01(\tR\bstreamId\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x12\n" +
+	"\x04port\x18\x04 \x01(\x05R\x04port\"1\n" +
+	"\x12CloseStreamRequest\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\"y\n" +
+	"\vStreamState\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12#\n" +
+	"\rconnection_id\x18\x03 \x01(\tR\fconnectionId\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\"/\n" +
+	"\x10GetStreamRequest\x12\x1b\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId2\xbb\x06\n" +
 	"\vAgentPublic\x12R\n" +
 	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponse\x12C\n" +
 	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponse\x12g\n" +
 	"\x10IngestContainers\x12(.agent.public.v1.IngestContainersRequest\x1a).agent.public.v1.IngestContainersResponse\x128\n" +
-	"\aGetNode\x12\x16.google.protobuf.Empty\x1a\x15.agent.public.v1.Node\x12g\n" +
+	"\aGetNode\x12\x16.google.protobuf.Empty\x1a\x15.agent.public.v1.Node\x12F\n" +
+	"\tNewStream\x12!.agent.public.v1.NewStreamRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\vCloseStream\x12#.agent.public.v1.CloseStreamRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
+	"\tGetStream\x12!.agent.public.v1.GetStreamRequest\x1a\x1c.agent.public.v1.StreamState\x12E\n" +
+	"\vListStreams\x12\x16.google.protobuf.Empty\x1a\x1c.agent.public.v1.StreamState0\x01\x12g\n" +
 	"\x10GetContainerLogs\x12(.agent.public.v1.GetContainerLogsRequest\x1a).agent.public.v1.GetContainerLogsResponse\x12^\n" +
 	"\x13StreamContainerLogs\x12+.agent.public.v1.StreamContainerLogsRequest\x1a\x18.agent.public.v1.LogLine0\x01BOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
 
@@ -765,7 +1007,7 @@ func file_agent_public_proto_rawDescGZIP() []byte {
 	return file_agent_public_proto_rawDescData
 }
 
-var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agent_public_proto_goTypes = []any{
 	(*GetStatusRequest)(nil),           // 0: agent.public.v1.GetStatusRequest
 	(*GetStatusResponse)(nil),          // 1: agent.public.v1.GetStatusResponse
@@ -779,7 +1021,11 @@ var file_agent_public_proto_goTypes = []any{
 	(*GetContainerLogsResponse)(nil),   // 9: agent.public.v1.GetContainerLogsResponse
 	(*StreamContainerLogsRequest)(nil), // 10: agent.public.v1.StreamContainerLogsRequest
 	(*Node)(nil),                       // 11: agent.public.v1.Node
-	(*emptypb.Empty)(nil),              // 12: google.protobuf.Empty
+	(*NewStreamRequest)(nil),           // 12: agent.public.v1.NewStreamRequest
+	(*CloseStreamRequest)(nil),         // 13: agent.public.v1.CloseStreamRequest
+	(*StreamState)(nil),                // 14: agent.public.v1.StreamState
+	(*GetStreamRequest)(nil),           // 15: agent.public.v1.GetStreamRequest
+	(*emptypb.Empty)(nil),              // 16: google.protobuf.Empty
 }
 var file_agent_public_proto_depIdxs = []int32{
 	4,  // 0: agent.public.v1.IngestContainersResponse.containers:type_name -> agent.public.v1.Container
@@ -787,17 +1033,25 @@ var file_agent_public_proto_depIdxs = []int32{
 	0,  // 2: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
 	2,  // 3: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
 	5,  // 4: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
-	12, // 5: agent.public.v1.AgentPublic.GetNode:input_type -> google.protobuf.Empty
-	8,  // 6: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
-	10, // 7: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
-	1,  // 8: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
-	3,  // 9: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
-	6,  // 10: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
-	11, // 11: agent.public.v1.AgentPublic.GetNode:output_type -> agent.public.v1.Node
-	9,  // 12: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
-	7,  // 13: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
-	8,  // [8:14] is the sub-list for method output_type
-	2,  // [2:8] is the sub-list for method input_type
+	16, // 5: agent.public.v1.AgentPublic.GetNode:input_type -> google.protobuf.Empty
+	12, // 6: agent.public.v1.AgentPublic.NewStream:input_type -> agent.public.v1.NewStreamRequest
+	13, // 7: agent.public.v1.AgentPublic.CloseStream:input_type -> agent.public.v1.CloseStreamRequest
+	15, // 8: agent.public.v1.AgentPublic.GetStream:input_type -> agent.public.v1.GetStreamRequest
+	16, // 9: agent.public.v1.AgentPublic.ListStreams:input_type -> google.protobuf.Empty
+	8,  // 10: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
+	10, // 11: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
+	1,  // 12: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
+	3,  // 13: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
+	6,  // 14: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
+	11, // 15: agent.public.v1.AgentPublic.GetNode:output_type -> agent.public.v1.Node
+	16, // 16: agent.public.v1.AgentPublic.NewStream:output_type -> google.protobuf.Empty
+	16, // 17: agent.public.v1.AgentPublic.CloseStream:output_type -> google.protobuf.Empty
+	14, // 18: agent.public.v1.AgentPublic.GetStream:output_type -> agent.public.v1.StreamState
+	14, // 19: agent.public.v1.AgentPublic.ListStreams:output_type -> agent.public.v1.StreamState
+	9,  // 20: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
+	7,  // 21: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
+	12, // [12:22] is the sub-list for method output_type
+	2,  // [2:12] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -814,7 +1068,7 @@ func file_agent_public_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_public_proto_rawDesc), len(file_agent_public_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -12,6 +12,12 @@ service AgentPublic {
   rpc IngestContainers(IngestContainersRequest) returns (IngestContainersResponse);
   rpc GetNode(google.protobuf.Empty) returns (Node);
 
+  // Stream RPCs
+  rpc NewStream(NewStreamRequest) returns (google.protobuf.Empty);
+  rpc CloseStream(CloseStreamRequest) returns (google.protobuf.Empty);
+  rpc GetStream(GetStreamRequest) returns (StreamState);
+  rpc ListStreams(google.protobuf.Empty) returns (stream StreamState);
+
   // Log RPCs — agent is the source of truth for container logs.
   rpc GetContainerLogs(GetContainerLogsRequest) returns (GetContainerLogsResponse);
   rpc StreamContainerLogs(StreamContainerLogsRequest) returns (stream LogLine);
@@ -81,4 +87,26 @@ message Node {
   string ip_address  = 3;
   string os          = 4;
   string arch        = 5;
+}
+
+message NewStreamRequest {
+  string connection_id = 1;
+  string stream_id = 2;
+  string type      = 3;
+  int32  port      = 4;
+}
+
+message CloseStreamRequest {
+  string stream_id = 1;
+}
+
+message StreamState {
+    string stream_id = 1;
+    string type = 2;
+    string connection_id = 3;
+    string state = 4;
+}
+
+message GetStreamRequest {
+    string stream_id = 1;
 }

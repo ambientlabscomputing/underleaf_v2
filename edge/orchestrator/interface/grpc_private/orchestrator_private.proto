@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 package orchestrator.private.v1;
 
 option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private";
@@ -11,6 +13,10 @@ service OrchestratorPrivate {
   rpc TriggerIngest(TriggerIngestRequest) returns (TriggerIngestResponse);
   rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
   rpc InitiateCloudRegistration(InitiateCloudRegistrationRequest) returns (InitiateCloudRegistrationResponse);
+  rpc NewStream(NewStreamRequest) returns (Stream);
+  rpc CloseStream(CloseStreamRequest) returns (google.protobuf.Empty);
+  rpc GetStream(GetStreamRequest) returns (StreamState);
+  rpc ListStreams(google.protobuf.Empty) returns (stream StreamState);
   rpc GetCloudRegistrationStatus(GetCloudRegistrationStatusRequest) returns (GetCloudRegistrationStatusResponse);
 }
 
@@ -83,4 +89,36 @@ message GetCloudRegistrationStatusRequest {}
 message GetCloudRegistrationStatusResponse {
   string status     = 1;
   string cluster_id = 2;
+}
+
+message NewStreamRequest {
+  string node_id      = 1;
+  string type         = 2;
+  int32  port         = 3;
+}
+
+message CloseStreamRequest {
+  string stream_id = 1;
+}
+
+message StreamState {
+    string stream_id = 1;
+    string type = 2;
+    string connection_id = 3;
+    string state = 4;
+}
+
+message GetStreamRequest {
+    string stream_id = 1;
+}
+
+message Stream {
+    string id = 1;
+    string connection_id = 2;
+    string type = 3;
+    string state = 4;
+    string status = 5;
+    int32 port = 6;
+    string created_at = 7;
+    string closed_at = 8;
 }

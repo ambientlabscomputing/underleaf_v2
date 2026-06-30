@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -24,6 +25,10 @@ const (
 	OrchestratorPrivate_TriggerIngest_FullMethodName              = "/orchestrator.private.v1.OrchestratorPrivate/TriggerIngest"
 	OrchestratorPrivate_ListContainers_FullMethodName             = "/orchestrator.private.v1.OrchestratorPrivate/ListContainers"
 	OrchestratorPrivate_InitiateCloudRegistration_FullMethodName  = "/orchestrator.private.v1.OrchestratorPrivate/InitiateCloudRegistration"
+	OrchestratorPrivate_NewStream_FullMethodName                  = "/orchestrator.private.v1.OrchestratorPrivate/NewStream"
+	OrchestratorPrivate_CloseStream_FullMethodName                = "/orchestrator.private.v1.OrchestratorPrivate/CloseStream"
+	OrchestratorPrivate_GetStream_FullMethodName                  = "/orchestrator.private.v1.OrchestratorPrivate/GetStream"
+	OrchestratorPrivate_ListStreams_FullMethodName                = "/orchestrator.private.v1.OrchestratorPrivate/ListStreams"
 	OrchestratorPrivate_GetCloudRegistrationStatus_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/GetCloudRegistrationStatus"
 )
 
@@ -38,6 +43,10 @@ type OrchestratorPrivateClient interface {
 	TriggerIngest(ctx context.Context, in *TriggerIngestRequest, opts ...grpc.CallOption) (*TriggerIngestResponse, error)
 	ListContainers(ctx context.Context, in *ListContainersRequest, opts ...grpc.CallOption) (*ListContainersResponse, error)
 	InitiateCloudRegistration(ctx context.Context, in *InitiateCloudRegistrationRequest, opts ...grpc.CallOption) (*InitiateCloudRegistrationResponse, error)
+	NewStream(ctx context.Context, in *NewStreamRequest, opts ...grpc.CallOption) (*Stream, error)
+	CloseStream(ctx context.Context, in *CloseStreamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetStream(ctx context.Context, in *GetStreamRequest, opts ...grpc.CallOption) (*StreamState, error)
+	ListStreams(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamState], error)
 	GetCloudRegistrationStatus(ctx context.Context, in *GetCloudRegistrationStatusRequest, opts ...grpc.CallOption) (*GetCloudRegistrationStatusResponse, error)
 }
 
@@ -99,6 +108,55 @@ func (c *orchestratorPrivateClient) InitiateCloudRegistration(ctx context.Contex
 	return out, nil
 }
 
+func (c *orchestratorPrivateClient) NewStream(ctx context.Context, in *NewStreamRequest, opts ...grpc.CallOption) (*Stream, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Stream)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_NewStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orchestratorPrivateClient) CloseStream(ctx context.Context, in *CloseStreamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_CloseStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orchestratorPrivateClient) GetStream(ctx context.Context, in *GetStreamRequest, opts ...grpc.CallOption) (*StreamState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StreamState)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_GetStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orchestratorPrivateClient) ListStreams(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamState], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &OrchestratorPrivate_ServiceDesc.Streams[0], OrchestratorPrivate_ListStreams_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[emptypb.Empty, StreamState]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type OrchestratorPrivate_ListStreamsClient = grpc.ServerStreamingClient[StreamState]
+
 func (c *orchestratorPrivateClient) GetCloudRegistrationStatus(ctx context.Context, in *GetCloudRegistrationStatusRequest, opts ...grpc.CallOption) (*GetCloudRegistrationStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCloudRegistrationStatusResponse)
@@ -120,6 +178,10 @@ type OrchestratorPrivateServer interface {
 	TriggerIngest(context.Context, *TriggerIngestRequest) (*TriggerIngestResponse, error)
 	ListContainers(context.Context, *ListContainersRequest) (*ListContainersResponse, error)
 	InitiateCloudRegistration(context.Context, *InitiateCloudRegistrationRequest) (*InitiateCloudRegistrationResponse, error)
+	NewStream(context.Context, *NewStreamRequest) (*Stream, error)
+	CloseStream(context.Context, *CloseStreamRequest) (*emptypb.Empty, error)
+	GetStream(context.Context, *GetStreamRequest) (*StreamState, error)
+	ListStreams(*emptypb.Empty, grpc.ServerStreamingServer[StreamState]) error
 	GetCloudRegistrationStatus(context.Context, *GetCloudRegistrationStatusRequest) (*GetCloudRegistrationStatusResponse, error)
 	mustEmbedUnimplementedOrchestratorPrivateServer()
 }
@@ -145,6 +207,18 @@ func (UnimplementedOrchestratorPrivateServer) ListContainers(context.Context, *L
 }
 func (UnimplementedOrchestratorPrivateServer) InitiateCloudRegistration(context.Context, *InitiateCloudRegistrationRequest) (*InitiateCloudRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitiateCloudRegistration not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) NewStream(context.Context, *NewStreamRequest) (*Stream, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewStream not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) CloseStream(context.Context, *CloseStreamRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CloseStream not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) GetStream(context.Context, *GetStreamRequest) (*StreamState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStream not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) ListStreams(*emptypb.Empty, grpc.ServerStreamingServer[StreamState]) error {
+	return status.Errorf(codes.Unimplemented, "method ListStreams not implemented")
 }
 func (UnimplementedOrchestratorPrivateServer) GetCloudRegistrationStatus(context.Context, *GetCloudRegistrationStatusRequest) (*GetCloudRegistrationStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCloudRegistrationStatus not implemented")
@@ -260,6 +334,71 @@ func _OrchestratorPrivate_InitiateCloudRegistration_Handler(srv interface{}, ctx
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrchestratorPrivate_NewStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).NewStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_NewStream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).NewStream(ctx, req.(*NewStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrchestratorPrivate_CloseStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).CloseStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_CloseStream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).CloseStream(ctx, req.(*CloseStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrchestratorPrivate_GetStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).GetStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_GetStream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).GetStream(ctx, req.(*GetStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrchestratorPrivate_ListStreams_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(OrchestratorPrivateServer).ListStreams(m, &grpc.GenericServerStream[emptypb.Empty, StreamState]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type OrchestratorPrivate_ListStreamsServer = grpc.ServerStreamingServer[StreamState]
+
 func _OrchestratorPrivate_GetCloudRegistrationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCloudRegistrationStatusRequest)
 	if err := dec(in); err != nil {
@@ -306,10 +445,28 @@ var OrchestratorPrivate_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OrchestratorPrivate_InitiateCloudRegistration_Handler,
 		},
 		{
+			MethodName: "NewStream",
+			Handler:    _OrchestratorPrivate_NewStream_Handler,
+		},
+		{
+			MethodName: "CloseStream",
+			Handler:    _OrchestratorPrivate_CloseStream_Handler,
+		},
+		{
+			MethodName: "GetStream",
+			Handler:    _OrchestratorPrivate_GetStream_Handler,
+		},
+		{
 			MethodName: "GetCloudRegistrationStatus",
 			Handler:    _OrchestratorPrivate_GetCloudRegistrationStatus_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ListStreams",
+			Handler:       _OrchestratorPrivate_ListStreams_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "orchestrator_private.proto",
 }

@@ -50,6 +50,8 @@ func NewRegistrationService(
 func (s *RegistrationService) InitiateRegistration(ctx context.Context, clusterName, clusterID string) (*RegistrationState, error) {
 	logger := utils.LoggerFromContext(ctx).With("cluster_name", clusterName, "cluster_id", clusterID)
 	logger.Info("registration: initiating cloud registration")
+
+	// Call cloud-api to initiate device auth flow
 	resp, err := s.cloudClient.RegisterDevice(ctx, clients.RegisterDeviceRequest{
 		ProposedClusterName: clusterName,
 		ProposedClusterID:   clusterID,
@@ -59,6 +61,7 @@ func (s *RegistrationService) InitiateRegistration(ctx context.Context, clusterN
 		return nil, fmt.Errorf("registration: register device: %w", err)
 	}
 
+	// Persist state to the repository
 	reg := &repository.ClusterRegistration{
 		DeviceCode:              resp.DeviceCode,
 		UserCode:                resp.UserCode,
@@ -117,7 +120,9 @@ func (s *RegistrationService) pollLoop(ctx context.Context, deviceCode string, i
 
 	logger.Debug("registration: poll loop started")
 	for range tick.C {
+		// create a new context with timeout for each poll request
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		// call cloud-api to poll for token
 		tokenResp, errCode, err := s.cloudClient.PollToken(ctx, deviceCode)
 		cancel()
 

@@ -6,6 +6,10 @@ import (
 
 type StreamType string
 
+func (s StreamType) ToString() string {
+	return string(s)
+}
+
 const (
 	StreamTypeSSH    StreamType = "ssh"     // make SSH available at <node_id>.ssh.underleafapp.com:22
 	StreamTypeGW     StreamType = "gateway" // make a gateway available at https://<conn_id>.gw.underleafapp.com
@@ -60,7 +64,6 @@ type Stream struct {
 	Type         StreamType  `json:"type"`
 	State        StreamState `json:"state"`
 	Status       Status      `json:"status"`
-	Endpoint     *string     `json:"endpoint"`
 	Port         *int        `json:"port"`
 	CreatedAt    string      `json:"created_at"`
 	ClosedAt     *string     `json:"closed_at,omitempty"`

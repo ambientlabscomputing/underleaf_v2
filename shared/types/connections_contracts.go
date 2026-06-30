@@ -18,7 +18,6 @@ func (t *CreateConnectionRequest) ToConnection() *Connection {
 type NewStreamRequest struct {
 	ConnectionID string     `json:"connection_id"`
 	Type         StreamType `json:"type"`
-	Endpoint     *string    `json:"endpoint"`
 	Port         *int       `json:"port"`
 }
 
@@ -29,7 +28,6 @@ func (t *NewStreamRequest) ToStream() *Stream {
 		Type:         t.Type,
 		State:        StreamStateActive,
 		Status:       StatusSucceeded,
-		Endpoint:     t.Endpoint,
 		Port:         t.Port,
 	}
 }
@@ -50,4 +48,16 @@ type CloseStreamRequest struct {
 type CloseStreamResponse struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
+}
+
+type QueryConnectionsRequest struct {
+	Name   *string `json:"name,omitempty"`
+	NodeID *string `json:"node_id,omitempty"`
+	State  *string `json:"state,omitempty"`
+	Status *string `json:"status,omitempty"`
+}
+
+type QueryConnectionsResponse struct {
+	Items []*Connection `json:"items"`
+	Total int           `json:"total"`
 }

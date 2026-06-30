@@ -24,6 +24,10 @@ const (
 	AgentPublic_Ping_FullMethodName                = "/agent.public.v1.AgentPublic/Ping"
 	AgentPublic_IngestContainers_FullMethodName    = "/agent.public.v1.AgentPublic/IngestContainers"
 	AgentPublic_GetNode_FullMethodName             = "/agent.public.v1.AgentPublic/GetNode"
+	AgentPublic_NewStream_FullMethodName           = "/agent.public.v1.AgentPublic/NewStream"
+	AgentPublic_CloseStream_FullMethodName         = "/agent.public.v1.AgentPublic/CloseStream"
+	AgentPublic_GetStream_FullMethodName           = "/agent.public.v1.AgentPublic/GetStream"
+	AgentPublic_ListStreams_FullMethodName         = "/agent.public.v1.AgentPublic/ListStreams"
 	AgentPublic_GetContainerLogs_FullMethodName    = "/agent.public.v1.AgentPublic/GetContainerLogs"
 	AgentPublic_StreamContainerLogs_FullMethodName = "/agent.public.v1.AgentPublic/StreamContainerLogs"
 )
@@ -38,6 +42,11 @@ type AgentPublicClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	IngestContainers(ctx context.Context, in *IngestContainersRequest, opts ...grpc.CallOption) (*IngestContainersResponse, error)
 	GetNode(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Node, error)
+	// Stream RPCs
+	NewStream(ctx context.Context, in *NewStreamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CloseStream(ctx context.Context, in *CloseStreamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetStream(ctx context.Context, in *GetStreamRequest, opts ...grpc.CallOption) (*StreamState, error)
+	ListStreams(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamState], error)
 	// Log RPCs — agent is the source of truth for container logs.
 	GetContainerLogs(ctx context.Context, in *GetContainerLogsRequest, opts ...grpc.CallOption) (*GetContainerLogsResponse, error)
 	StreamContainerLogs(ctx context.Context, in *StreamContainerLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error)
@@ -91,6 +100,55 @@ func (c *agentPublicClient) GetNode(ctx context.Context, in *emptypb.Empty, opts
 	return out, nil
 }
 
+func (c *agentPublicClient) NewStream(ctx context.Context, in *NewStreamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AgentPublic_NewStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) CloseStream(ctx context.Context, in *CloseStreamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AgentPublic_CloseStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) GetStream(ctx context.Context, in *GetStreamRequest, opts ...grpc.CallOption) (*StreamState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StreamState)
+	err := c.cc.Invoke(ctx, AgentPublic_GetStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) ListStreams(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamState], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentPublic_ServiceDesc.Streams[0], AgentPublic_ListStreams_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[emptypb.Empty, StreamState]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentPublic_ListStreamsClient = grpc.ServerStreamingClient[StreamState]
+
 func (c *agentPublicClient) GetContainerLogs(ctx context.Context, in *GetContainerLogsRequest, opts ...grpc.CallOption) (*GetContainerLogsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetContainerLogsResponse)
@@ -103,7 +161,7 @@ func (c *agentPublicClient) GetContainerLogs(ctx context.Context, in *GetContain
 
 func (c *agentPublicClient) StreamContainerLogs(ctx context.Context, in *StreamContainerLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &AgentPublic_ServiceDesc.Streams[0], AgentPublic_StreamContainerLogs_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &AgentPublic_ServiceDesc.Streams[1], AgentPublic_StreamContainerLogs_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +188,11 @@ type AgentPublicServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	IngestContainers(context.Context, *IngestContainersRequest) (*IngestContainersResponse, error)
 	GetNode(context.Context, *emptypb.Empty) (*Node, error)
+	// Stream RPCs
+	NewStream(context.Context, *NewStreamRequest) (*emptypb.Empty, error)
+	CloseStream(context.Context, *CloseStreamRequest) (*emptypb.Empty, error)
+	GetStream(context.Context, *GetStreamRequest) (*StreamState, error)
+	ListStreams(*emptypb.Empty, grpc.ServerStreamingServer[StreamState]) error
 	// Log RPCs — agent is the source of truth for container logs.
 	GetContainerLogs(context.Context, *GetContainerLogsRequest) (*GetContainerLogsResponse, error)
 	StreamContainerLogs(*StreamContainerLogsRequest, grpc.ServerStreamingServer[LogLine]) error
@@ -154,6 +217,18 @@ func (UnimplementedAgentPublicServer) IngestContainers(context.Context, *IngestC
 }
 func (UnimplementedAgentPublicServer) GetNode(context.Context, *emptypb.Empty) (*Node, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNode not implemented")
+}
+func (UnimplementedAgentPublicServer) NewStream(context.Context, *NewStreamRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewStream not implemented")
+}
+func (UnimplementedAgentPublicServer) CloseStream(context.Context, *CloseStreamRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CloseStream not implemented")
+}
+func (UnimplementedAgentPublicServer) GetStream(context.Context, *GetStreamRequest) (*StreamState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStream not implemented")
+}
+func (UnimplementedAgentPublicServer) ListStreams(*emptypb.Empty, grpc.ServerStreamingServer[StreamState]) error {
+	return status.Errorf(codes.Unimplemented, "method ListStreams not implemented")
 }
 func (UnimplementedAgentPublicServer) GetContainerLogs(context.Context, *GetContainerLogsRequest) (*GetContainerLogsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContainerLogs not implemented")
@@ -254,6 +329,71 @@ func _AgentPublic_GetNode_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentPublic_NewStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).NewStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_NewStream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).NewStream(ctx, req.(*NewStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_CloseStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).CloseStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_CloseStream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).CloseStream(ctx, req.(*CloseStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_GetStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).GetStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_GetStream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).GetStream(ctx, req.(*GetStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_ListStreams_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AgentPublicServer).ListStreams(m, &grpc.GenericServerStream[emptypb.Empty, StreamState]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type AgentPublic_ListStreamsServer = grpc.ServerStreamingServer[StreamState]
+
 func _AgentPublic_GetContainerLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetContainerLogsRequest)
 	if err := dec(in); err != nil {
@@ -307,11 +447,28 @@ var AgentPublic_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentPublic_GetNode_Handler,
 		},
 		{
+			MethodName: "NewStream",
+			Handler:    _AgentPublic_NewStream_Handler,
+		},
+		{
+			MethodName: "CloseStream",
+			Handler:    _AgentPublic_CloseStream_Handler,
+		},
+		{
+			MethodName: "GetStream",
+			Handler:    _AgentPublic_GetStream_Handler,
+		},
+		{
 			MethodName: "GetContainerLogs",
 			Handler:    _AgentPublic_GetContainerLogs_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ListStreams",
+			Handler:       _AgentPublic_ListStreams_Handler,
+			ServerStreams: true,
+		},
 		{
 			StreamName:    "StreamContainerLogs",
 			Handler:       _AgentPublic_StreamContainerLogs_Handler,

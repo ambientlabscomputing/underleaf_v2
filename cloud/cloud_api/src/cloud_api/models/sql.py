@@ -125,6 +125,9 @@ class SQLCluster(SQLBase):
     principal_account_id: Mapped[str] = mapped_column(
         ForeignKey("underleaf.principal_accounts.id")
     )
+    manager_node_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.nodes.id"), nullable=True
+    )
     nodes: Mapped[list["SQLNode"]] = relationship(back_populates="cluster")
 
 

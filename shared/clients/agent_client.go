@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"google.golang.org/grpc"
@@ -83,4 +84,50 @@ func (c *AgentClient) GetNode(ctx context.Context) (*agentpb.Node, error) {
 		return nil, err
 	}
 	return resp, nil
+}
+
+// NewStream tells the agent to create a new stream for a given connection.
+func (c *AgentClient) NewStream(ctx context.Context, connectionID, streamID, streamType string, port int) error {
+	_, err := c.client.NewStream(ctx, &agentpb.NewStreamRequest{
+		ConnectionId: connectionID,
+		StreamId:     streamID,
+		Type:         streamType,
+		Port:         int32(port),
+	})
+	return err
+}
+
+// CloseStream tells the agent to close a stream for a given connection.
+func (c *AgentClient) CloseStream(ctx context.Context, streamID string) error {
+	_, err := c.client.CloseStream(ctx, &agentpb.CloseStreamRequest{
+		StreamId: streamID,
+	})
+	return err
+}
+
+// GetStream fetches the state of a stream from the agent.
+func (c *AgentClient) GetStream(ctx context.Context, streamID string) (*agentpb.StreamState, error) {
+	return c.client.GetStream(ctx, &agentpb.GetStreamRequest{
+		StreamId: streamID,
+	})
+}
+
+// ListStreams fetches the list of streams from the agent.
+func (c *AgentClient) ListStreams(ctx context.Context) ([]*agentpb.StreamState, error) {
+	stream, err := c.client.ListStreams(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	var streams []*agentpb.StreamState
+	for {
+		s, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		streams = append(streams, s)
+	}
+	return streams, nil
 }
