@@ -1,6 +1,16 @@
 package utils
 
+import "strconv"
+
 type NamedPort int
+
+func (np NamedPort) String() string {
+	return strconv.Itoa(int(np))
+}
+
+func (np NamedPort) Int() int {
+	return int(np)
+}
 
 const (
 	OrchestratorHttpPort   NamedPort = 9090
@@ -13,11 +23,28 @@ const (
 	AgentGRPCPort          NamedPort = 50103
 )
 
+type BasePath string
+
+func (bp BasePath) String() string {
+	return string(bp)
+}
+
+const (
+	// cloud components -- shared an nginx reverse proxy and domain
+	// so these paths need to be unique across all cloud components
+	ConnWorkerBasePath BasePath = "/api/v2/connections"
+	CloudAPIBasePath   BasePath = "/api/v2/cloud"
+
+	// edge components do not share a reverse proxy or domain, so these paths only need to be unique within the component
+	OrchestratorBasePath BasePath = "/api/v1/"
+)
+
 type HttpConfig struct {
 	Port         NamedPort `yaml:"port"`
 	ReadTimeout  string    `yaml:"read_timeout"` // Duration string (e.g., "30s", "1m") for read timeout
 	WriteTimeout string    `yaml:"write_timeout"`
 	IdleTimeout  string    `yaml:"idle_timeout"`
+	BasePath     BasePath  `yaml:"base_path"`
 }
 
 type ConnectionsConfig struct {
@@ -72,6 +99,7 @@ func init() {
 			ReadTimeout:  "5s",
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
+			BasePath:     OrchestratorBasePath,
 		},
 		DBPath:                   "orchestrator.db",
 		ContainerSyncIntervalSec: 60,
@@ -101,6 +129,7 @@ func init() {
 			ReadTimeout:  "5s",
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
+			BasePath:     ConnWorkerBasePath,
 		},
 		Connections: &ConnectionsConfig{
 			NodeConnectionsPort: ConnectionsNodePort,

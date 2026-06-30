@@ -7,6 +7,7 @@ import (
 	"github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
+	"github.com/gin-gonic/gin"
 )
 
 type StreamHandlerReq struct {
@@ -64,6 +65,21 @@ func (s *AppService) NewConnection(ctx context.Context, req types.CreateConnecti
 func (s *AppService) Start(ctx context.Context) error {
 	go s.ConnManager.Serve(ctx)
 	go s.GatewayServer.Serve()
+
+	router := gin.Default()
+	v1 := router.Group(s.config.Http.BasePath.String())
+	{
+		v1.GET("/health", func(c *gin.Context) {
+			c.JSON(200, gin.H{"status": "ok"})
+		})
+	}
+	go func() {
+		utils.Logger.Info("conn-worker http server listening", "port", s.config.Http.Port)
+		if err := router.Run(":" + s.config.Http.Port.String()); err != nil {
+			utils.Logger.Error("http server error", "error", err)
+		}
+	}()
+
 	return nil
 }
 

@@ -34,7 +34,7 @@ app.add_middleware(
 )
 
 
-router = APIRouter(prefix="/api/v2")
+router = APIRouter(prefix=app_config.api.base_path)
 router.include_router(accounts_router)
 router.include_router(clusters_router)
 router.include_router(billing_accounts_router)
@@ -43,13 +43,14 @@ router.include_router(connections_router)
 router.include_router(stream_router)
 router.include_router(registration_router)
 
-app.include_router(router)
-app.include_router(oauth_router)
-
 
 @router.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+app.include_router(router)
+app.include_router(oauth_router)
 
 @app.middleware("http")
 async def x_subject_id_token_middleware(request: Request, call_next):

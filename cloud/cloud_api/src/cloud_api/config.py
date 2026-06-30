@@ -101,7 +101,7 @@ class APIConfig(BaseModel):
         default=8080, description="Port number for the API server to listen on"
     )
     base_path: str = Field(
-        default="/api/v2", description="Base path prefix for all API endpoints"
+        default="/api/v2/cloud", description="Base path prefix for all API endpoints"
     )
 
 

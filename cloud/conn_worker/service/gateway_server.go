@@ -3,11 +3,11 @@ package service
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"strconv"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
@@ -38,7 +38,7 @@ func (gs *GatewayServer) Serve() error {
 	go gs.HandleConnectionReqs()
 
 	utils.Logger.Debug("serving Gateway Server ...", "port", gs.config.Connections.GatewayPort, "domain", gs.config.Connections.Domain)
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(gs.config.Connections.GatewayPort))
+	listener, err := net.Listen("tcp", ":"+gs.config.Connections.GatewayPort.String())
 	if err != nil {
 		utils.Logger.Error("failed to start gateway server", "error", err)
 		return err
@@ -46,11 +46,14 @@ func (gs *GatewayServer) Serve() error {
 	gs.listener = listener
 	defer gs.listener.Close()
 
-	utils.Logger.Info("Gateway server started on port " + strconv.Itoa(gs.config.Connections.GatewayPort))
+	utils.Logger.Info("Gateway server started on port " + gs.config.Connections.GatewayPort.String())
 
 	for {
 		conn, err := gs.listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return nil
+			}
 			utils.Logger.Error("failed to accept connection", "error", err)
 			continue
 		}

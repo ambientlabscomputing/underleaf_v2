@@ -3,9 +3,9 @@ package service
 import (
 	"bufio"
 	"context"
+	"errors"
 	"net"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/repository"
@@ -39,7 +39,7 @@ func NewConnectionManager(
 	gwChan chan StreamHandlerReq,
 	config utils.Config,
 ) (*ConnectionManager, error) {
-	ln, err := net.Listen("tcp", ":"+strconv.Itoa(config.Connections.NodeConnectionsPort))
+	ln, err := net.Listen("tcp", ":"+config.Connections.NodeConnectionsPort.String())
 	if err != nil {
 		utils.Logger.Error("failed to start connection manager", "error", err)
 		return nil, err
@@ -59,6 +59,9 @@ func (cm *ConnectionManager) Serve(ctx context.Context) {
 	for {
 		conn, err := cm.listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
 			utils.Logger.ErrorContext(ctx, "failed to accept connection", "error", err)
 			continue
 		}
