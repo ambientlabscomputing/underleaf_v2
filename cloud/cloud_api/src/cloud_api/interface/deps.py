@@ -13,6 +13,7 @@ Usage:
 
 from functools import lru_cache
 
+from cloud_api import logger
 from cloud_api.models.api import Cluster, Node
 from cloud_api.repository.user_repository import UserRepository
 from pydantic import Field
@@ -20,7 +21,12 @@ from fastapi import Depends, HTTPException, Request, Request, status
 from fastapi.security import APIKeyHeader
 
 from cloud_api.lib.auth_lib import AuthLib, InvalidTokenError, JWTClaims
-from cloud_api.service_manager import get_auth_lib, get_cluster_repo, get_node_repo, get_user_repo
+from cloud_api.service_manager import (
+    get_auth_lib,
+    get_cluster_repo,
+    get_node_repo,
+    get_user_repo,
+)
 
 # Reads the Authorization header and surfaces a single token field in Swagger.
 _auth_header = APIKeyHeader(name="Authorization", auto_error=True)
@@ -72,15 +78,24 @@ async def get_access_claims(
 def get_auth_lib(user_repo: UserRepository):
     return AuthLib(user_repo=user_repo)
 
+
 @lru_cache
-def mint_token(auth_lib: AuthLib, principal_account_id: str, node_id: str | None = None, cluster_id: str | None = None) -> str:
+def mint_token(
+    auth_lib: AuthLib,
+    principal_account_id: str,
+    node_id: str | None = None,
+    cluster_id: str | None = None,
+) -> str:
     user_id = node_id or cluster_id or ""
     return auth_lib.mint_access_token(
         user_id=user_id,
         principal_account_id=principal_account_id,
     )
 
-async def fetch_data_for_node_or_cluster(subject_id: str) -> tuple[Node | None, Cluster]:
+
+async def fetch_data_for_node_or_cluster(
+    subject_id: str,
+) -> tuple[Node | None, Cluster]:
     node: Node | None = None
     cluster: Cluster | None = None
     if subject_id.startswith("node_"):
@@ -110,17 +125,21 @@ async def fetch_data_for_node_or_cluster(subject_id: str) -> tuple[Node | None, 
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid X-Subject-Id header value: {subject_id}",
         )
-    
+
     return node, cluster
+
 
 async def x_subject_id_token_middleware_(request: Request, call_next):
     if "X-Subject-Id" not in request.headers:
         # skip this helper if the header is not present
+        logger.debug("X-Subject-Id header not present, skipping token minting")
         pass
     elif request.headers.get("Authorization"):
         # skip this helper if the Authorization header is already present
+        logger.debug("Authorization header already present, skipping token minting")
         pass
     else:
+        logger.debug("X-Subject-Id header present, minting token for request")
         subject_id = request.headers["X-Subject-Id"]
         node, cluster = await fetch_data_for_node_or_cluster(subject_id)
         if not cluster:
@@ -131,14 +150,16 @@ async def x_subject_id_token_middleware_(request: Request, call_next):
 
         auth_lib = get_auth_lib(get_user_repo())
         token = mint_token(
-            auth_lib, 
-            principal_account_id=cluster.principal_account_id, 
+            auth_lib,
+            principal_account_id=cluster.principal_account_id,
             node_id=node.id if node else None,
-            cluster_id=cluster.id
+            cluster_id=cluster.id,
         )
+        logger.debug("Minted token for request", extra={"token": token[:20]})
         request.headers.__dict__["_list"].append(
             (b"Authorization", f"Bearer {token}".encode())
         )
+        logger.debug("Added Authorization header to request", extra={"token": request.headers.get("Authorization", "" *20)[:20]})
 
     response = await call_next(request)
     return response

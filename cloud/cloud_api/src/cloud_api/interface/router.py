@@ -19,7 +19,12 @@ from cloud_api.interface.connections.connections import router as connections_ro
 from cloud_api.service_manager import get_node_repo, get_cluster_repo, get_user_repo
 from cloud_api.lib.auth_lib import AuthLib
 from scipy import cluster
-from cloud_api.interface.deps import get_auth_lib, mint_token, fetch_data_for_node_or_cluster, x_subject_id_token_middleware_
+from cloud_api.interface.deps import (
+    get_auth_lib,
+    mint_token,
+    fetch_data_for_node_or_cluster,
+    x_subject_id_token_middleware_,
+)
 
 app = FastAPI()
 if not app_config:
@@ -42,6 +47,7 @@ router.include_router(subscriptions_router)
 router.include_router(connections_router)
 router.include_router(stream_router)
 router.include_router(registration_router)
+router.include_router(oauth_router)
 
 
 @router.get("/health")
@@ -50,7 +56,7 @@ async def health_check():
 
 
 app.include_router(router)
-app.include_router(oauth_router)
+
 
 @app.middleware("http")
 async def x_subject_id_token_middleware(request: Request, call_next):

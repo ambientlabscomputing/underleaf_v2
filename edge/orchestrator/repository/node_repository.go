@@ -62,6 +62,10 @@ func (r *NodeRepository) ListNodes(query types.QueryNodesRequest) ([]*types.Node
 		statement = statement.Where(goqu.I("arch").Eq(query.Arch))
 		countStatement = countStatement.Where(goqu.I("arch").Eq(query.Arch))
 	}
+	if query.IPAddr != "" {
+		statement = statement.Where(goqu.I("ip_address").Eq(query.IPAddr))
+		countStatement = countStatement.Where(goqu.I("ip_address").Eq(query.IPAddr))
+	}
 
 	stmt, args, err := statement.ToSQL()
 	if err != nil {

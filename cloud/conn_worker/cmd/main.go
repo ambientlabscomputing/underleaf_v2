@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	conngrpc "github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/interface/grpc"
 	"github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/service"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
@@ -25,6 +26,9 @@ func main() {
 		fmt.Println("Failed to start service:", err)
 		return
 	}
+
+	grpcServer := conngrpc.NewConnWorkerGRPCServer(svc, config)
+	go grpcServer.Serve()
 
 	<-ctx.Done()
 	utils.Logger.Info("shutting down conn-worker")

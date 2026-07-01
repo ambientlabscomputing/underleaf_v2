@@ -285,7 +285,9 @@ class RegistrationService:
             token_hash, status="approved"
         )
         if candidate is None:
-            logger.error("Invalid or already-used one-time token", token_hash=token_hash)
+            logger.error(
+                "Invalid or already-used one-time token", token_hash=token_hash
+            )
             raise InvalidOneTimeTokenError("Invalid or already-used token")
 
         now = datetime.now(timezone.utc)
@@ -293,7 +295,11 @@ class RegistrationService:
         if expires and expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         if expires is None or now > expires:
-            logger.error("One-time token has expired", candidate_id=candidate.id, token_hash=token_hash)
+            logger.error(
+                "One-time token has expired",
+                candidate_id=candidate.id,
+                token_hash=token_hash,
+            )
             raise InvalidOneTimeTokenError("One-time token has expired")
 
         subject_id = candidate.cluster_id or candidate.proposed_cluster_id

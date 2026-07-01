@@ -27,6 +27,7 @@ type QueryNodesRequest struct {
 	Name   string `json:"name"`
 	OS     string `json:"os"`
 	Arch   string `json:"arch"`
+	IPAddr string `json:"ip_address"`
 }
 
 type GetNodesResponse struct {

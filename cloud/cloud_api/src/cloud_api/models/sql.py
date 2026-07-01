@@ -128,7 +128,10 @@ class SQLCluster(SQLBase):
     manager_node_id: Mapped[str] = mapped_column(
         ForeignKey("underleaf.nodes.id"), nullable=True
     )
-    nodes: Mapped[list["SQLNode"]] = relationship(back_populates="cluster")
+    nodes: Mapped[list["SQLNode"]] = relationship(
+        back_populates="cluster",
+        foreign_keys="SQLNode.cluster_id",
+    )
 
 
 class SQLNode(SQLBase):
@@ -137,7 +140,10 @@ class SQLNode(SQLBase):
 
     name: Mapped[str]
     cluster_id: Mapped[str] = mapped_column(ForeignKey("underleaf.clusters.id"))
-    cluster: Mapped["SQLCluster"] = relationship(back_populates="nodes")
+    cluster: Mapped["SQLCluster"] = relationship(
+        back_populates="nodes",
+        foreign_keys="[SQLNode.cluster_id]",
+    )
 
 
 class SQLConnection(SQLBase):
@@ -213,8 +219,10 @@ class SQLClusterCandidate(SQLBase):
     cluster_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey("underleaf.clusters.id"), nullable=True
     )
-    node_id: Mapped[Optional[str]] = mapped_column( # for node-specific registration requestsd
-        ForeignKey("underleaf.nodes.id"), nullable=True
+    node_id: Mapped[Optional[str]] = (
+        mapped_column(  # for node-specific registration requestsd
+            ForeignKey("underleaf.nodes.id"), nullable=True
+        )
     )
     # one-time token used by orch-server to request a signed cert
     one_time_token_hash: Mapped[Optional[str]] = mapped_column(nullable=True)

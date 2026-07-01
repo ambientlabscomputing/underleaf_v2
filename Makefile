@@ -40,5 +40,9 @@ stop: stop-cloud stop-edge
 	-overmind kill -s cloud/.overmind.sock 2>/dev/null || true
 	-overmind kill -s edge/.overmind.sock  2>/dev/null || true
 	-rm -f cloud/.overmind.sock edge/.overmind.sock
-	@# kill any stale Vite/node processes still holding our ports
-	-lsof -ti :5181,:5182,:5183 | xargs kill -9 2>/dev/null || true
+	-pkill node 2>/dev/null || true
+	-pkill conn-worker 2>/dev/null || true
+	-./scripts/kill_by_port.sh 8080 2>/dev/null || true
+
+clean:
+	-docker rm -f cloud-api-db redis 2>/dev/null || true

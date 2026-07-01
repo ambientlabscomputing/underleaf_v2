@@ -5,16 +5,25 @@ overmind kill
 ]0;cloud | overmindovermind: dial unix ./.overmind.sock: connect: no such file or directory
 make[2]: [stop] Error 1 (ignored)
 go generate ./agent/interface/grpc_private/...
-[1;38;5;7msystem  [0m | [1mTmux socket name: overmind-cloud-3WIhK197dxCC-0lKZRPne[0m
+[1;38;5;7msystem  [0m | [1mTmux socket name: overmind-cloud-6qM-cos4NBZDJ6N0AHefG[0m
 [1;38;5;7msystem  [0m | [1mTmux session ID: cloud[0m
 [1;38;5;7msystem  [0m | [1mListening at ./.overmind.sock[0m
-[1;38;5;3mcockpit [0m | [1mStarted with pid 98999...[0m
-[1;38;5;4mapi     [0m | [1mStarted with pid 99000...[0m
-[1;38;5;2maccounts[0m | [1mStarted with pid 98998...[0m
+[1;38;5;5mworker  [0m | [1mStarted with pid 40003...[0m
+[1;38;5;3mcockpit [0m | [1mStarted with pid 40001...[0m
+[1;38;5;2maccounts[0m | [1mStarted with pid 40000...[0m
+[1;38;5;4mapi     [0m | [1mStarted with pid 40002...[0m
 go generate ./agent/interface/grpc_public/...
 go generate ./orchestrator/interface/grpc_private/...
+[1;38;5;4mapi     [0m | make db-up
+[1;38;5;4mapi     [0m | docker run -d \
+[1;38;5;4mapi     [0m | 		--name cloud-api-db \
+[1;38;5;4mapi     [0m | 		-e POSTGRES_USER=postgres \
+[1;38;5;4mapi     [0m | 		-e POSTGRES_PASSWORD=postgres \
+[1;38;5;4mapi     [0m | 		-e POSTGRES_DB=postgres \
+[1;38;5;4mapi     [0m | 		-p 5432:5432 \
+[1;38;5;4mapi     [0m | 		postgres:18
 go generate ./orchestrator/interface/grpc_public/...
-go build -tags devmode -o bin/orcli ./orchestrator/cmd/cli
+[1;38;5;5mworker  [0m | go build -o bin/conn-worker ./cmd/main.go
 [1;38;5;2maccounts[0m | 
 [1;38;5;2maccounts[0m | > account_ui@0.0.0 dev
 [1;38;5;2maccounts[0m | > vite
@@ -23,35 +32,14 @@ go build -tags devmode -o bin/orcli ./orchestrator/cmd/cli
 [1;38;5;3mcockpit [0m | > cockpit_ui@0.0.0 dev
 [1;38;5;3mcockpit [0m | > vite
 [1;38;5;3mcockpit [0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m | [1;1H[0J
-[1;38;5;2maccounts[0m |   [32m[1mVITE[22m v8.0.16[39m  [2mready in [0m[1m211[22m[2m[0m ms[22m
-[1;38;5;2maccounts[0m | 
-[1;38;5;2maccounts[0m |   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5181[22m/[39m
-[1;38;5;2maccounts[0m | [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
-[1;38;5;2maccounts[0m | [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+go build -tags devmode -o bin/orcli ./orchestrator/cmd/cli
+[1;38;5;4mapi     [0m | docker: Error response from daemon: Conflict. The container name "/cloud-api-db" is already in use by container "92915433070ef148bba75df4e062a2ab8c7b019f1596910bcb8a218cbca89f57". You have to remove (or rename) that container to be able to reuse that name.
+[1;38;5;4mapi     [0m | 
+[1;38;5;4mapi     [0m | Run 'docker run --help' for more information
+[1;38;5;4mapi     [0m | make[4]: *** [db-up] Error 125
+[1;38;5;4mapi     [0m | make[3]: [run] Error 2 (ignored)
+[1;38;5;4mapi     [0m | PYTHONPATH=src .venv/bin/python -m cloud_api.main
+[1;38;5;5mworker  [0m | docker run --name redis -d -p 6379:6379 redis
 go build -o bin/orch-server ./orchestrator/cmd/server
 [1;38;5;3mcockpit [0m | 
 [1;38;5;3mcockpit [0m | 
@@ -77,17 +65,65 @@ go build -o bin/orch-server ./orchestrator/cmd/server
 [1;38;5;3mcockpit [0m | 
 [1;38;5;3mcockpit [0m | 
 [1;38;5;3mcockpit [0m | [1;1H[0J
-[1;38;5;3mcockpit [0m |   [32m[1mVITE[22m v8.0.16[39m  [2mready in [0m[1m207[22m[2m[0m ms[22m
+[1;38;5;3mcockpit [0m |   [32m[1mVITE[22m v8.0.16[39m  [2mready in [0m[1m305[22m[2m[0m ms[22m
 [1;38;5;3mcockpit [0m | 
 [1;38;5;3mcockpit [0m |   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5182[22m/[39m
 [1;38;5;3mcockpit [0m | [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
 [1;38;5;3mcockpit [0m | [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
-go build -o bin/migrate ./orchestrator/cmd/migrate
-go build -o bin/ufagent ./agent/cmd/ufagent
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m | 
+[1;38;5;5mworker  [0m | ace47fdf7b499ba8435f73a7f3b175964d04e7f79c4a56bbbabe798916b98946
+[1;38;5;2maccounts[0m | [1;1H[0J
+[1;38;5;2maccounts[0m |   [32m[1mVITE[22m v8.0.16[39m  [2mready in [0m[1m307[22m[2m[0m ms[22m
+[1;38;5;2maccounts[0m | 
+[1;38;5;2maccounts[0m |   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5181[22m/[39m
+[1;38;5;2maccounts[0m | [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[1;38;5;2maccounts[0m | [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[1;38;5;5mworker  [0m | ./bin/conn-worker
+[1;38;5;5mworker  [0m | [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+[1;38;5;5mworker  [0m | 
+[1;38;5;5mworker  [0m | [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+[1;38;5;5mworker  [0m |  - using env:	export GIN_MODE=release
+[1;38;5;5mworker  [0m |  - using code:	gin.SetMode(gin.ReleaseMode)
+[1;38;5;5mworker  [0m | 
+[1;38;5;5mworker  [0m | [GIN-debug] GET    /api/v2/connections/health --> github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/service.(*AppService).Start.func1 (3 handlers)
+[1;38;5;5mworker  [0m | time=2026-06-30T21:27:18.612-06:00 level=INFO msg="conn-worker http server listening" port=9070
+[1;38;5;5mworker  [0m | [GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+[1;38;5;5mworker  [0m | Please check https://github.com/gin-gonic/gin/blob/master/docs/doc.md#dont-trust-all-proxies for details.
+[1;38;5;5mworker  [0m | time=2026-06-30T21:27:18.612-06:00 level=DEBUG msg="serving Gateway Server ..." port=9020 domain=underleafapp.com
+[1;38;5;5mworker  [0m | [GIN-debug] Listening and serving HTTP on :9070
+[1;38;5;5mworker  [0m | time=2026-06-30T21:27:18.613-06:00 level=INFO msg="conn-worker gRPC server listening" port=50102
+[1;38;5;5mworker  [0m | time=2026-06-30T21:27:18.613-06:00 level=INFO msg="Gateway server started on port 9020"
 [1;38;5;4mapi     [0m | Swagger docs available at http://0.0.0.0:8080/docs
 [1;38;5;4mapi     [0m | [32mINFO[0m:     Will watch for changes in these directories: ['/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api']
 [1;38;5;4mapi     [0m | [32mINFO[0m:     Uvicorn running on [1mhttp://0.0.0.0:8080[0m (Press CTRL+C to quit)
-[1;38;5;4mapi     [0m | [32mINFO[0m:     Started reloader process [[36m[1m99068[0m] using [36m[1mStatReload[0m
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Started reloader process [[36m[1m40098[0m] using [36m[1mStatReload[0m
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Started server process [[36m40176[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application startup.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application startup complete.
+go build -o bin/migrate ./orchestrator/cmd/migrate
+go build -o bin/ufagent ./agent/cmd/ufagent
 go build -o bin/ufagentd ./agent/cmd/ufagentd
 chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd
 cp bin/orcli /Users/jose/.local/bin/orcli
@@ -96,25 +132,22 @@ cp bin/migrate /Users/jose/.local/bin/migrate
 cp bin/ufagent /Users/jose/.local/bin/ufagent
 cp bin/ufagentd /Users/jose/.local/bin/ufagentd
 overmind start
-]0;edge | overmind[1;38;5;7msystem[0m | [1mTmux socket name: overmind-edge-pa93Z-l-zXK0pnd_JoONX[0m
+]0;edge | overmind[1;38;5;7msystem[0m | [1mTmux socket name: overmind-edge-VCatdEnHOEbCLXZ9GlPMg[0m
 [1;38;5;7msystem[0m | [1mTmux session ID: edge[0m
 [1;38;5;7msystem[0m | [1mListening at ./.overmind.sock[0m
-[1;38;5;2mserver[0m | [1mStarted with pid 99214...[0m
-[1;38;5;4mui    [0m | [1mStarted with pid 99216...[0m
-[1;38;5;3magent [0m | [1mStarted with pid 99215...[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     Started server process [[36m99118[0m]
-[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application startup.
-[1;38;5;4mapi     [0m | [32mINFO[0m:     Application startup complete.
+[1;38;5;2mserver[0m | [1mStarted with pid 40355...[0m
+[1;38;5;3magent [0m | [1mStarted with pid 40356...[0m
+[1;38;5;4mui    [0m | [1mStarted with pid 40357...[0m
 [1;38;5;4mui    [0m | 
 [1;38;5;4mui    [0m | > orchestrator_ui@0.0.0 dev
 [1;38;5;4mui    [0m | > vite
 [1;38;5;4mui    [0m | 
-[1;38;5;2mserver[0m | time=2026-06-20T14:39:58.274-06:00 level=DEBUG msg="Starting database migration" file=agent.db total_migrations=4
-[1;38;5;2mserver[0m | time=2026-06-20T14:39:58.275-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0001_initial
-[1;38;5;2mserver[0m | time=2026-06-20T14:39:58.275-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0002_containers
-[1;38;5;2mserver[0m | time=2026-06-20T14:39:58.275-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0003_node_fields
-[1;38;5;2mserver[0m | time=2026-06-20T14:39:58.275-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0004_registration
-[1;38;5;2mserver[0m | time=2026-06-20T14:39:58.275-06:00 level=INFO msg="Database migration complete" file=agent.db total_migrations=4
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:23.803-06:00 level=DEBUG msg="Starting database migration" file=agent.db total_migrations=4
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:23.804-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0001_initial
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:23.804-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0002_containers
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:23.804-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0003_node_fields
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:23.804-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0004_registration
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:23.804-06:00 level=INFO msg="Database migration complete" file=agent.db total_migrations=4
 [1;38;5;2mserver[0m | [sync] container sync task started (interval=60s)
 [1;38;5;2mserver[0m | [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
 [1;38;5;2mserver[0m | 
@@ -123,33 +156,33 @@ overmind start
 [1;38;5;2mserver[0m |  - using code:	gin.SetMode(gin.ReleaseMode)
 [1;38;5;2mserver[0m | 
 [1;38;5;2mserver[0m | gRPC private server listening on unix:///tmp/undf-orch.sock
-[1;38;5;2mserver[0m | gRPC public server listening on :50100
-[1;38;5;2mserver[0m | [GIN-debug] GET    /api/health               --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).Serve.func1 (4 handlers)
-[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v2/nodes             --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetNodes-fm (4 handlers)
-[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v2/containers        --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetContainers-fm (4 handlers)
-[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v2/nodes/:nodeId/containers --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetContainersByNode-fm (4 handlers)
-[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v2/containers/:dockerId/logs --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetContainerLogs-fm (4 handlers)
-[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v2/containers/:dockerId/logs/stream --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).StreamContainerLogs-fm (4 handlers)
+[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v1/nodes             --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetNodes-fm (4 handlers)
+[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v1/containers        --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetContainers-fm (4 handlers)
+[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v1/nodes/:nodeId/containers --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetContainersByNode-fm (4 handlers)
+[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v1/containers/:dockerId/logs --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).GetContainerLogs-fm (4 handlers)
+[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v1/containers/:dockerId/logs/stream --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).StreamContainerLogs-fm (4 handlers)
+[1;38;5;2mserver[0m | [GIN-debug] GET    /api/v1/health            --> github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest.(*OrchestratorRESTServer).Serve.func1 (4 handlers)
 [1;38;5;2mserver[0m | Server actively listening on http://localhost:9090
-[1;38;5;3magent [0m | time=2026-06-20T14:39:58.402-06:00 level=DEBUG msg="Initializing repository with config" db_path=agent.db
-[1;38;5;3magent [0m | time=2026-06-20T14:39:58.417-06:00 level=DEBUG msg="Starting database migration" file=agent.db total_migrations=4
-[1;38;5;3magent [0m | time=2026-06-20T14:39:58.417-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0001_initial
-[1;38;5;3magent [0m | time=2026-06-20T14:39:58.417-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0002_containers
-[1;38;5;3magent [0m | time=2026-06-20T14:39:58.417-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0003_container_logs
-[1;38;5;3magent [0m | time=2026-06-20T14:39:58.417-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0004_node_fields
-[1;38;5;3magent [0m | time=2026-06-20T14:39:58.417-06:00 level=INFO msg="Database migration complete" file=agent.db total_migrations=4
-[1;38;5;3magent [0m | [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
-[1;38;5;3magent [0m | 
+[1;38;5;2mserver[0m | gRPC public server listening on :50100
+[1;38;5;3magent [0m | time=2026-06-30T21:27:23.969-06:00 level=DEBUG msg="Initializing repository with config" db_path=agent.db
+[1;38;5;3magent [0m | time=2026-06-30T21:27:23.976-06:00 level=DEBUG msg="Starting database migration" file=agent.db total_migrations=4
+[1;38;5;3magent [0m | time=2026-06-30T21:27:23.976-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0001_initial
+[1;38;5;3magent [0m | time=2026-06-30T21:27:23.976-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0002_containers
+[1;38;5;3magent [0m | time=2026-06-30T21:27:23.976-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0003_container_logs
+[1;38;5;3magent [0m | time=2026-06-30T21:27:23.976-06:00 level=DEBUG msg="Skipping already applied migration" migration.ID=0004_node_fields
+[1;38;5;3magent [0m | time=2026-06-30T21:27:23.976-06:00 level=INFO msg="Database migration complete" file=agent.db total_migrations=4
 [1;38;5;3magent [0m | [1;38;2;0;255;0mEdge agent started successfully[m
 [1;38;5;3magent [0m | [1;38;2;0;255;0m[m                               
+[1;38;5;3magent [0m | [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+[1;38;5;3magent [0m | 
 [1;38;5;3magent [0m | [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
 [1;38;5;3magent [0m |  - using env:	export GIN_MODE=release
 [1;38;5;3magent [0m |  - using code:	gin.SetMode(gin.ReleaseMode)
 [1;38;5;3magent [0m | 
-[1;38;5;3magent [0m | [GIN-debug] GET    /health                   --> github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/rest.(*AgentRESTServer).Serve.func1 (3 handlers)
+[1;38;5;3magent [0m | [GIN-debug] GET    /api/v1/health            --> github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/rest.(*AgentRESTServer).Serve.func1 (3 handlers)
 [1;38;5;3magent [0m | Server actively listening on http://localhost:9091
-[1;38;5;3magent [0m | gRPC private server listening on unix:///tmp/undf-agent.sock
 [1;38;5;3magent [0m | gRPC public server listening on :50101
+[1;38;5;3magent [0m | gRPC private server listening on unix:///tmp/undf-agent.sock
 [1;38;5;3magent [0m | [health] ping → orchestrator OK (responder=orchestrator, rtt≈0ms)
 [1;38;5;4mui    [0m | 
 [1;38;5;4mui    [0m | 
@@ -175,309 +208,68 @@ overmind start
 [1;38;5;4mui    [0m | 
 [1;38;5;4mui    [0m | 
 [1;38;5;4mui    [0m | [1;1H[0J
-[1;38;5;4mui    [0m |   [32m[1mVITE[22m v8.0.16[39m  [2mready in [0m[1m195[22m[2m[0m ms[22m
+[1;38;5;4mui    [0m |   [32m[1mVITE[22m v8.0.16[39m  [2mready in [0m[1m192[22m[2m[0m ms[22m
 [1;38;5;4mui    [0m | 
 [1;38;5;4mui    [0m |   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5183[22m/[39m
 [1;38;5;4mui    [0m | [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
 [1;38;5;4mui    [0m | [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
-[1;38;5;2mserver[0m | [health] ping → agent OK (responder=agent, rtt≈1ms)
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55220 - "[1mPOST /api/v2/registration/device HTTP/1.1[0m" [91m500 Internal Server Error[0m
-[1;38;5;4mapi     [0m | [31mERROR[0m:    Exception in ASGI application
-[1;38;5;4mapi     [0m | Traceback (most recent call last):
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 526, in _prepare_and_execute
-[1;38;5;4mapi     [0m |     prepared_stmt, attributes = await adapt_connection._prepare(
-[1;38;5;4mapi     [0m |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |         operation, self._invalidate_schema_cache_asof
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 773, in _prepare
-[1;38;5;4mapi     [0m |     prepared_stmt = await self._connection.prepare(
-[1;38;5;4mapi     [0m |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |         operation, name=self._prepared_statement_name_func()
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 638, in prepare
-[1;38;5;4mapi     [0m |     return await self._prepare(
-[1;38;5;4mapi     [0m |            ^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     ...<4 lines>...
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 657, in _prepare
-[1;38;5;4mapi     [0m |     stmt = await self._get_statement(
-[1;38;5;4mapi     [0m |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     ...<5 lines>...
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 443, in _get_statement
-[1;38;5;4mapi     [0m |     statement = await self._protocol.prepare(
-[1;38;5;4mapi     [0m |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     ...<5 lines>...
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "asyncpg/protocol/protocol.pyx", line 165, in prepare
-[1;38;5;4mapi     [0m | asyncpg.exceptions.UndefinedTableError: relation "underleaf.cluster_candidates" does not exist
-[1;38;5;4mapi     [0m | 
-[1;38;5;4mapi     [0m | The above exception was the direct cause of the following exception:
-[1;38;5;4mapi     [0m | 
-[1;38;5;4mapi     [0m | Traceback (most recent call last):
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
-[1;38;5;4mapi     [0m |     self.dialect.do_execute(
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         cursor, str_statement, effective_parameters, context
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
-[1;38;5;4mapi     [0m |     cursor.execute(statement, parameters)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
-[1;38;5;4mapi     [0m |     self._adapt_connection.await_(
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         self._prepare_and_execute(operation, parameters)
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
-[1;38;5;4mapi     [0m |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-[1;38;5;4mapi     [0m |            ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
-[1;38;5;4mapi     [0m |     value = await result
-[1;38;5;4mapi     [0m |             ^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
-[1;38;5;4mapi     [0m |     self._handle_exception(error)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
-[1;38;5;4mapi     [0m |     self._adapt_connection._handle_exception(error)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
-[1;38;5;4mapi     [0m |     raise translated_error from error
-[1;38;5;4mapi     [0m | sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.ProgrammingError: <class 'asyncpg.exceptions.UndefinedTableError'>: relation "underleaf.cluster_candidates" does not exist
-[1;38;5;4mapi     [0m | 
-[1;38;5;4mapi     [0m | The above exception was the direct cause of the following exception:
-[1;38;5;4mapi     [0m | 
-[1;38;5;4mapi     [0m | Traceback (most recent call last):
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/uvicorn/protocols/http/h11_impl.py", line 415, in run_asgi
-[1;38;5;4mapi     [0m |     result = await app(  # type: ignore[func-returns-value]
-[1;38;5;4mapi     [0m |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |         self.scope, self.receive, self.send
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/uvicorn/middleware/proxy_headers.py", line 62, in __call__
-[1;38;5;4mapi     [0m |     return await self.app(scope, receive, send)
-[1;38;5;4mapi     [0m |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/fastapi/applications.py", line 1159, in __call__
-[1;38;5;4mapi     [0m |     await super().__call__(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/applications.py", line 90, in __call__
-[1;38;5;4mapi     [0m |     await self.middleware_stack(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/middleware/errors.py", line 186, in __call__
-[1;38;5;4mapi     [0m |     raise exc
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/middleware/errors.py", line 164, in __call__
-[1;38;5;4mapi     [0m |     await self.app(scope, receive, _send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/middleware/cors.py", line 88, in __call__
-[1;38;5;4mapi     [0m |     await self.app(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-[1;38;5;4mapi     [0m |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-[1;38;5;4mapi     [0m |     raise exc
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-[1;38;5;4mapi     [0m |     await app(scope, receive, sender)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-[1;38;5;4mapi     [0m |     await self.app(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/routing.py", line 660, in __call__
-[1;38;5;4mapi     [0m |     await self.middleware_stack(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/routing.py", line 680, in app
-[1;38;5;4mapi     [0m |     await route.handle(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/routing.py", line 276, in handle
-[1;38;5;4mapi     [0m |     await self.app(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/fastapi/routing.py", line 134, in app
-[1;38;5;4mapi     [0m |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-[1;38;5;4mapi     [0m |     raise exc
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-[1;38;5;4mapi     [0m |     await app(scope, receive, sender)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/fastapi/routing.py", line 120, in app
-[1;38;5;4mapi     [0m |     response = await f(request)
-[1;38;5;4mapi     [0m |                ^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/fastapi/routing.py", line 674, in app
-[1;38;5;4mapi     [0m |     raw_response = await run_endpoint_function(
-[1;38;5;4mapi     [0m |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     ...<3 lines>...
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
-[1;38;5;4mapi     [0m |     return await dependant.call(**values)
-[1;38;5;4mapi     [0m |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/src/cloud_api/interface/registration/registration.py", line 61, in register_device
-[1;38;5;4mapi     [0m |     return await svc.register_device(req)
-[1;38;5;4mapi     [0m |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/src/cloud_api/service/registration_service.py", line 115, in register_device
-[1;38;5;4mapi     [0m |     await self.registration_repo.create_candidate(
-[1;38;5;4mapi     [0m |     ...<7 lines>...
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/src/cloud_api/repository/registration_repository.py", line 33, in create_candidate
-[1;38;5;4mapi     [0m |     await session.commit()
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/ext/asyncio/session.py", line 999, in commit
-[1;38;5;4mapi     [0m |     await greenlet_spawn(self.sync_session.commit)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 203, in greenlet_spawn
-[1;38;5;4mapi     [0m |     result = context.switch(value)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2034, in commit
-[1;38;5;4mapi     [0m |     trans.commit(_to_root=True)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "<string>", line 2, in commit
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
-[1;38;5;4mapi     [0m |     ret_value = fn(self, *arg, **kw)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 1315, in commit
-[1;38;5;4mapi     [0m |     self._prepare_impl()
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~^^
-[1;38;5;4mapi     [0m |   File "<string>", line 2, in _prepare_impl
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
-[1;38;5;4mapi     [0m |     ret_value = fn(self, *arg, **kw)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 1290, in _prepare_impl
-[1;38;5;4mapi     [0m |     self.session.flush()
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4352, in flush
-[1;38;5;4mapi     [0m |     self._flush(objects)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4487, in _flush
-[1;38;5;4mapi     [0m |     with util.safe_reraise():
-[1;38;5;4mapi     [0m |          ~~~~~~~~~~~~~~~~~^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
-[1;38;5;4mapi     [0m |     raise exc_value.with_traceback(exc_tb)
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4448, in _flush
-[1;38;5;4mapi     [0m |     flush_context.execute()
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 465, in execute
-[1;38;5;4mapi     [0m |     rec.execute(self)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 641, in execute
-[1;38;5;4mapi     [0m |     util.preloaded.orm_persistence.save_obj(
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         self.mapper,
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |         uow.states_for_mapper_hierarchy(self.mapper, False, False),
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |         uow,
-[1;38;5;4mapi     [0m |         ^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 94, in save_obj
-[1;38;5;4mapi     [0m |     _emit_insert_statements(
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         base_mapper,
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     ...<3 lines>...
-[1;38;5;4mapi     [0m |         insert,
-[1;38;5;4mapi     [0m |         ^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 1049, in _emit_insert_statements
-[1;38;5;4mapi     [0m |     result = connection.execute(
-[1;38;5;4mapi     [0m |         statement, multiparams, execution_options=execution_options
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
-[1;38;5;4mapi     [0m |     return meth(
-[1;38;5;4mapi     [0m |         self,
-[1;38;5;4mapi     [0m |         distilled_parameters,
-[1;38;5;4mapi     [0m |         execution_options or NO_OPTIONS,
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
-[1;38;5;4mapi     [0m |     return connection._execute_clauseelement(
-[1;38;5;4mapi     [0m |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         self, distilled_params, execution_options
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
-[1;38;5;4mapi     [0m |     ret = self._execute_context(
-[1;38;5;4mapi     [0m |         dialect,
-[1;38;5;4mapi     [0m |     ...<8 lines>...
-[1;38;5;4mapi     [0m |         cache_hit=cache_hit,
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
-[1;38;5;4mapi     [0m |     return self._exec_single_context(
-[1;38;5;4mapi     [0m |            ~~~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         dialect, context, statement, parameters
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
-[1;38;5;4mapi     [0m |     self._handle_dbapi_exception(
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         e, str_statement, effective_parameters, cursor, context
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2365, in _handle_dbapi_exception
-[1;38;5;4mapi     [0m |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
-[1;38;5;4mapi     [0m |     self.dialect.do_execute(
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         cursor, str_statement, effective_parameters, context
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
-[1;38;5;4mapi     [0m |     cursor.execute(statement, parameters)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
-[1;38;5;4mapi     [0m |     self._adapt_connection.await_(
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-[1;38;5;4mapi     [0m |         self._prepare_and_execute(operation, parameters)
-[1;38;5;4mapi     [0m |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |     )
-[1;38;5;4mapi     [0m |     ^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
-[1;38;5;4mapi     [0m |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-[1;38;5;4mapi     [0m |            ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
-[1;38;5;4mapi     [0m |     value = await result
-[1;38;5;4mapi     [0m |             ^^^^^^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
-[1;38;5;4mapi     [0m |     self._handle_exception(error)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
-[1;38;5;4mapi     [0m |     self._adapt_connection._handle_exception(error)
-[1;38;5;4mapi     [0m |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
-[1;38;5;4mapi     [0m |   File "/Users/jose/ambient_labs/underleaf_v2/cloud/cloud_api/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
-[1;38;5;4mapi     [0m |     raise translated_error from error
-[1;38;5;4mapi     [0m | sqlalchemy.exc.ProgrammingError: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedTableError'>: relation "underleaf.cluster_candidates" does not exist
-[1;38;5;4mapi     [0m | [SQL: INSERT INTO underleaf.cluster_candidates (id, user_code, device_code_hash, status, proposed_cluster_name, proposed_cluster_id, principal_account_id, cluster_id, one_time_token_hash, one_time_token_expires_at, device_code_expires_at, poll_interval, last_polled_at, created_at, updated_at) VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::VARCHAR, $9::VARCHAR, $10::TIMESTAMP WITH TIME ZONE, $11::TIMESTAMP WITH TIME ZONE, $12::INTEGER, $13::TIMESTAMP WITH TIME ZONE, $14::TIMESTAMP WITH TIME ZONE, $15::TIMESTAMP WITH TIME ZONE)]
-[1;38;5;4mapi     [0m | [parameters: ('candidate_d8rflk4k4ke86bi5dd6g', 'TRHZ-6VL4', 'fa801e507de2f1b8d445ea7253ffe1cea55d8ccaed9c9fe34bd7322ad43b1be3', 'pending', 'cluster_d8rflk01jmp8c3mepnhg', 'cluster_d8rflk01jmp8c3mepnhg', None, None, None, None, datetime.datetime(2026, 6, 20, 20, 50, 48, 726164, tzinfo=datetime.timezone.utc), 5, None, datetime.datetime(2026, 6, 20, 20, 40, 48, 726230, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 6, 20, 20, 40, 48, 726230, tzinfo=datetime.timezone.utc))]
-[1;38;5;4mapi     [0m | (Background on this error at: https://sqlalche.me/e/20/f405)
-[1;38;5;2mserver[0m | [sync] container ingest complete: 1 container(s) synced
-[1;38;5;2mserver[0m | [sync] container ingest complete: 1 container(s) synced
-[1;38;5;4mapi     [0m | [32m2026-06-20 14:42:15[0m | [1mINFO    [0m | [36mcloud_api.service.registration_service[0m:[36mregister_device[0m:[36m125[0m - [1mClusterCandidate created[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55276 - "[1mPOST /api/v2/registration/device HTTP/1.1[0m" [32m201 Created[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55284 - "[1mPOST /api/v2/registration/token HTTP/1.1[0m" [31m400 Bad Request[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55284 - "[1mPOST /api/v2/registration/token HTTP/1.1[0m" [31m400 Bad Request[0m
-[1;38;5;4mapi     [0m | [32m2026-06-20 14:42:30[0m | [1mINFO    [0m | [36mcloud_api.lib.auth_lib[0m:[36m__bootstrap_certs[0m:[36m151[0m - [1mBootstrap certs already exist, skipping generation[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55299 - "[1mGET /oauth/userinfo HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55299 - "[1mGET /oauth/userinfo HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55299 - "[1mOPTIONS /api/v2/registration/candidate?user_code=1HUE-VHVM HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55299 - "[1mGET /api/v2/registration/candidate?user_code=1HUE-VHVM HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55306 - "[1mPOST /api/v2/registration/token HTTP/1.1[0m" [31m400 Bad Request[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55301 - "[1mOPTIONS /api/v2/registration/approve HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32m2026-06-20 14:42:36[0m | [1mINFO    [0m | [36mcloud_api.service.registration_service[0m:[36mapprove_candidate[0m:[36m268[0m - [1mCandidate approved, cluster created[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55301 - "[1mPOST /api/v2/registration/approve HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55301 - "[1mGET /api/v2/registration/candidate?user_code=1HUE-VHVM HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55301 - "[1mGET /api/v2/clusters HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32m2026-06-20 14:42:45[0m | [1mINFO    [0m | [36mcloud_api.service.registration_service[0m:[36mpoll_token[0m:[36m197[0m - [1mOne-time cluster token issued[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55315 - "[1mPOST /api/v2/registration/token HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32m2026-06-20 14:42:45[0m | [1mINFO    [0m | [36mcloud_api.service.registration_service[0m:[36missue_certificate[0m:[36m310[0m - [1mCertificate issued, candidate consumed[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55315 - "[1mPOST /api/v2/registration/certificate HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;2mserver[0m | [registration] cluster cluster_d8rfm9o1jmp06vumpb60 successfully registered
-[1;38;5;2mserver[0m | [sync] container ingest complete: 1 container(s) synced
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55309 - "[1mGET /oauth/userinfo HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55309 - "[1mGET /oauth/userinfo HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55309 - "[1mGET /api/v2/clusters HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55351 - "[1mGET /api/v2/billing-accounts HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;2mserver[0m | [sync] container ingest complete: 1 container(s) synced
-[1;38;5;2mserver[0m | [sync] container ingest complete: 1 container(s) synced
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55419 - "[1mGET /api/v2/connections HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55419 - "[1mGET /api/v2/tunnels HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55419 - "[1mGET /api/v2/subscriptions HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55419 - "[1mGET /api/v2/clusters HTTP/1.1[0m" [32m200 OK[0m
-[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:55419 - "[1mGET /api/v2/billing-accounts HTTP/1.1[0m" [32m200 OK[0m
+[1;38;5;2mserver[0m | [health] ping → agent OK (responder=agent, rtt≈0ms)
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:36.001-06:00 level=DEBUG msg="sending HTTP request" method=POST path=/connections body="{\"node_id\":\"node_d925a501jmp1dt4r99fg\",\"name\":\"stream-1782876456\"}"
+[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:63405 - "[1mPOST /api/v2/cloud/connections HTTP/1.1[0m" [31m401 Unauthorized[0m
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:36.007-06:00 level=DEBUG msg="received HTTP response" method=POST path=/connections status=401 body="{\"detail\":\"Not authenticated\"}"
+[1;38;5;2mserver[0m | time=2026-06-30T21:27:36.007-06:00 level=ERROR msg="HTTP request failed" method=POST path=/connections status=401 body="{\"detail\":\"Not authenticated\"}"
+[1;38;5;2mserver[0m | [sync] container ingest complete: 2 container(s) synced
+[1;38;5;4mapi     [0m | [33mWARNING[0m:  StatReload detected changes in 'src/cloud_api/interface/deps.py'. Reloading...
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Shutting down
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application shutdown.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application shutdown complete.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Finished server process [[36m40176[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Started server process [[36m41645[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application startup.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application startup complete.
+[1;38;5;2mserver[0m | [sync] container ingest complete: 2 container(s) synced
+[1;38;5;4mapi     [0m | [33mWARNING[0m:  StatReload detected changes in 'src/cloud_api/interface/deps.py'. Reloading...
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Shutting down
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application shutdown.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application shutdown complete.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Finished server process [[36m41645[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Started server process [[36m41906[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application startup.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application startup complete.
+[1;38;5;2mserver[0m | [sync] container ingest complete: 2 container(s) synced
+[1;38;5;4mapi     [0m | [33mWARNING[0m:  StatReload detected changes in 'src/cloud_api/interface/deps.py'. Reloading...
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Shutting down
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application shutdown.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application shutdown complete.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Finished server process [[36m41906[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Started server process [[36m42855[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application startup.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application startup complete.
+[1;38;5;2mserver[0m | [sync] container ingest complete: 2 container(s) synced
+[1;38;5;4mapi     [0m | [33mWARNING[0m:  StatReload detected changes in 'src/cloud_api/interface/deps.py'. Reloading...
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Shutting down
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application shutdown.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application shutdown complete.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Finished server process [[36m42855[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Started server process [[36m43538[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application startup.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application startup complete.
+[1;38;5;2mserver[0m | time=2026-06-30T21:31:49.726-06:00 level=DEBUG msg="sending HTTP request" method=POST path=/connections body="{\"node_id\":\"node_d925a501jmp1dt4r99fg\",\"name\":\"stream-1782876709\"}"
+[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:63733 - "[1mPOST /api/v2/cloud/connections HTTP/1.1[0m" [31m401 Unauthorized[0m
+[1;38;5;2mserver[0m | time=2026-06-30T21:31:49.735-06:00 level=DEBUG msg="received HTTP response" method=POST path=/connections status=401 body="{\"detail\":\"Not authenticated\"}"
+[1;38;5;2mserver[0m | time=2026-06-30T21:31:49.735-06:00 level=ERROR msg="HTTP request failed" method=POST path=/connections status=401 body="{\"detail\":\"Not authenticated\"}"
+[1;38;5;4mapi     [0m | [33mWARNING[0m:  StatReload detected changes in 'src/cloud_api/config.py'. Reloading...
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Shutting down
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application shutdown.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application shutdown complete.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Finished server process [[36m43538[0m]
+[1;38;5;2mserver[0m | [sync] container ingest complete: 2 container(s) synced
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Started server process [[36m44112[0m]
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Waiting for application startup.
+[1;38;5;4mapi     [0m | [32mINFO[0m:     Application startup complete.
+[1;38;5;2mserver[0m | time=2026-06-30T21:32:34.630-06:00 level=DEBUG msg="sending HTTP request" method=POST path=/connections body="{\"node_id\":\"node_d925a501jmp1dt4r99fg\",\"name\":\"stream-1782876754\"}"
+[1;38;5;4mapi     [0m | [32m2026-06-30 21:32:34[0m | [34m[1mDEBUG   [0m | [36mcloud_api.interface.deps[0m:[36mx_subject_id_token_middleware_[0m:[36m135[0m - [34m[1mX-Subject-Id header not present, skipping token minting[0m
+[1;38;5;4mapi     [0m | [32mINFO[0m:     127.0.0.1:63821 - "[1mPOST /api/v2/cloud/connections HTTP/1.1[0m" [31m401 Unauthorized[0m
+[1;38;5;2mserver[0m | time=2026-06-30T21:32:34.643-06:00 level=DEBUG msg="received HTTP response" method=POST path=/connections status=401 body="{\"detail\":\"Not authenticated\"}"
+[1;38;5;2mserver[0m | time=2026-06-30T21:32:34.643-06:00 level=ERROR msg="HTTP request failed" method=POST path=/connections status=401 body="{\"detail\":\"Not authenticated\"}"
+[1;38;5;2mserver[0m | [sync] container ingest complete: 2 container(s) synced

@@ -27,9 +27,10 @@ func NewConnWorkerGRPCServer(service service.Service, config utils.Config) *Conn
 }
 
 func (s *ConnWorkerGRPCServer) Serve() {
-	lis, _ := net.Listen("tcp", ":"+strconv.Itoa(s.config.GRPC.Port))
+	lis, _ := net.Listen("tcp", ":"+strconv.Itoa(s.config.GRPC.Port.Int()))
 	grpcServer := grpc.NewServer()
 	RegisterConnectionWorkerServer(grpcServer, s)
+	utils.Logger.Info("conn-worker gRPC server listening", "port", s.config.GRPC.Port)
 	grpcServer.Serve(lis)
 }
 

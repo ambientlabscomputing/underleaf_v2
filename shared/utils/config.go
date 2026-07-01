@@ -1,6 +1,9 @@
 package utils
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type NamedPort int
 
@@ -13,6 +16,7 @@ func (np NamedPort) Int() int {
 }
 
 const (
+	CloudHttpPort          NamedPort = 8080
 	OrchestratorHttpPort   NamedPort = 9090
 	ConnectionsNodePort    NamedPort = 9021
 	ConnectionsGatewayPort NamedPort = 9020
@@ -37,6 +41,7 @@ const (
 
 	// edge components do not share a reverse proxy or domain, so these paths only need to be unique within the component
 	OrchestratorBasePath BasePath = "/api/v1/"
+	AgentBasePath        BasePath = "/api/v1/"
 )
 
 type HttpConfig struct {
@@ -103,7 +108,7 @@ func init() {
 		},
 		DBPath:                   "orchestrator.db",
 		ContainerSyncIntervalSec: 60,
-		CloudAPIBaseURL:          "http://localhost:8080",
+		CloudAPIBaseURL:          fmt.Sprintf("http://localhost:%d%s", CloudHttpPort.Int(), CloudAPIBasePath.String()),
 		AccountUIBaseURL:         "http://localhost:5173",
 		CertDir:                  "./certs",
 	}
@@ -118,6 +123,7 @@ func init() {
 			ReadTimeout:  "5s",
 			WriteTimeout: "10s",
 			IdleTimeout:  "15s",
+			BasePath:     AgentBasePath,
 		},
 		DBPath:                   "agent.db",
 		ContainerSyncIntervalSec: 60,

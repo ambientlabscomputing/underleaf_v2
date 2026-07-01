@@ -17,10 +17,12 @@ type OrchestratorRESTServer struct {
 }
 
 func (s *OrchestratorRESTServer) Serve() {
+	config := utils.GetConfig(utils.OrchestratorConfig)
+
 	router := gin.Default()
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:5183"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -28,16 +30,15 @@ func (s *OrchestratorRESTServer) Serve() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	router.GET("/api/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "OK"})
-	})
-
-	v2 := router.Group("/api/v2")
+	v2 := router.Group(config.Http.BasePath.String())
 	s.RegisterNodeRoutes(v2, s.Service)
 	s.RegisterContainerRoutes(v2, s.Service)
 	s.RegisterLogRoutes(v2, s.Service)
+	health := v2.Group("/health")
+	health.GET("", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "OK"})
+	})
 
-	config := utils.GetConfig(utils.OrchestratorConfig)
 	addr := fmt.Sprintf(":%d", config.Http.Port)
 
 	srv := &http.Server{

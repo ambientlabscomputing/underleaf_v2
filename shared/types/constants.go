@@ -2,6 +2,10 @@ package types
 
 type CertFileName string
 
+func (c CertFileName) String() string {
+	return string(c)
+}
+
 const (
 	CertFileNameClusterCert CertFileName = "cluster_cert.pem"
 	CertFileNameClusterKey  CertFileName = "cluster_key.pem"

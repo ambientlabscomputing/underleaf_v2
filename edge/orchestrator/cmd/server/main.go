@@ -12,6 +12,7 @@ import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest"
 	_ "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository/migrations"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +41,11 @@ func main() {
 }
 
 func Run() {
-	svc := service.NewService().(*service.AppService)
+	config := utils.GetConfig(utils.OrchestratorConfig)
+	svc := service.NewService(config).(*service.AppService)
+	if err := svc.Start(); err != nil {
+		panic("Failed to start service: " + err.Error())
+	}
 
 	// Initialize and start the REST server
 	restServer := rest.OrchestratorRESTServer{Service: svc}

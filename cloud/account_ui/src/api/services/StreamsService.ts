@@ -3,7 +3,7 @@ import type { ListResponse } from './Common';
 
 // -- Types ---------------------------------------------------------------------
 
-export interface Tunnel {
+export interface Stream {
   id: string;
   name: string;
   node_id: string;
@@ -11,28 +11,28 @@ export interface Tunnel {
   updated_at: string;
 }
 
-export interface CreateTunnelRequest {
+export interface CreateStreamRequest {
   name: string;
   node_id: string;
 }
 
-export interface PatchTunnelRequest {
+export interface PatchStreamRequest {
   name?: string;
 }
 
 // -- Service -------------------------------------------------------------------
 
-export const tunnelsService = {
+export const streamsService = {
   list: (params?: { name?: string; node_id?: string }) => {
     const qs = new URLSearchParams();
     if (params?.name) qs.set('name', params.name);
     if (params?.node_id) qs.set('node_id', params.node_id);
     const q = qs.toString();
-    return apiClient.get<ListResponse<Tunnel>>(`/tunnels${q ? `?${q}` : ''}`);
+    return apiClient.get<ListResponse<Stream>>(`/streams${q ? `?${q}` : ''}`);
   },
-  getById: (id: string) => apiClient.get<Tunnel>(`/tunnels/${id}`),
-  create: (req: CreateTunnelRequest) => apiClient.post<Tunnel>('/tunnels', req),
-  update: (id: string, req: PatchTunnelRequest) =>
-    apiClient.patch<Tunnel>(`/tunnels/${id}`, req),
-  delete: (id: string) => apiClient.delete<void>(`/tunnels/${id}`),
+  getById: (id: string) => apiClient.get<Stream>(`/streams/${id}`),
+  create: (req: CreateStreamRequest) => apiClient.post<Stream>('/streams', req),
+  update: (id: string, req: PatchStreamRequest) =>
+    apiClient.patch<Stream>(`/streams/${id}`, req),
+  delete: (id: string) => apiClient.delete<void>(`/streams/${id}`),
 };

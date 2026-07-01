@@ -3,6 +3,6 @@ export { Signup } from './Signup';
 export { BillingAccounts } from './BillingAccounts';
 export { Clusters } from './Clusters';
 export { ClusterRegistration } from './ClusterRegistration';
-export { Tunnels } from './Tunnels';
+export { Streams } from './Streams';
 export { Connections } from './Connections';
 export { Subscriptions } from './Subscriptions';

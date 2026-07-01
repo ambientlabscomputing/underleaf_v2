@@ -18,12 +18,12 @@ export {
 } from './clusters';
 
 export {
-  tunnelKeys,
-  useTunnels,
-  useCreateTunnel,
-  useUpdateTunnel,
-  useDeleteTunnel,
-} from './tunnels';
+  streamKeys,
+  useStreams,
+  useCreateStream,
+  useUpdateStream,
+  useDeleteStream,
+} from './streams';
 
 export {
   connectionKeys,

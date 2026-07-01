@@ -15,15 +15,14 @@ type AgentRESTServer struct {
 }
 
 func (s *AgentRESTServer) Serve() {
+	config := utils.GetConfig(utils.AgentConfig)
 	router := gin.Default()
 
-	router.GET("/health", func(c *gin.Context) {
+	v1 := router.Group(config.Http.BasePath.String())
+	v1.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
 
-	// v2 := router.Group("/v2")
-
-	config := utils.GetConfig(utils.AgentConfig)
 	addr := fmt.Sprintf(":%d", config.Http.Port)
 
 	srv := &http.Server{

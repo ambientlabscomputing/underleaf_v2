@@ -17,7 +17,7 @@ export function useNavItems(): NavItem[] {
   return [
     { label: 'Billing Accounts', icon: <AccountBalanceIcon fontSize="small" />, onClick: () => navigate('/billing-accounts'), selected: location.pathname === '/billing-accounts' },
     { label: 'Clusters',         icon: <StorageIcon fontSize="small" />,         onClick: () => navigate('/clusters'),          selected: location.pathname === '/clusters' },
-    { label: 'Tunnels',          icon: <TuneIcon fontSize="small" />,            onClick: () => navigate('/tunnels'),           selected: location.pathname === '/tunnels' },
+    { label: 'Streams',          icon: <TuneIcon fontSize="small" />,            onClick: () => navigate('/streams'),           selected: location.pathname === '/streams' },
     { label: 'Connections',      icon: <LinkIcon fontSize="small" />,            onClick: () => navigate('/connections'),       selected: location.pathname === '/connections' },
     { label: 'Subscriptions',    icon: <SubscriptionsIcon fontSize="small" />,   onClick: () => navigate('/subscriptions'),     selected: location.pathname === '/subscriptions' },
   ];

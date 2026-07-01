@@ -88,6 +88,7 @@ def get_auth_lib() -> AuthLib:
     """AuthLib is expensive to construct (RSA cert load/generate). One instance."""
     return AuthLib(get_user_repo())
 
+
 @lru_cache
 def get_conn_worker_client() -> ConnWorkerClient:
     from cloud_api import app_config
@@ -151,12 +152,16 @@ def get_stream_repo() -> StreamRepository:
 
 @lru_cache
 def get_connection_service() -> ConnectionService:
-    return ConnectionService(conn_repo=get_conn_repo(), conn_client=get_conn_worker_client())
+    return ConnectionService(
+        conn_repo=get_conn_repo(), conn_client=get_conn_worker_client()
+    )
 
 
 @lru_cache
 def get_stream_service() -> StreamService:
-    return StreamService(stream_repo=get_stream_repo(), conn_worker_client=get_conn_worker_client())
+    return StreamService(
+        stream_repo=get_stream_repo(), conn_worker_client=get_conn_worker_client()
+    )
 
 
 @lru_cache

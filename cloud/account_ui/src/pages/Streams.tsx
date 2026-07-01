@@ -5,8 +5,8 @@ import {
   PageShell, AppDataGrid, AppDialog, ConfirmDialog, AppTextField,
   type GridColDef,
 } from '../components';
-import { useTunnels, useCreateTunnel, useUpdateTunnel, useDeleteTunnel } from '../datastore';
-import type { Tunnel } from '../api/services/TunnelsService';
+import { useStreams, useCreateStream, useUpdateStream, useDeleteStream } from '../datastore';
+import type { Stream } from '../api/services/StreamsService';
 import {
   Box, Button, IconButton, Typography, Tooltip,
   AddIcon, EditIcon, DeleteIcon, LogoutIcon,
@@ -14,7 +14,7 @@ import {
 
 // -- Constants -----------------------------------------------------------------
 
-const BASE_COLUMNS: GridColDef<Tunnel>[] = [
+const BASE_COLUMNS: GridColDef<Stream>[] = [
   { field: 'id', headerName: 'ID', flex: 1.5 },
   { field: 'name', headerName: 'Name', flex: 1 },
   { field: 'node_id', headerName: 'Node ID', flex: 1.5 },
@@ -23,21 +23,21 @@ const BASE_COLUMNS: GridColDef<Tunnel>[] = [
 
 // -- Component -----------------------------------------------------------------
 
-export function Tunnels() {
+export function Streams() {
   const { user, logout } = useAuth();
   const navItems = useNavItems();
 
-  const { data, isPending, isError } = useTunnels();
-  const createMutation = useCreateTunnel();
-  const updateMutation = useUpdateTunnel();
-  const deleteMutation = useDeleteTunnel();
+  const { data, isPending, isError } = useStreams();
+  const createMutation = useCreateStream();
+  const updateMutation = useUpdateStream();
+  const deleteMutation = useDeleteStream();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Tunnel | null>(null);
+  const [editing, setEditing] = useState<Stream | null>(null);
   const [formName, setFormName] = useState('');
   const [formNodeId, setFormNodeId] = useState('');
   const [dialogError, setDialogError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Tunnel | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Stream | null>(null);
 
   const openCreate = () => {
     setEditing(null);
@@ -47,7 +47,7 @@ export function Tunnels() {
     setDialogOpen(true);
   };
 
-  const openEdit = (row: Tunnel) => {
+  const openEdit = (row: Stream) => {
     setEditing(row);
     setFormName(row.name);
     setFormNodeId(row.node_id);
@@ -79,7 +79,7 @@ export function Tunnels() {
 
   const rows = data?.items ?? [];
 
-  const columns: GridColDef<Tunnel>[] = [
+  const columns: GridColDef<Stream>[] = [
     ...BASE_COLUMNS,
     {
       field: '__actions',
@@ -109,7 +109,7 @@ export function Tunnels() {
       }
     >
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="h6">Tunnels</Typography>
+        <Typography variant="h6">Streams</Typography>
         <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={openCreate}>New</Button>
       </Box>
       <Box sx={{ flex: 1, px: 2, pb: 2 }}>
@@ -117,14 +117,14 @@ export function Tunnels() {
           rows={rows}
           columns={columns}
           loading={isPending}
-          emptyMessage={isError ? 'Failed to load tunnels.' : 'No tunnels yet.'}
+          emptyMessage={isError ? 'Failed to load streams.' : 'No streams yet.'}
           sx={{ flex: 1 }}
         />
       </Box>
 
       <AppDialog
         open={dialogOpen}
-        title={editing ? 'Edit Tunnel' : 'New Tunnel'}
+        title={editing ? 'Edit Stream' : 'New Stream'}
         loading={createMutation.isPending || updateMutation.isPending}
         error={dialogError}
         onClose={() => setDialogOpen(false)}
@@ -138,8 +138,8 @@ export function Tunnels() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete Tunnel"
-        message={`Delete tunnel "${deleteTarget?.name}"? This cannot be undone.`}
+        title="Delete Stream"
+        message={`Delete stream "${deleteTarget?.name}"? This cannot be undone.`}
         loading={deleteMutation.isPending}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}

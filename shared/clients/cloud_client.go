@@ -85,16 +85,16 @@ type IssueCertificateResponse struct {
 
 // ---- Client methods ----
 
-// RegisterDevice calls POST /api/v2/registration/device.
+// RegisterDevice calls POST /registration/device.
 func (c *CloudClient) RegisterDevice(ctx context.Context, req RegisterDeviceRequest) (*DeviceAuthResponse, error) {
 	var resp DeviceAuthResponse
-	if err := c.postWithClusterToken(ctx, "/api/v2/registration/device", req, &resp, ""); err != nil {
+	if err := c.postWithClusterToken(ctx, "/registration/device", req, &resp, ""); err != nil {
 		return nil, fmt.Errorf("cloud: register device: %w", err)
 	}
 	return &resp, nil
 }
 
-// PollToken calls POST /api/v2/registration/token and returns (response, errorCode, error).
+// PollToken calls POST /registration/token and returns (response, errorCode, error).
 // errorCode is the RFC 8628 error string if the server returned 400; empty on success.
 func (c *CloudClient) PollToken(ctx context.Context, deviceCode string) (*PollTokenResponse, string, error) {
 	req := PollTokenRequest{
@@ -107,7 +107,7 @@ func (c *CloudClient) PollToken(ctx context.Context, deviceCode string) (*PollTo
 		return nil, "", err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v2/registration/token", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/registration/token", bytes.NewReader(body))
 	if err != nil {
 		return nil, "", err
 	}
@@ -140,12 +140,12 @@ func (c *CloudClient) PollToken(ctx context.Context, deviceCode string) (*PollTo
 	return nil, "", fmt.Errorf("cloud: poll token: unexpected status %d: %s", httpResp.StatusCode, respBody)
 }
 
-// RequestCertificate calls POST /api/v2/registration/certificate with the one-time token.
+// RequestCertificate calls POST /registration/certificate with the one-time token.
 func (c *CloudClient) RequestCertificate(ctx context.Context, oneTimeToken string, csrPEM, nodeID string) (*IssueCertificateResponse, error) {
 	var resp IssueCertificateResponse
 	if err := c.postWithClusterToken(
 		ctx,
-		"/api/v2/registration/certificate",
+		"/registration/certificate",
 		IssueCertificateRequest{
 			CSRPEM: csrPEM,
 			NodeID: nodeID,
@@ -160,7 +160,7 @@ func (c *CloudClient) RequestCertificate(ctx context.Context, oneTimeToken strin
 
 func (c *CloudClient) CreateConnection(ctx context.Context, req types.CreateConnectionRequest) (*types.Connection, error) {
 	var resp types.Connection
-	if err := c.post(ctx, "/api/v2/connections", req, &resp); err != nil {
+	if err := c.post(ctx, "/connections", req, &resp); err != nil {
 		return nil, fmt.Errorf("cloud: create connection: %w", err)
 	}
 	return &resp, nil
@@ -168,14 +168,14 @@ func (c *CloudClient) CreateConnection(ctx context.Context, req types.CreateConn
 
 func (c *CloudClient) GetConnection(ctx context.Context, connectionID string) (*types.Connection, error) {
 	var resp types.Connection
-	if err := c.get(ctx, fmt.Sprintf("/api/v2/connections/%s", connectionID), &resp, nil); err != nil {
+	if err := c.get(ctx, fmt.Sprintf("/connections/%s", connectionID), &resp, nil); err != nil {
 		return nil, fmt.Errorf("cloud: get connection: %w", err)
 	}
 	return &resp, nil
 }
 
 func (c *CloudClient) TerminateConnection(ctx context.Context, connectionID string) error {
-	if err := c.delete(ctx, fmt.Sprintf("/api/v2/connections/%s", connectionID), nil); err != nil {
+	if err := c.delete(ctx, fmt.Sprintf("/connections/%s", connectionID), nil); err != nil {
 		return fmt.Errorf("cloud: terminate connection: %w", err)
 	}
 	return nil
@@ -190,7 +190,7 @@ func (c *CloudClient) ListConnections(ctx context.Context, query types.QueryConn
 		params["name"] = *query.Name
 	}
 	var listResp types.QueryConnectionsResponse
-	if err := c.get(ctx, "/api/v2/connections", &listResp, params); err != nil {
+	if err := c.get(ctx, "/connections", &listResp, params); err != nil {
 		return nil, fmt.Errorf("cloud: list connections: %w", err)
 	}
 	conns := make([]types.Connection, len(listResp.Items))
@@ -209,14 +209,14 @@ func (c *CloudClient) ListConnections(ctx context.Context, query types.QueryConn
 
 func (c *CloudClient) NewStream(ctx context.Context, req types.NewStreamRequest) (*types.Stream, error) {
 	var resp types.Stream
-	if err := c.post(ctx, "/api/v2/streams", req, &resp); err != nil {
+	if err := c.post(ctx, "/streams", req, &resp); err != nil {
 		return nil, fmt.Errorf("cloud: new stream: %w", err)
 	}
 	return &resp, nil
 }
 
 func (c *CloudClient) CloseStream(ctx context.Context, streamID string) error {
-	if err := c.delete(ctx, fmt.Sprintf("/api/v2/streams/%s", streamID), nil); err != nil {
+	if err := c.delete(ctx, fmt.Sprintf("/streams/%s", streamID), nil); err != nil {
 		return fmt.Errorf("cloud: close stream: %w", err)
 	}
 	return nil

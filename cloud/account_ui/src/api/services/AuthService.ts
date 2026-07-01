@@ -56,7 +56,7 @@ export interface SignUpResponse {
 
 // -- Helpers -------------------------------------------------------------------
 
-const OAUTH_BASE = BASE_URL.replace('/api/v2', '');
+const OAUTH_BASE = BASE_URL
 
 // -- Service -------------------------------------------------------------------
 

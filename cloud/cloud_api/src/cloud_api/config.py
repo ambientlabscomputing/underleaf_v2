@@ -34,7 +34,7 @@ class DBConfig(BaseModel):
 
 class LogConfig(BaseModel):
     level: str = Field(
-        default="INFO",
+        default="DEBUG",
         description="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
     log_location: str = Field(

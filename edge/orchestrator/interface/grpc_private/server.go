@@ -133,3 +133,26 @@ func (s *OrchestratorGRPCPrivateServer) GetCloudRegistrationStatus(_ context.Con
 	}
 	return &GetCloudRegistrationStatusResponse{Status: status}, nil
 }
+
+// NewStream implements OrchestratorPrivateServer — creates a new stream via the cloud.
+func (s *OrchestratorGRPCPrivateServer) NewStream(ctx context.Context, req *NewStreamRequest) (*Stream, error) {
+	stream, err := s.Service.Connections().NewStream(ctx, req.NodeId, req.Type, int(req.Port))
+	if err != nil {
+		return nil, err
+	}
+	resp := &Stream{
+		Id:           stream.ID,
+		ConnectionId: string(stream.ConnectionID),
+		Type:         string(stream.Type),
+		State:        string(stream.State),
+		Status:       string(stream.Status),
+		CreatedAt:    stream.CreatedAt,
+	}
+	if stream.Port != nil {
+		resp.Port = int32(*stream.Port)
+	}
+	if stream.ClosedAt != nil {
+		resp.ClosedAt = *stream.ClosedAt
+	}
+	return resp, nil
+}
