@@ -130,9 +130,9 @@ Interfaces
 
 | Info | Value |
 | ---- | ----- |
-| Language | Rust |
+| Language | Golang |
 | Architecture | CLI + Daemon |
-| Storage | Sqllite |
+| Storage | Sqlite3 |
 
 Interfaces
 
@@ -161,9 +161,27 @@ Interfaces
 | http | UI browser access | http://0.0.0.0:9091/api/ |
 
 
+#### Conn Worker
+
+Implements the Cloud Gateway: brokers and multiplexes tunnels between Agents and gateway clients.
+
+| Info | Value |
+| ---- | ----- |
+| Language | Golang |
+| Storage | Redis |
+
+Interfaces
+
+| Protocol | Purpose | Location |
+| -------- | ------- | -------- |
+| gRPC | Agent connection/tunnel management | :50102 |
+| http | REST API for Cloud API management/data display | see [conn_worker README](cloud/conn_worker/README.md) |
+
+See [cloud/conn_worker/README.md](cloud/conn_worker/README.md) for the detailed connection/tunnel architecture and data model.
+
 #### Account Management UI
 
-Account Managenent UI
+Account Management UI
 
 | Info | Value |
 | ---- | ----- |
@@ -180,7 +198,7 @@ Interfaces
 
 #### Cloud Cockpit UI
 
-Account Managenent UI
+Premium multi-cluster management UI for advanced users
 
 | Info | Value |
 | ---- | ----- |
@@ -198,20 +216,46 @@ Interfaces
 
 ```
 README.md (You are here)
-Makefile (root Makefile for the project)
-cloud
-    |-cloud_api
-        |-pyprojject.toml
-        |-src
-            |-cloud_api
-    |-management_ui
-        |-package.json
-    |-cockpit_ui
-        |-package.json
-edge
-    |-orchestrator
-        |- go.mod
+Makefile (root Makefile: make run / make stop everything)
+go.mod (single Go module covering edge/ and cloud/conn_worker)
+RFDs/ (design docs -- key user flows, connection architecture, UI gold standard)
+configs/local/ (per-service YAML config for local dev + docker-compose)
+certs/ (local dev TLS material, gitignored)
+e2e_testing/ (pytest-based end-to-end tests against the running stack)
+shared/ (Go: types, clients, migrator, and utils shared by orchestrator/agent/conn_worker)
+scripts/ (dev helper scripts, e.g. kill_by_port.sh)
+cloud/
+    |-Procfile, Makefile (overmind targets for cloud services)
+    |-cloud_api/       (Python/FastAPI: Cloud API, pyproject.toml, src/cloud_api)
+    |-conn_worker/     (Go: Cloud Gateway connection/tunnel broker)
+    |-account_ui/      (TypeScript/Vite/React: Account Management UI)
+    |-cockpit_ui/      (TypeScript/Vite/React: Cloud Cockpit UI)
+    |-docker/          (Dockerfiles for cloud_api, conn_worker, nginx gateway config)
+edge/
+    |-Procfile, Makefile (overmind targets for edge services)
+    |-orchestrator/    (Go: orchestrator server, CLI (orcli), migrate binary; uses the root go.mod)
+    |-agent/           (Go: ufagent CLI + ufagentd daemon)
+    |-orchestrator_ui/ (TypeScript/Vite/React: Orchestrator UI)
 ```
+
+## Development
+
+Each of `edge/` and `cloud/` is a [Procfile](https://devcenter.heroku.com/articles/procfile)-driven service group, run locally via [`overmind`](https://github.com/DarthSim/overmind).
+
+```bash
+# from repo root: build edge binaries (dev-mode), then start both edge + cloud groups
+make run
+# tear everything down (overmind, node, conn-worker processes)
+make stop
+```
+
+- `edge/Procfile` runs `orch-server`, `ufagentd`, and the Orchestrator UI (`npm run dev`, port 5183).
+- `cloud/Procfile` runs `cloud_api` (`make run` inside `cloud/cloud_api`), `conn_worker`, and the Account (`5181`) and Cockpit (`5182`) UIs.
+- Per-group targets exist too: `cd edge && make run` / `cd cloud && make run`, or run a single service, e.g. `cd cloud && make run-cloud-api`.
+- `make build-orc` / `cd edge && make build` compiles the Go binaries (`orcli`, `orch-server`, `migrate`, `ufagent`, `ufagentd`) into `edge/bin`.
+- `docker-compose.yaml` + `configs/local/*.yaml` stand up a more production-like Cloud stack (nginx gateway, cloud_api, conn_worker, postgres, redis) as containers instead of local processes.
+- End-to-end tests live in [`e2e_testing/`](e2e_testing/README.md) (pytest) and expect the stack above to be running.
+- UI code (`account_ui`, `cockpit_ui`, `orchestrator_ui`) should follow [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md) — `edge/orchestrator_ui` is the reference implementation.
 
 ## Tagging Policy
 

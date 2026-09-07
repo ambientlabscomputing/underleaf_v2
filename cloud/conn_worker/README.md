@@ -75,3 +75,21 @@ erDiagram
     Agent ||--o{ UserApp: Hosts
     UserApp }o--o{ Stream: OneStreamPerPort
 ```
+
+| Info | Value |
+| ---- | ----- |
+| Language | Golang |
+| Storage | Redis |
+
+| Protocol | Purpose | Location |
+| -------- | ------- | -------- |
+| gRPC | Agent connection/tunnel management | `:50102` |
+
+## Running locally
+
+```bash
+make run
+```
+
+Normally run as part of the cloud process group (`cd cloud && make run`, or `make run-conn-worker`) — see the [root README](../../README.md#development). Config is read from `configs/local/conn_worker.yaml` (or `UNDERLEAF_CONFIG` when containerized via [docker-compose.yaml](../../docker-compose.yaml)); requires Redis.
+
