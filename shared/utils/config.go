@@ -2,7 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"strconv"
+
+	"github.com/goccy/go-yaml"
 )
 
 type NamedPort int
@@ -16,15 +19,22 @@ func (np NamedPort) Int() int {
 }
 
 const (
+	// Cloud - external (exposed by nginx)
+	ExternalCloudHttpPort       NamedPort = 443 // shared with UI
+	ExternalConnectionsNodePort NamedPort = 19021
+
+	// Cloud - internal (what nginx points to)
 	CloudHttpPort          NamedPort = 8080
-	OrchestratorHttpPort   NamedPort = 9090
-	ConnectionsNodePort    NamedPort = 9021
-	ConnectionsGatewayPort NamedPort = 9020
 	ConnWorkerHttpPort     NamedPort = 9070
-	AgentHttpPort          NamedPort = 9091
-	OrchestratorGRPCPort   NamedPort = 50101
 	ConnWorkerGRPCPort     NamedPort = 50102
-	AgentGRPCPort          NamedPort = 50103
+	ConnectionsGatewayPort NamedPort = 9020
+	ConnectionsNodePort    NamedPort = 9021
+
+	// Edge
+	OrchestratorHttpPort NamedPort = 9090
+	AgentHttpPort        NamedPort = 9091
+	OrchestratorGRPCPort NamedPort = 50101
+	AgentGRPCPort        NamedPort = 50103
 )
 
 type BasePath string
@@ -171,12 +181,80 @@ const (
 func GetConfig(configType ConfigType) Config {
 	switch configType {
 	case OrchestratorConfig:
-		return defaultOrchConfig
+		return mergeConfig(defaultOrchConfig)
 	case AgentConfig:
-		return defaultAgentConfig
+		return mergeConfig(defaultAgentConfig)
 	case ConnWorkerConfig:
-		return defaultConnWorkerConfig
+		return mergeConfig(defaultConnWorkerConfig)
 	default:
-		return defaultOrchConfig
+		return mergeConfig(defaultOrchConfig)
 	}
+}
+
+// mergeConfig takes a default config and overrides with values from yaml file found at UNDERLEAF_CONFIG
+func mergeConfig(defaultConfig Config) Config {
+	configFilePath := os.Getenv("UNDERLEAF_CONFIG")
+	if configFilePath == "" {
+		return defaultConfig
+	}
+
+	file, err := os.Open(configFilePath)
+	if err != nil {
+		Logger.Error("Error opening config file", "error", err)
+		return defaultConfig
+	}
+	defer file.Close()
+
+	var fileConfig Config
+	err = yaml.NewDecoder(file).Decode(&fileConfig)
+	if err != nil {
+		Logger.Error("Error decoding config file", "error", err)
+		return defaultConfig
+	}
+
+	// Merge the fileConfig into defaultConfig
+	if fileConfig.Http.Port != 0 {
+		defaultConfig.Http.Port = fileConfig.Http.Port
+	}
+	if fileConfig.Http.ReadTimeout != "" {
+		defaultConfig.Http.ReadTimeout = fileConfig.Http.ReadTimeout
+	}
+	if fileConfig.Http.WriteTimeout != "" {
+		defaultConfig.Http.WriteTimeout = fileConfig.Http.WriteTimeout
+	}
+	if fileConfig.Http.IdleTimeout != "" {
+		defaultConfig.Http.IdleTimeout = fileConfig.Http.IdleTimeout
+	}
+	if fileConfig.Http.BasePath != "" {
+		defaultConfig.Http.BasePath = fileConfig.Http.BasePath
+	}
+	if fileConfig.Connections != nil {
+		defaultConfig.Connections = fileConfig.Connections
+	}
+	if fileConfig.ConnectionsClient != nil {
+		defaultConfig.ConnectionsClient = fileConfig.ConnectionsClient
+	}
+	if fileConfig.Redis != nil {
+		defaultConfig.Redis = fileConfig.Redis
+	}
+	if fileConfig.GRPC != nil {
+		defaultConfig.GRPC = fileConfig.GRPC
+	}
+	if fileConfig.DBPath != "" {
+		defaultConfig.DBPath = fileConfig.DBPath
+	}
+	if fileConfig.ContainerSyncIntervalSec != 0 {
+		defaultConfig.ContainerSyncIntervalSec = fileConfig.ContainerSyncIntervalSec
+	}
+	if fileConfig.CloudAPIBaseURL != "" {
+		defaultConfig.CloudAPIBaseURL = fileConfig.CloudAPIBaseURL
+	}
+	if fileConfig.AccountUIBaseURL != "" {
+		defaultConfig.AccountUIBaseURL = fileConfig.AccountUIBaseURL
+	}
+	if fileConfig.CertDir != "" {
+		defaultConfig.CertDir = fileConfig.CertDir
+	}
+
+	return defaultConfig
 }

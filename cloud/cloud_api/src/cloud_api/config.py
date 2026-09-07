@@ -1,6 +1,8 @@
+import os
+import pathlib
+
 import yaml
 from pydantic import BaseModel, Field
-import pathlib
 
 
 class DBConfig(BaseModel):
@@ -143,19 +145,19 @@ class AppConfig(BaseModel):
 
 
 app_config: AppConfig | None = None
-CONFIG_FILE_PATH = "config.yaml"
+CONFIG_FILE_PATH = os.getenv("UNDERLEAF_CONFIG") or "./config.yaml"
 
 
 def load_config() -> AppConfig:
     """Loads the application configuration from a YAML file."""
     global app_config
+    # set default config
+    app_config = AppConfig()
     # check if config file exists
     config_path = pathlib.Path(CONFIG_FILE_PATH)
     if config_path.exists():
         with open(config_path, "r") as f:
             config_data = yaml.safe_load(f)
-        app_config = AppConfig(**config_data)
-    # if it doesn't exiist, load default config
-    else:
-        app_config = AppConfig()
+        # merge the loaded config with the default config
+        app_config = AppConfig(**{**app_config.model_dump(), **config_data})
     return app_config

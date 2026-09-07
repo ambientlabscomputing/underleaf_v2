@@ -1,0 +1,4 @@
+gateway:
+    domain: "underleaf.local"
+redis:
+    host: "redis"

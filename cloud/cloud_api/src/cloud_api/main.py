@@ -1,4 +1,5 @@
 import uvicorn
+
 import cloud_api
 from cloud_api import load_config
 from cloud_api.repository.session import init_session_maker
@@ -15,10 +16,14 @@ cloud_api.app_config = cfg
 
 init_session_maker(cfg)
 
-from cloud_api.interface.router import app  # noqa: E402 — must import after config + session init
 
 if __name__ == "__main__":
-    print(f"Swagger docs available at http://{cfg.api.host}:{cfg.api.port}/docs")
+    cloud_api.logger.info(
+        f"Swagger docs available at http://{cfg.api.host}:{cfg.api.port}/docs"
+    )
+    cloud_api.logger.info(
+        "starting API server ...", extra={"host": cfg.api.host, "port": cfg.api.port}
+    )
     uvicorn.run(
         "cloud_api.interface.router:app",
         host=cfg.api.host,

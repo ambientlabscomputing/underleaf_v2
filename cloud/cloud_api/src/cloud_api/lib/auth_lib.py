@@ -1,20 +1,17 @@
-from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
-from datetime import datetime, timedelta, timezone
 import pathlib
-from pydantic import BaseModel, Field
-
-from cloud_api.models.api import SignInRequest, SignInResponse
-from cloud_api.repository.user_repository import UserRepository
-from cloud_api import logger, app_config
-
-from cryptography import x509
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
+from datetime import datetime, timedelta, timezone
 
 import jwt
-
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
+from cloud_api import app_config, logger
+from cloud_api.models.api import SignInRequest, SignInResponse
+from cloud_api.repository.user_repository import UserRepository
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
+from pydantic import BaseModel, Field
 
 _ph = PasswordHasher()
 
@@ -53,6 +50,7 @@ class AuthLib:
         if not app_config.oauth.bootstrap_certs:
             logger.info("Certificate bootstrapping disabled in config, skipping")
             return
+        logger.info("Bootstrapping OAuth certificates")
         cert_path = app_config.oauth.root_ca_cert_path
         key_path = app_config.oauth.private_key_path
         self.__bootstrap_certs(cert_path, key_path)

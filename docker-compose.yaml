@@ -1,0 +1,52 @@
+services:
+  nginx:
+    image: nginx:latest
+    networks:
+        - underleaf
+    depends_on:
+      - cloud_api
+    ports:
+      - "80:80"
+      - "443:443"
+      - "19021:19021"
+    volumes:
+      - ./cloud/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./cloud/account_ui/dist:/usr/share/nginx/html/account_ui:ro
+
+  cloud_api:
+    image: ghcr.io/ambientlabscomputing/underleaf/cloud_api:latest
+    networks:
+        - underleaf
+    environment:
+        - UNDERLEAF_CONFIG=/etc/underleaf/config.yaml
+    volumes:
+        - ./configs/local/cloud_api.yaml:/etc/underleaf/config.yaml:ro
+        - ./certs:/var/lib/underleaf/certs
+
+  conn_worker:
+    image: ghcr.io/ambientlabscomputing/underleaf/conn_worker:latest
+    networks:
+      - underleaf
+    environment:
+      - UNDERLEAF_CONFIG=/etc/underleaf/config.yaml
+    volumes:
+      - ./configs/local/conn_worker.yaml:/etc/underleaf/config.yaml:ro
+
+  postgres:
+    image: postgres:18
+    networks:
+      - underleaf
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+
+  redis:
+    image: redis:latest
+    networks:
+    - underleaf
+
+networks:
+  underleaf:
+    driver: bridge

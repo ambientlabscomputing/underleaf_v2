@@ -1,0 +1,6 @@
+reload: false
+oauth:
+    root_ca_cert_path: /var/lib/underleaf/certs/root_ca_cert.pem
+    private_key_path: /var/lib/underleaf/certs/private_key.pem
+conn_worker:
+    grpc_target: conn_worker:50102

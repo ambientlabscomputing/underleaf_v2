@@ -46,3 +46,10 @@ stop: stop-cloud stop-edge
 
 clean:
 	-docker rm -f cloud-api-db redis 2>/dev/null || true
+
+cloud-docker-build:
+	docker build . -t ghcr.io/ambientlabscomputing/underleaf/cloud_api:latest -f cloud/docker/cloud_api/Dockerfile
+	docker build . -t ghcr.io/ambientlabscomputing/underleaf/conn_worker:latest -f cloud/docker/conn_worker/Dockerfile
+
+cloud-ui-build:
+	cd cloud/account_ui && npm run build

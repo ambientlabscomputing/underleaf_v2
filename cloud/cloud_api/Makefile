@@ -1,5 +1,6 @@
 install:
 	pip install -e ".[dev]"
+	source .venv/bin/activate && pip install -e .
 
 db-up:
 	docker run -d \

@@ -19,7 +19,7 @@ from cloud_api.lib.auth_lib import AuthLib
 from cloud_api.lib.conn_worker_client import ConnWorkerClient
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.cluster_repository import ClusterRepository
-from cloud_api.repository.stream_repository import StreamRepository
+from cloud_api.repository.connection_repository import ConnectionRepository
 from cloud_api.repository.entitlements_bucket_repository import (
     EntitlementsBucketRepository,
 )
@@ -27,19 +27,18 @@ from cloud_api.repository.node_repository import NodeRepository
 from cloud_api.repository.principal_account_repository import (
     PrincipalAccountRepository,
 )
+from cloud_api.repository.stream_repository import StreamRepository
 from cloud_api.repository.subscription_repository import SubscriptionRepository
-from cloud_api.repository.connection_repository import ConnectionRepository
 from cloud_api.repository.usage_event_repository import UsageEventRepository
 from cloud_api.repository.user_repository import UserRepository
 from cloud_api.service.account_service import AccountService
 from cloud_api.service.auth_service import AuthService
 from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
-from cloud_api.service.stream_service import StreamService
-from cloud_api.service.registration_service import RegistrationService
-from cloud_api.service.subscription_service import SubscriptionService
 from cloud_api.service.connection_service import ConnectionService
-
+from cloud_api.service.registration_service import RegistrationService
+from cloud_api.service.stream_service import StreamService
+from cloud_api.service.subscription_service import SubscriptionService
 
 # ---------------------------------------------------------------------------
 # Repository singletons
@@ -183,8 +182,8 @@ def get_registration_repo():
 
 @lru_cache
 def get_cert_lib():
-    from cloud_api.lib.cert_lib import CertLib
     from cloud_api import app_config
+    from cloud_api.lib.cert_lib import CertLib
 
     if not app_config:
         raise RuntimeError("App config not loaded")
@@ -201,3 +200,6 @@ def get_registration_service() -> RegistrationService:
         cluster_repo=get_cluster_repo(),
         cert_lib=get_cert_lib(),
     )
+
+
+_ = get_auth_lib()

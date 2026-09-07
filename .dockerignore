@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# macOS
+.DS_Store
+
+# Go build outputs
+edge/bin/
+cloud/bin/
+
+# Node
+**/node_modules
+**/dist
+
+# Python
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.egg-info
+
+# Logs
+*.log
+
+# Docker
+**/Dockerfile
+**/.dockerignore
+
+# Docs / RFDs
+RFDs/
+README.md
