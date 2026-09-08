@@ -19,22 +19,27 @@ The root README and every sub-project README have been corrected to match this �
 | App manifest (repo-backed `deploy gh:<user>/<repo>`) | **Not started** | A data model exists ([shared/types/app.go](shared/types/app.go): `AppSpec`/`App`/`Container`), but there's no manifest file format, no git-fetch, no `deploy` command in `orcli` or `ufagent`, and no `ufctl` binary anywhere in the code — only in prose (now marked as such in the [root README](README.md#what-stays)). |
 | Local core loop (Orchestrator + Agent + containers + node/stream mgmt) | **Substantially built** | Per git history: registration, container CRUD over REST+gRPC, node/stream management. |
 | Cloud API (billing, clusters, subscriptions) | **Substantially built** | Per git history. Actual interfaces: `:8080` internally (`/api/v2/cloud/`), fronted by nginx on `:443`. |
-| Cloud infra (docker-compose, nginx, Dockerfiles) | **Freshly added, unverified end-to-end** | Introduced in the most recent WIP commit; see track 1. |
+| Cloud infra (docker-compose, nginx, Dockerfiles) | **Verified end-to-end** | `docker compose up` now builds and brings up cloud_api + conn_worker + nginx + postgres + redis, with healthchecks/depends_on wired and reachability confirmed (cloud_api migrates against postgres and serves `/health` both directly and through nginx; conn_worker serves its health route and starts cleanly against redis). See track 1 (done). |
 | Conn Worker REST API | **Confirmed not implemented** | [service.go](cloud/conn_worker/service/service.go) only serves `/health` — none of the tunnel CRUD routes sketched in [cloud/conn_worker/README.md](cloud/conn_worker/README.md) exist yet. The gRPC side (yamux tunnel mgmt) is real and implemented, under `CreateConnection`/`NewStream`/etc. |
 | UIs | **Uneven** | `orchestrator_ui` and `account_ui` have a real `api`/`datastore`/`components`/`pages` layer per [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md). `cockpit_ui` is **still the unmodified `create-vite` scaffold** — no API integration, no TanStack Query dependency, nothing built. |
 | E2E tests | **Thin** | Framework exists ([e2e_testing/](e2e_testing/README.md)), but coverage is currently just health-check tests, no golden-path test. |
-| Edge release CI | **Broken** | [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) points at a nonexistent `edge/go.mod` (module lives at repo root now). See track 1. |
+| Edge release CI | **Fixed** | [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) now points `setup-go` at the root `go.mod`/`go.sum`; all four edge binaries build locally with `working-directory: edge` unchanged. See track 1 (done). |
 
 **Net effect:** the manifest/deploy feature — the one thing the product is named for — is the actual bottleneck, not the gateway/mTLS work that used to top the README's TODO list before this doc replaced it.
 
 ## Tracks
 
 ### 1. De-risk the new cloud infra
-**Status:** not started · **Blocks:** nothing directly, but de-risks 3 & 4 · **Size:** small
+**Status:** done · **Blocks:** nothing directly, de-risked 3 & 4 · **Size:** small
 
-Confirm `docker compose up` actually brings up cloud_api + conn_worker + nginx + postgres + redis and they can reach each other, using `configs/local/*.yaml`. This stack was added in the last WIP commit and hasn't been exercised end-to-end.
+`docker compose up` now builds cloud_api + conn_worker from their local Dockerfiles and brings up the full stack (cloud_api, conn_worker, nginx, postgres, redis) with `depends_on`/healthchecks wired between them. Verified end-to-end: cloud_api runs its alembic migration against postgres on startup and serves `/api/v2/cloud/health` both directly and through nginx's HTTPS proxy; conn_worker serves its health route (`/api/v2/connections/health`) and starts cleanly against redis.
 
-**Also broken today, found while verifying this doc:** [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) sets `go-version-file: edge/go.mod` and `cache-dependency-path: edge/go.sum` — but there is no `go.mod`/`go.sum` under `edge/`; the module was consolidated to the repo root at some point and the workflow wasn't updated. The release pipeline described in the README's "Tagging Policy" section will not run as-is. Not fixed here since it's a CI/pipeline change, not a doc change — flagging for a deliberate fix.
+Along the way, fixed real config bugs that would have silently broken the stack (none were caught by the docs, only by actually running it):
+- `cloud_api`'s Dockerfile wasn't running alembic migrations at all — postgres would have stayed schema-less. It now runs `alembic upgrade head` before starting the API.
+- `configs/local/cloud_api.yaml` had no `db.host` override, so it defaulted to `localhost:5432` — unreachable from inside the container. Pointed it at `postgres:5432`.
+- `configs/local/conn_worker.yaml`'s `gateway`/`redis` sections were partial; the Go config loader replaces those structs wholesale rather than merging field-by-field, so the missing fields (ports, timeouts, TTL) were silently zeroed. Filled in the complete sections.
+
+**Also fixed:** [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) pointed `setup-go` at a nonexistent `edge/go.mod`/`edge/go.sum` from before the Go module was consolidated to the repo root. Now points at root `go.mod`/`go.sum`; confirmed all four edge binaries (`ufagent`, `ufagentd`, `orcli`, `orch-server`) still build locally with `working-directory: edge` unchanged.
 
 ### 2. Manifest & deploy (the flagship feature)
 **Status:** not started · **Blocks:** MVP demo, golden-path e2e test (track 6) · **Size:** large — the critical path
@@ -67,10 +72,10 @@ Add one real end-to-end test to [e2e_testing/](e2e_testing/README.md): deploy fr
 ## Sequencing
 
 ```
-1 (infra check) ──┐
-                   ├─→ 2 (manifest/deploy) ──→ 6 (golden-path e2e)
-                   ├─→ 3 (gateway integration)
-                   └─→ 4 (mTLS)
+1 (infra check, done) ──┐
+                         ├─→ 2 (manifest/deploy) ──→ 6 (golden-path e2e)
+                         ├─→ 3 (gateway integration)
+                         └─→ 4 (mTLS)
 
 5 (billing polish) — after the above, not blocking
 ```
