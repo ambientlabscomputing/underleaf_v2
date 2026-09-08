@@ -10,16 +10,18 @@ Operator UI for managing a single cluster: containers, nodes, streams, etc. Talk
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI browser access | `http://0.0.0.0:9090/ui/` |
+| http | UI dev server | `http://localhost:5183/` |
+
+This is a standalone Vite dev server/SPA build — the Orchestrator does not serve it; there's no production static-hosting path wired up for it yet (unlike Account UI, which nginx serves in production).
 
 ## Running locally
 
 ```bash
 npm install
-npm run dev      # standalone, port 5183
+npm run dev      # port 5183 (fixed via vite.config.ts, strictPort)
 ```
 
-Normally run as part of the edge process group (`cd edge && make run`) alongside the Orchestrator it talks to — see the [root README](../../README.md#development).
+Talks to the Orchestrator REST API at `http://localhost:9090/api/v1` by default (override with `VITE_API_URL`; see `src/api/client.ts`). Normally run as part of the edge process group (`cd edge && make run`) alongside the Orchestrator — see the [root README](../../README.md#development).
 
 ## Structure
 

@@ -33,7 +33,9 @@ utils/              -- shared helpers local to the orchestrator
 | -------- | ------- | -------- |
 | gRPC | Unix socket management API for CLI | `unix:/tmp/undf-orch.sock` |
 | gRPC | Agent-Orchestrator communication | `:50100` |
-| http | REST API for the Orchestrator UI and integrations | `http://0.0.0.0:9090/api` |
+| http | REST API (JSON only, no static assets) for the Orchestrator UI and integrations | `http://localhost:9090/api/v1/` |
+
+Routes today: nodes, containers, logs, `/health` (see `interface/rest/*.go`). CORS is currently locked to `http://localhost:5173` and `http://localhost:5183`.
 
 ## Running locally
 

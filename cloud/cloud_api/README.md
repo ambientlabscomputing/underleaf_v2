@@ -25,7 +25,8 @@ erDiagram
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | REST API | `http://0.0.0.0:9091/api/` |
+| http | REST API, internal (behind nginx) | `http://cloud_api:8080/api/v2/cloud/` (`http://localhost:8080/...` outside Docker) |
+| https | REST API, external (via nginx, Bearer token or mTLS) | `https://underleafapp.com/api/v2/cloud/` |
 
 ## Running locally
 

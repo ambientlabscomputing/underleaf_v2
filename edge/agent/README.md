@@ -32,6 +32,7 @@ service/            -- domain/business logic (containers, nodes, registration, s
 | -------- | ------- | -------- |
 | gRPC | Unix socket management API for CLI | `unix:/tmp/undf-agent.sock` |
 | gRPC | Agent-Orchestrator + Agent-Agent communication | `:50101` |
+| http | Local REST API (currently just `/health`) | `http://localhost:9091/api/v1/` |
 
 ## Running locally
 

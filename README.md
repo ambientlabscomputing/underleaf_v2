@@ -2,14 +2,14 @@
 
 Underleaf V1 itself went through a large number of fundamental refactors, so why V2 now? Because during the previous changes, we were improving to fit a certain product shape. V2 marks the start of a new product shape.
 
-V1: Large, complex microervice cloud backend; fragmented, multi-agent client; cloud-connection required
-- this resulted is a ton of split brain bugs and made everything much more complex for very little gain
+V1: Large, complex microservice cloud backend; fragmented, multi-agent client; cloud connection required
+- this resulted in a ton of split-brain bugs and made everything much more complex for very little gain
 
-V2: Truly local, unified management servicy; small simpe flexible client; cloud API/UI is for billing/admin and network gateways
+V2: Truly local, unified management service; small, simple, flexible client; cloud API/UI is for billing/admin and network gateways
 
 ## What Stays
 
-We keep the repo-backed manifest model: `ufctl deploy gh:<user>/<repo>` is still the flagship command.
+We keep the repo-backed manifest model: a `deploy gh:<user>/<repo>`-style command is meant to stay the flagship command. **Not implemented yet** — see [ROADMAP.md](ROADMAP.md) track 2. (`ufctl` isn't a real binary in this codebase today; the current CLIs are `orcli` and `ufagent`/`ufagentd`.)
 
 Cloud Gateway Features: we keep our network mesh model.
 
@@ -25,14 +25,11 @@ Microservices
 
 ## What's New
 
-Premium Cloud Cockpit UI: the local Orchestrator UI, API and CLI interfaces are fully powered. The Cockpit UI is for advanced users that have more than one cluster or want to pay for advanced remote accesss features.
+Premium Cloud Cockpit UI: the local Orchestrator UI, API and CLI interfaces are fully powered. The Cockpit UI is for advanced users that have more than one cluster or want to pay for advanced remote access features.
 
-## TODO
+## Roadmap
 
-- [ ] Flesh out connection worker
-    - [ ] implement real tunnels (yamux) mutiplexing connections
-- [ ] Flesh out cluster-cloud mTLS
-- [ ] App manifest features
+See [ROADMAP.md](ROADMAP.md) for the current assessment of what's built vs. outstanding, and the planned sequencing to MVP.
 
 ## Architecture
 
@@ -90,7 +87,7 @@ graph TD
 ### Manager Node
 #### Orchestrator
 
-Orchestrator is the main brain of the system. It orchestratos all of the Underleaf automations necessary to make the Underleaf manifest model work. This is the main control entry point for a cluster. One Orchestrator per Cluster.
+Orchestrator is the main brain of the system. It orchestrates all of the Underleaf automations necessary to make the Underleaf manifest model work. This is the main control entry point for a cluster. One Orchestrator per Cluster.
 
 | Info | Value |
 | ---- | ----- |
@@ -100,29 +97,29 @@ Orchestrator is the main brain of the system. It orchestratos all of the Underle
 
 Interfaces
 
-
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| gRPC | Unix socket management API for CLI | unix:/tmp/undf-orch.sock |
-| gRPC | Agent-Orchestrator communication | :50100
-| http | REST API for UI and integrations | http://0.0.0.0:9090/api
+| gRPC | Unix socket management API for CLI | `unix:/tmp/undf-orch.sock` |
+| gRPC | Agent-Orchestrator communication | `:50100` |
+| http | REST API for the Orchestrator UI and integrations (JSON only, no static assets served) | `http://localhost:9090/api/v1/` |
 
 #### Orchestrator UI
 
-Operator UI for managing your cluster
+Operator UI for managing your cluster. A standalone Vite dev server/SPA build — it is **not** served by the orchestrator process itself, it just calls the REST API above.
 
 | Info | Value |
 | ---- | ----- |
 | Language | TypeScript |
 | Framework | Vite + React |
-| Datastore | TanStack |
+| Datastore | TanStack Query |
 
 Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI browser access | http://0.0.0.0:9090/ui/ |
+| http | UI dev server (`npm run dev`) | `http://localhost:5183/` |
 
+No production static-hosting path is wired up for this UI yet (unlike Account UI, which nginx serves — see below); it's dev-server-only today.
 
 ### All Nodes
 
@@ -138,14 +135,14 @@ Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| gRPC | Unix socket management API for CLI |  unix:/tmp/undf-agent.sock |
-| gRPC | Agent-Orchestrator + Agent-Agent communication | :50101
+| gRPC | Unix socket management API for CLI | `unix:/tmp/undf-agent.sock` |
+| gRPC | Agent-Orchestrator + Agent-Agent communication | `:50101` |
+| http | Local REST API (currently just `/health`) | `http://localhost:9091/api/v1/` |
 
 
 ### Underleaf Cloud
 
 #### Cloud API
-
 
 | Info | Value |
 | ---- | ----- |
@@ -158,8 +155,8 @@ Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI browser access | http://0.0.0.0:9091/api/ |
-
+| http | REST API, internal (behind nginx) | `http://cloud_api:8080/api/v2/cloud/` (`http://localhost:8080/...` outside Docker) |
+| https | REST API, external (via nginx, Bearer token or mTLS) | `https://underleafapp.com/api/v2/cloud/` |
 
 #### Conn Worker
 
@@ -174,43 +171,44 @@ Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| gRPC | Agent connection/tunnel management | :50102 |
-| http | REST API for Cloud API management/data display | see [conn_worker README](cloud/conn_worker/README.md) |
+| gRPC | Agent connection/tunnel management | `:50102` |
+| http | REST API for Cloud API management/data display, internal | `http://conn_worker:9070/api/v2/connections/` |
+| http(s) | Northbound: gateway client access, per-stream subdomain (via nginx) | `https://<stream-id>.gw.underleafapp.com` → `conn_worker:9020` |
+| tcp+mTLS | Southbound: node/agent tunnel establishment (via nginx stream proxy) | nginx `:19021` → `conn_worker:9021` |
 
 See [cloud/conn_worker/README.md](cloud/conn_worker/README.md) for the detailed connection/tunnel architecture and data model.
 
 #### Account Management UI
 
-Account Management UI
+Cloud-hosted account/billing management UI.
 
 | Info | Value |
 | ---- | ----- |
 | Language | TypeScript |
 | Framework | Vite + React |
-| Datastore | TanStack |
+| Datastore | TanStack Query |
 
 Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI browser access | http://0.0.0.0:9091/ui/ |
-
+| http | UI dev server (`npm run dev`) | `http://localhost:5181/` |
+| https | Production static build, served by nginx | `https://underleafapp.com/` |
 
 #### Cloud Cockpit UI
 
-Premium multi-cluster management UI for advanced users
+Premium multi-cluster management UI for advanced users. **Unimplemented** — currently just the unmodified `create-vite` scaffold (no `api/`, `datastore/`, `components/`, or `pages/` layers yet, unlike the two UIs above).
 
 | Info | Value |
 | ---- | ----- |
 | Language | TypeScript |
 | Framework | Vite + React |
-| Datastore | TanStack |
 
 Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI browser access | http://0.0.0.0:9092/ui/ |
+| http | UI dev server (`npm run dev`) | `http://localhost:5182/` |
 
 ## Directory Structure
 
@@ -256,6 +254,7 @@ make stop
 - `docker-compose.yaml` + `configs/local/*.yaml` stand up a more production-like Cloud stack (nginx gateway, cloud_api, conn_worker, postgres, redis) as containers instead of local processes.
 - End-to-end tests live in [`e2e_testing/`](e2e_testing/README.md) (pytest) and expect the stack above to be running.
 - UI code (`account_ui`, `cockpit_ui`, `orchestrator_ui`) should follow [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md) — `edge/orchestrator_ui` is the reference implementation.
+- See [ROADMAP.md](ROADMAP.md) for what's built, what's outstanding, and planned sequencing to MVP.
 
 ## Tagging Policy
 
