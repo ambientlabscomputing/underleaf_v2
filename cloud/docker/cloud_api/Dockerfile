@@ -9,5 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev build
 
 RUN pip install .
 
+COPY ./cloud/cloud_api/alembic.ini .
+COPY ./cloud/cloud_api/alembic ./alembic
+
 ENV PYTHONPATH=src
-CMD ["python", "-m", "cloud_api.main"]
+CMD ["sh", "-c", "alembic upgrade head && python -m cloud_api.main"]

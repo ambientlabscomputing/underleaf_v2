@@ -1,4 +1,6 @@
 reload: false
+db:
+    host: postgres:5432
 oauth:
     root_ca_cert_path: /var/lib/underleaf/certs/root_ca_cert.pem
     private_key_path: /var/lib/underleaf/certs/private_key.pem

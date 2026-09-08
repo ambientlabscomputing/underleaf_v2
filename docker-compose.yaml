@@ -4,7 +4,8 @@ services:
     networks:
         - underleaf
     depends_on:
-      - cloud_api
+      cloud_api:
+        condition: service_started
     ports:
       - "80:80"
       - "443:443"
@@ -15,6 +16,9 @@ services:
       - ./cloud/account_ui/dist:/usr/share/nginx/html/account_ui:ro
 
   cloud_api:
+    build:
+      context: .
+      dockerfile: cloud/docker/cloud_api/Dockerfile
     image: ghcr.io/ambientlabscomputing/underleaf/cloud_api:latest
     networks:
         - underleaf
@@ -23,8 +27,24 @@ services:
     volumes:
         - ./configs/local/cloud_api.yaml:/etc/underleaf/config.yaml:ro
         - ./certs:/var/lib/underleaf/certs
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      conn_worker:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v2/cloud/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   conn_worker:
+    build:
+      context: .
+      dockerfile: cloud/docker/conn_worker/Dockerfile
     image: ghcr.io/ambientlabscomputing/underleaf/conn_worker:latest
     networks:
       - underleaf
@@ -32,6 +52,14 @@ services:
       - UNDERLEAF_CONFIG=/etc/underleaf/config.yaml
     volumes:
       - ./configs/local/conn_worker.yaml:/etc/underleaf/config.yaml:ro
+    ports:
+      - "9070:9070"
+      - "50102:50102"
+      - "9020:9020"
+      - "9021:9021"
+    depends_on:
+      redis:
+        condition: service_healthy
 
   postgres:
     image: postgres:18
@@ -41,12 +69,31 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:latest
     networks:
     - underleaf
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 networks:
   underleaf:
     driver: bridge
+
+volumes:
+  postgres_data:
