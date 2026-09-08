@@ -1,11 +1,15 @@
 package service
 
 import (
+	"os"
+
 	"github.com/docker/docker/client"
 
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/lib/conn_client"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 // Service defines the interface for the edge agent service.
@@ -16,6 +20,9 @@ type Service interface {
 	Orchestrator() *OrchestratorService
 	Docker() *DockerService
 	Logs() *LogCollector
+	// Connections returns the cloud-tunnel service, or nil if the node hasn't completed
+	// cluster registration yet (no node cert issued — see track 4/mTLS).
+	Connections() *ConnectionService
 	GetNode() (*types.Node, error)
 }
 
@@ -25,6 +32,7 @@ type AppService struct {
 	orchestrator *OrchestratorService
 	docker       *DockerService
 	logs         *LogCollector
+	connections  *ConnectionService
 	repository   *repository.Repository
 }
 
@@ -32,6 +40,7 @@ func (s *AppService) Health() *HealthService             { return s.health }
 func (s *AppService) Orchestrator() *OrchestratorService { return s.orchestrator }
 func (s *AppService) Docker() *DockerService             { return s.docker }
 func (s *AppService) Logs() *LogCollector                { return s.logs }
+func (s *AppService) Connections() *ConnectionService    { return s.connections }
 func (s *AppService) GetNode() (*types.Node, error) {
 	return s.repository.Node.GetNode()
 }
@@ -57,11 +66,26 @@ func NewService() Service {
 	logCollector := newLogCollector(dockerClient, repo)
 	logCollector.Start()
 
+	// The connection client needs a node cert (issued by cluster registration, track 4)
+	// to dial the cloud over mTLS. Skip it entirely if the node hasn't registered yet,
+	// rather than failing agent startup for a feature it can't use anyway.
+	cfg := utils.GetConfig(utils.AgentConfig)
+	var connections *ConnectionService
+	if _, err := os.Stat(cfg.CertDir + "/" + string(types.CertFileNameNodeCert)); err == nil {
+		connClient, err := conn_client.NewConnClient(cfg, make(chan struct{}))
+		if err != nil {
+			panic("agent: failed to create connection client: " + err.Error())
+		}
+		connections = NewConnectionService(cfg, connClient)
+		connections.Start()
+	}
+
 	return &AppService{
 		health:       &HealthService{peer: peer},
 		orchestrator: &OrchestratorService{orchClient: peer, repository: repo},
 		docker:       &DockerService{docker: dockerClient, repository: repo, orchClient: peer, logs: logCollector},
 		logs:         logCollector,
+		connections:  connections,
 		repository:   repo,
 	}
 }

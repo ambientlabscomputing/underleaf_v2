@@ -3,9 +3,12 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 // Repository lets us interact with Redis
@@ -14,15 +17,15 @@ type Repository struct {
 	db  int
 }
 
-func NewRepository() *Repository {
+func NewRepository(config utils.Config) *Repository {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // Redis host and port
-		Password: "",               // No password by default
-		DB:       0,                // Default database ID
+		Addr:     fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port),
+		Password: config.Redis.Password,
+		DB:       config.Redis.DB,
 	})
 	return &Repository{
 		rdb: rdb,
-		db:  0,
+		db:  config.Redis.DB,
 	}
 }
 

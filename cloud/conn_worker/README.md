@@ -31,34 +31,11 @@ flowchart TD
 
 ## API
 
-### REST API
-
-**Design intent** — intended for use by the Cloud API for management and data display. **Not implemented yet**: the actual REST server (`service/service.go`) currently only serves `/health`; none of the routes below exist.
-```yaml
-api:
-    v1:
-        tunnels:
-            POST: Create a new tunnel
-            GET: List + search tunnels
-            {id}:
-                GET: Get tunnel
-                DELETE: Tear down tunnel
-        metrics: # future
-            performance:
-                GET: performance related metrics
-                timeseries:
-                    GET: timeseries performance metrics
-            tunnels:
-                GET: tunnel metrics
-                timeseries:
-                    GET: timeseries tunnel metrics
-                {id}:
-                    GET: specific tunnel metrics
-```
-
 ### gRPC
 
-Used by the agent to establish and manage its connection with the Conn Worker. This part **is implemented** (yamux-multiplexed) — see `interface/grpc/*.proto` and [connection_manager.go](service/connection_manager.go). Actual service (the RPC names below differ from the design sketch above):
+This is the real integration surface: Cloud API talks to Conn Worker directly over gRPC (see `cloud_api/lib/conn_worker_client`) to create/list/inspect/close tunnels — there is no separate REST management API in front of it, and none is planned. Cloud API exposes its own REST CRUD for connections/streams to its own clients (`interface/connections/`, `interface/streams/` in `cloud_api`); Conn Worker itself only serves `/health` over HTTP (see the table below) and is not expected to grow a REST surface of its own.
+
+Also used by the agent to establish and manage its connection with the Conn Worker (yamux-multiplexed) — see `interface/grpc/*.proto` and [connection_manager.go](service/connection_manager.go). Actual service:
 
 ```proto
 service ConnectionWorker {
@@ -95,7 +72,7 @@ erDiagram
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
 | gRPC | Agent connection/tunnel management | `:50102` |
-| http | REST API for Cloud API management/data display, internal (currently just `/health` — see gap above) | `http://conn_worker:9070/api/v2/connections/` |
+| http | internal health check only, no management REST API (Cloud API talks gRPC — see above) | `http://conn_worker:9070/api/v2/connections/health` |
 | http(s) | Northbound: gateway client access, per-stream subdomain (via nginx) | `https://<stream-id>.gw.underleafapp.com` → `conn_worker:9020` |
 | tcp+mTLS | Southbound: node/agent tunnel establishment (via nginx stream proxy) | nginx `:19021` → `conn_worker:9021` |
 

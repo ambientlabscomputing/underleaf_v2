@@ -6,9 +6,12 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/lib/conn_client"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
 )
@@ -244,4 +247,70 @@ func (s *AgentGRPCPublicServer) RemoveContainer(ctx context.Context, req *grpc_p
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
+}
+
+// NewStream implements AgentPublicServer — asks the agent to open a new multiplexed stream over its cloud connection.
+func (s *AgentGRPCPublicServer) NewStream(ctx context.Context, req *grpc_public.NewStreamRequest) (*emptypb.Empty, error) {
+	conns := s.Service.Connections()
+	if conns == nil {
+		return nil, status.Error(codes.FailedPrecondition, "node has not completed cluster registration; no cloud connection available")
+	}
+	err := conns.NewStream(ctx, service.NewStreamRequest{
+		ConnectionID: req.ConnectionId,
+		StreamID:     req.StreamId,
+		Type:         req.Type,
+		Port:         int(req.Port),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// CloseStream implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) CloseStream(ctx context.Context, req *grpc_public.CloseStreamRequest) (*emptypb.Empty, error) {
+	conns := s.Service.Connections()
+	if conns == nil {
+		return nil, status.Error(codes.FailedPrecondition, "node has not completed cluster registration; no cloud connection available")
+	}
+	if err := conns.CloseStream(ctx, req.StreamId); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// GetStream implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) GetStream(ctx context.Context, req *grpc_public.GetStreamRequest) (*grpc_public.StreamState, error) {
+	conns := s.Service.Connections()
+	if conns == nil {
+		return nil, status.Error(codes.FailedPrecondition, "node has not completed cluster registration; no cloud connection available")
+	}
+	streamState, ok := conns.GetStream(ctx, req.StreamId)
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "stream %s not found", req.StreamId)
+	}
+	return streamStateToProto(streamState), nil
+}
+
+// ListStreams implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) ListStreams(_ *emptypb.Empty, stream grpc_public.AgentPublic_ListStreamsServer) error {
+	conns := s.Service.Connections()
+	if conns == nil {
+		return status.Error(codes.FailedPrecondition, "node has not completed cluster registration; no cloud connection available")
+	}
+	for _, streamState := range conns.ListStreams(stream.Context()) {
+		if err := stream.Send(streamStateToProto(streamState)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func streamStateToProto(s conn_client.StreamState) *grpc_public.StreamState {
+	return &grpc_public.StreamState{
+		StreamId:     s.StreamID,
+		Type:         string(s.Type),
+		ConnectionId: s.ConnectionID,
+		State:        string(s.State),
+	}
 }

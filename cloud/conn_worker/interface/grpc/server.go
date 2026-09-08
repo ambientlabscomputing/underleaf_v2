@@ -43,10 +43,7 @@ func (s *ConnWorkerGRPCServer) CreateConnection(ctx context.Context, req *Create
 	if err != nil {
 		return nil, err
 	}
-	return &Connection{
-		NodeId: string(conn.NodeID),
-		Name:   conn.Name,
-	}, nil
+	return connectionToProto(conn), nil
 }
 
 func (s *ConnWorkerGRPCServer) GetConnection(ctx context.Context, req *GetConnectionRequest) (*Connection, error) {
@@ -54,10 +51,7 @@ func (s *ConnWorkerGRPCServer) GetConnection(ctx context.Context, req *GetConnec
 	if err != nil {
 		return nil, err
 	}
-	return &Connection{
-		NodeId: string(conn.NodeID),
-		Name:   conn.Name,
-	}, nil
+	return connectionToProto(conn), nil
 }
 
 func (s *ConnWorkerGRPCServer) TerminateConnection(ctx context.Context, req *TerminateConnectionRequest) (*emptypb.Empty, error) {
@@ -76,30 +70,30 @@ func (s *ConnWorkerGRPCServer) ListConnections(req *emptypb.Empty, stream Connec
 	if err != nil {
 		return err
 	}
-	var grpcConnections []*Connection
 	for _, conn := range connections {
-		grpcConnections = append(grpcConnections, &Connection{
-			NodeId: string(conn.NodeID),
-			Name:   conn.Name,
-		})
-	}
-	for _, conn := range grpcConnections {
-		stream.Send(conn)
+		if err := stream.Send(connectionToProto(&conn)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (s *ConnWorkerGRPCServer) NewStream(ctx context.Context, req *NewStreamRequest) (*Stream, error) {
+	var port *int
+	if req.Port != 0 {
+		p := int(req.Port)
+		port = &p
+	}
 	req_ := types.NewStreamRequest{
 		ConnectionID: req.ConnectionId,
+		Type:         types.StreamType(req.Type),
+		Port:         port,
 	}
 	stream, err := s.service.NewStream(ctx, req_)
 	if err != nil {
 		return nil, err
 	}
-	return &Stream{
-		Id: stream.ID,
-	}, nil
+	return streamToProto(stream), nil
 }
 
 func (s *ConnWorkerGRPCServer) CloseStream(ctx context.Context, req *CloseStreamRequest) (*CloseStreamResponse, error) {
@@ -121,14 +115,10 @@ func (s *ConnWorkerGRPCServer) ListStreams(req *emptypb.Empty, stream Connection
 	if err != nil {
 		return err
 	}
-	var grpcStreams []*Stream
 	for _, str := range streams {
-		grpcStreams = append(grpcStreams, &Stream{
-			Id: str.ID,
-		})
-	}
-	for _, str := range grpcStreams {
-		stream.Send(str)
+		if err := stream.Send(streamToProto(&str)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -138,7 +128,42 @@ func (s *ConnWorkerGRPCServer) GetStream(ctx context.Context, req *GetStreamRequ
 	if err != nil {
 		return nil, err
 	}
+	return streamToProto(stream), nil
+}
+
+func connectionToProto(conn *types.Connection) *Connection {
+	var closedAt string
+	if conn.ClosedAt != nil {
+		closedAt = *conn.ClosedAt
+	}
+	return &Connection{
+		Id:        conn.ID,
+		NodeId:    string(conn.NodeID),
+		Name:      conn.Name,
+		State:     string(conn.State),
+		Status:    string(conn.Status),
+		CreatedAt: conn.CreatedAt,
+		ClosedAt:  closedAt,
+	}
+}
+
+func streamToProto(stream *types.Stream) *Stream {
+	var closedAt string
+	if stream.ClosedAt != nil {
+		closedAt = *stream.ClosedAt
+	}
+	var port int32
+	if stream.Port != nil {
+		port = int32(*stream.Port)
+	}
 	return &Stream{
-		Id: stream.ID,
-	}, nil
+		Id:           stream.ID,
+		ConnectionId: string(stream.ConnectionID),
+		Type:         string(stream.Type),
+		State:        string(stream.State),
+		Status:       string(stream.Status),
+		Port:         port,
+		CreatedAt:    stream.CreatedAt,
+		ClosedAt:     closedAt,
+	}
 }

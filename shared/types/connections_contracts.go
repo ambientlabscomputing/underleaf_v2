@@ -7,7 +7,7 @@ type CreateConnectionRequest struct {
 
 func (t *CreateConnectionRequest) ToConnection() *Connection {
 	return &Connection{
-		ID:     GenerateID(StreamIDPrefix), // Implement a function to generate unique IDs
+		ID:     GenerateID(ConnectionIDPrefix),
 		NodeID: ForeignKey(t.NodeID),
 		Name:   t.Name,
 		State:  ConnectionStateProvisioned,

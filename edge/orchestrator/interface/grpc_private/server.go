@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -155,6 +156,39 @@ func (s *OrchestratorGRPCPrivateServer) NewStream(ctx context.Context, req *NewS
 		resp.ClosedAt = *stream.ClosedAt
 	}
 	return resp, nil
+}
+
+// GetStream implements OrchestratorPrivateServer — reports a stream's live state via the agent.
+func (s *OrchestratorGRPCPrivateServer) GetStream(ctx context.Context, req *GetStreamRequest) (*StreamState, error) {
+	streamState, err := s.Service.Connections().GetStream(ctx, req.StreamId)
+	if err != nil {
+		return nil, err
+	}
+	return &StreamState{
+		StreamId:     streamState.StreamId,
+		Type:         streamState.Type,
+		ConnectionId: streamState.ConnectionId,
+		State:        streamState.State,
+	}, nil
+}
+
+// ListStreams implements OrchestratorPrivateServer — lists live streams via the agent.
+func (s *OrchestratorGRPCPrivateServer) ListStreams(_ *emptypb.Empty, stream OrchestratorPrivate_ListStreamsServer) error {
+	streamStates, err := s.Service.Connections().ListStreams(stream.Context())
+	if err != nil {
+		return err
+	}
+	for _, streamState := range streamStates {
+		if err := stream.Send(&StreamState{
+			StreamId:     streamState.StreamId,
+			Type:         streamState.Type,
+			ConnectionId: streamState.ConnectionId,
+			State:        streamState.State,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Deploy implements OrchestratorPrivateServer — resolves a manifest and

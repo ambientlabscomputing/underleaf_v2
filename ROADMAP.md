@@ -20,7 +20,7 @@ The root README and every sub-project README have been corrected to match this �
 | Local core loop (Orchestrator + Agent + containers + node/stream mgmt) | **Substantially built** | Per git history: registration, container CRUD over REST+gRPC, node/stream management. |
 | Cloud API (billing, clusters, subscriptions) | **Substantially built** | Per git history. Actual interfaces: `:8080` internally (`/api/v2/cloud/`), fronted by nginx on `:443`. |
 | Cloud infra (docker-compose, nginx, Dockerfiles) | **Verified end-to-end** | `docker compose up` now builds and brings up cloud_api + conn_worker + nginx + postgres + redis, with healthchecks/depends_on wired and reachability confirmed (cloud_api migrates against postgres and serves `/health` both directly and through nginx; conn_worker serves its health route and starts cleanly against redis). See track 1 (done). |
-| Conn Worker REST API | **Confirmed not implemented** | [service.go](cloud/conn_worker/service/service.go) only serves `/health` — none of the tunnel CRUD routes sketched in [cloud/conn_worker/README.md](cloud/conn_worker/README.md) exist yet. The gRPC side (yamux tunnel mgmt) is real and implemented, under `CreateConnection`/`NewStream`/etc. |
+| Cloud Gateway (tunnel create/list/inspect via `orcli streams`) | **Done end-to-end** | See track 3 (done). Cloud API talks to Conn Worker over gRPC, not REST — [service.go](cloud/conn_worker/service/service.go) only ever needed to serve `/health`; the tunnel CRUD sketch that used to live in [cloud/conn_worker/README.md](cloud/conn_worker/README.md) was unused and has been removed. Fixed the gRPC↔protobuf field-mapping bug in [interface/grpc/server.go](cloud/conn_worker/interface/grpc/server.go), implemented the previously-unimplemented agent-side stream RPCs ([edge/agent/interface/grpc_public/server/server.go](edge/agent/interface/grpc_public/server/server.go)), and wired up `orcli streams ls` end-to-end. |
 | UIs | **Uneven** | `orchestrator_ui` and `account_ui` have a real `api`/`datastore`/`components`/`pages` layer per [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md). `cockpit_ui` is **still the unmodified `create-vite` scaffold** — no API integration, no TanStack Query dependency, nothing built. |
 | E2E tests | **Thin** | Framework exists ([e2e_testing/](e2e_testing/README.md)), but coverage is currently just health-check tests, no golden-path test. |
 | Edge release CI | **Fixed** | [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) now points `setup-go` at the root `go.mod`/`go.sum`; all four edge binaries build locally with `working-directory: edge` unchanged. See track 1 (done). |
@@ -56,9 +56,12 @@ Design is written up in [RFDs/RFD-3.md](RFDs/RFD-3.md) (manifest format, reconci
 Deferred by design (see RFD-3), not planned for MVP: Docker network creation (manifests' `networks:` is parsed and stored but not acted on), per-service resource limits (no flat default is safe for arbitrary images — see the docker_service.go comment above), and end-to-end port exposure through the Cloud Gateway (the manifest's `expose:` field is parsed/stored but unwired — that's track 3/4 territory).
 
 ### 3. Finish Cloud Gateway integration
-**Status:** core plumbing done, integration incomplete · **Blocks:** nothing in 2 · **Size:** medium — can run in parallel with track 2
+**Status:** done · **Blocks:** nothing in 2 · **Size:** medium — ran in parallel with track 2
 
-Yamux tunneling (gRPC side) works on both ends already. Confirmed missing: the REST management API in conn_worker (currently only serves `/health` — see [cloud/conn_worker/README.md](cloud/conn_worker/README.md)), which Cloud API needs in order to create/list/inspect tunnels. Also needs wiring `orcli streams new` end-to-end through Cloud API → Conn Worker → Agent, matching the sequence diagrams already documented in [cloud/docker/nginx/README.md](cloud/docker/nginx/README.md).
+Turned out the originally-stated blocker (a missing REST management API in conn_worker) was stale: Cloud API already talks to Conn Worker directly over gRPC (`cloud_api/lib/conn_worker_client`) and already has its own REST CRUD for connections/streams; the REST sketch in [cloud/conn_worker/README.md](cloud/conn_worker/README.md) was unused by anything and has been dropped in favor of documenting the real gRPC path. The actual gaps, found by tracing the full `orcli streams new` chain, and now fixed:
+- **conn_worker gRPC↔protobuf field mapping** ([interface/grpc/server.go](cloud/conn_worker/interface/grpc/server.go)) was dropping `id`/`state`/`status`/timestamps on `Connection`/`Stream` responses and the `type`/`port` fields on `NewStream` requests — Cloud API would have received connections/streams with empty IDs. Now maps every field via `connectionToProto`/`streamToProto`.
+- **Agent-side stream RPCs were unimplemented.** `AgentGRPCPublicServer` ([edge/agent/interface/grpc_public/server/server.go](edge/agent/interface/grpc_public/server/server.go)) now implements `NewStream`/`CloseStream`/`GetStream`/`ListStreams`, delegating to the agent's `ConnectionService` (previously orphaned, now constructed and started in `NewService()` — [edge/agent/service/service.go](edge/agent/service/service.go)), which wraps the already-working yamux `conn_client.ConnClient`.
+- **`orcli streams ls`** was a stub. The orchestrator-private `GetStream`/`ListStreams` RPCs are now implemented ([edge/orchestrator/interface/grpc_private/server.go](edge/orchestrator/interface/grpc_private/server.go)), and the CLI command lists real stream state with `--connection-id`/`--state` filters.
 
 ### 4. Finish cluster-cloud mTLS
 **Status:** client-side scaffolding done, server-side unverified · **Blocks:** nothing in 2; only blocks the *cloud-connected* path · **Size:** medium — can run in parallel with 2 & 3
@@ -79,14 +82,14 @@ Track 2 is done, so nothing blocks this anymore. Add one real end-to-end test to
 
 ```
 1 (infra check, done) ──┐
-                         ├─→ 2 (manifest/deploy) ──→ 6 (golden-path e2e)
-                         ├─→ 3 (gateway integration)
+                         ├─→ 2 (manifest/deploy, done) ──→ 6 (golden-path e2e)
+                         ├─→ 3 (gateway integration, done)
                          └─→ 4 (mTLS)
 
 5 (billing polish) — after the above, not blocking
 ```
 
-Tracks 2, 3, and 4 don't block each other and can run in parallel. Track 2 is fully done (backend, CLI, and UI), so track 6 (golden-path e2e) is unblocked.
+Tracks 2, 3, and 4 don't block each other and can run in parallel. Tracks 2 and 3 are fully done, so track 6 (golden-path e2e) is unblocked and could optionally also cover the gateway path now.
 
 ## Open decisions
 

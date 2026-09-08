@@ -37,7 +37,7 @@ type AppService struct {
 }
 
 func NewService(config utils.Config) Service {
-	repository := repository.NewRepository()
+	repository := repository.NewRepository(config)
 	gwReqChan := make(chan StreamHandlerReq)
 	connManager, err := NewConnectionManager(repository, gwReqChan, config)
 	if err != nil {
@@ -55,7 +55,7 @@ func NewService(config utils.Config) Service {
 
 func (s *AppService) NewConnection(ctx context.Context, req types.CreateConnectionRequest) (*types.Connection, error) {
 	conn := req.ToConnection()
-	if err := s.Repository.Set(ctx, conn.ID, conn, 0); err != nil {
+	if err := s.Repository.Set(ctx, conn.ID, string(conn.ToJSON()), 0); err != nil {
 		utils.Logger.ErrorContext(ctx, "failed to create connection: "+err.Error())
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (s *AppService) TerminateConnection(ctx context.Context, req types.Terminat
 
 func (s *AppService) NewStream(ctx context.Context, req types.NewStreamRequest) (*types.Stream, error) {
 	stream := req.ToStream()
-	if err := s.Repository.Set(ctx, stream.ID, stream, 0); err != nil {
+	if err := s.Repository.Set(ctx, stream.ID, string(stream.ToJSON()), 0); err != nil {
 		utils.Logger.ErrorContext(ctx, "failed to create stream: "+err.Error())
 		return nil, err
 	}
