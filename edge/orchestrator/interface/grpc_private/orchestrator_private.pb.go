@@ -1098,6 +1098,788 @@ func (x *Stream) GetClosedAt() string {
 	return ""
 }
 
+type BuildSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Context       string                 `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Dockerfile    string                 `protobuf:"bytes,2,opt,name=dockerfile,proto3" json:"dockerfile,omitempty"`
+	Args          map[string]string      `protobuf:"bytes,3,rep,name=args,proto3" json:"args,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BuildSpec) Reset() {
+	*x = BuildSpec{}
+	mi := &file_orchestrator_private_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BuildSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BuildSpec) ProtoMessage() {}
+
+func (x *BuildSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BuildSpec.ProtoReflect.Descriptor instead.
+func (*BuildSpec) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *BuildSpec) GetContext() string {
+	if x != nil {
+		return x.Context
+	}
+	return ""
+}
+
+func (x *BuildSpec) GetDockerfile() string {
+	if x != nil {
+		return x.Dockerfile
+	}
+	return ""
+}
+
+func (x *BuildSpec) GetArgs() map[string]string {
+	if x != nil {
+		return x.Args
+	}
+	return nil
+}
+
+type ExposeSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Port          int32                  `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
+	Hostname      string                 `protobuf:"bytes,2,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExposeSpec) Reset() {
+	*x = ExposeSpec{}
+	mi := &file_orchestrator_private_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExposeSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExposeSpec) ProtoMessage() {}
+
+func (x *ExposeSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExposeSpec.ProtoReflect.Descriptor instead.
+func (*ExposeSpec) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ExposeSpec) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *ExposeSpec) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+type SourceRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Owner         string                 `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Repo          string                 `protobuf:"bytes,2,opt,name=repo,proto3" json:"repo,omitempty"`
+	Ref           string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
+	ArchiveUrl    string                 `protobuf:"bytes,4,opt,name=archive_url,json=archiveUrl,proto3" json:"archive_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SourceRef) Reset() {
+	*x = SourceRef{}
+	mi := &file_orchestrator_private_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SourceRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SourceRef) ProtoMessage() {}
+
+func (x *SourceRef) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SourceRef.ProtoReflect.Descriptor instead.
+func (*SourceRef) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SourceRef) GetOwner() string {
+	if x != nil {
+		return x.Owner
+	}
+	return ""
+}
+
+func (x *SourceRef) GetRepo() string {
+	if x != nil {
+		return x.Repo
+	}
+	return ""
+}
+
+func (x *SourceRef) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *SourceRef) GetArchiveUrl() string {
+	if x != nil {
+		return x.ArchiveUrl
+	}
+	return ""
+}
+
+type ServiceSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Image         string                 `protobuf:"bytes,2,opt,name=image,proto3" json:"image,omitempty"`
+	Build         *BuildSpec             `protobuf:"bytes,3,opt,name=build,proto3" json:"build,omitempty"`
+	Ports         []string               `protobuf:"bytes,4,rep,name=ports,proto3" json:"ports,omitempty"`
+	Environment   map[string]string      `protobuf:"bytes,5,rep,name=environment,proto3" json:"environment,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Networks      []string               `protobuf:"bytes,6,rep,name=networks,proto3" json:"networks,omitempty"`
+	Volumes       []string               `protobuf:"bytes,7,rep,name=volumes,proto3" json:"volumes,omitempty"`
+	Expose        *ExposeSpec            `protobuf:"bytes,8,opt,name=expose,proto3" json:"expose,omitempty"`
+	Source        *SourceRef             `protobuf:"bytes,9,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServiceSpec) Reset() {
+	*x = ServiceSpec{}
+	mi := &file_orchestrator_private_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServiceSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServiceSpec) ProtoMessage() {}
+
+func (x *ServiceSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServiceSpec.ProtoReflect.Descriptor instead.
+func (*ServiceSpec) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ServiceSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ServiceSpec) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *ServiceSpec) GetBuild() *BuildSpec {
+	if x != nil {
+		return x.Build
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetPorts() []string {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetEnvironment() map[string]string {
+	if x != nil {
+		return x.Environment
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetNetworks() []string {
+	if x != nil {
+		return x.Networks
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetVolumes() []string {
+	if x != nil {
+		return x.Volumes
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetExpose() *ExposeSpec {
+	if x != nil {
+		return x.Expose
+	}
+	return nil
+}
+
+func (x *ServiceSpec) GetSource() *SourceRef {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+type DeploymentNetworkSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Driver        string                 `protobuf:"bytes,2,opt,name=driver,proto3" json:"driver,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeploymentNetworkSpec) Reset() {
+	*x = DeploymentNetworkSpec{}
+	mi := &file_orchestrator_private_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeploymentNetworkSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeploymentNetworkSpec) ProtoMessage() {}
+
+func (x *DeploymentNetworkSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeploymentNetworkSpec.ProtoReflect.Descriptor instead.
+func (*DeploymentNetworkSpec) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *DeploymentNetworkSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DeploymentNetworkSpec) GetDriver() string {
+	if x != nil {
+		return x.Driver
+	}
+	return ""
+}
+
+type DeploymentVolumeSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeploymentVolumeSpec) Reset() {
+	*x = DeploymentVolumeSpec{}
+	mi := &file_orchestrator_private_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeploymentVolumeSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeploymentVolumeSpec) ProtoMessage() {}
+
+func (x *DeploymentVolumeSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeploymentVolumeSpec.ProtoReflect.Descriptor instead.
+func (*DeploymentVolumeSpec) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *DeploymentVolumeSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type DeploymentSpec struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Version       string                   `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Name          string                   `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Slug          string                   `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
+	Services      []*ServiceSpec           `protobuf:"bytes,4,rep,name=services,proto3" json:"services,omitempty"`
+	Networks      []*DeploymentNetworkSpec `protobuf:"bytes,5,rep,name=networks,proto3" json:"networks,omitempty"`
+	Volumes       []*DeploymentVolumeSpec  `protobuf:"bytes,6,rep,name=volumes,proto3" json:"volumes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeploymentSpec) Reset() {
+	*x = DeploymentSpec{}
+	mi := &file_orchestrator_private_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeploymentSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeploymentSpec) ProtoMessage() {}
+
+func (x *DeploymentSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeploymentSpec.ProtoReflect.Descriptor instead.
+func (*DeploymentSpec) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *DeploymentSpec) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *DeploymentSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DeploymentSpec) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+func (x *DeploymentSpec) GetServices() []*ServiceSpec {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
+func (x *DeploymentSpec) GetNetworks() []*DeploymentNetworkSpec {
+	if x != nil {
+		return x.Networks
+	}
+	return nil
+}
+
+func (x *DeploymentSpec) GetVolumes() []*DeploymentVolumeSpec {
+	if x != nil {
+		return x.Volumes
+	}
+	return nil
+}
+
+type Deployment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Repo          string                 `protobuf:"bytes,2,opt,name=repo,proto3" json:"repo,omitempty"`
+	Ref           string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
+	Spec          *DeploymentSpec        `protobuf:"bytes,4,opt,name=spec,proto3" json:"spec,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"` // "in_progress" | "succeeded" | "failed"
+	Error         string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`   // populated when status is "failed"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Deployment) Reset() {
+	*x = Deployment{}
+	mi := &file_orchestrator_private_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Deployment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Deployment) ProtoMessage() {}
+
+func (x *Deployment) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Deployment.ProtoReflect.Descriptor instead.
+func (*Deployment) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *Deployment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Deployment) GetRepo() string {
+	if x != nil {
+		return x.Repo
+	}
+	return ""
+}
+
+func (x *Deployment) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *Deployment) GetSpec() *DeploymentSpec {
+	if x != nil {
+		return x.Spec
+	}
+	return nil
+}
+
+func (x *Deployment) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Deployment) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type DeployRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"` // "gh:<owner>/<repo>[@ref]"
+	Ref           string                 `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`       // optional; overrides any "@ref" embedded in source
+	Token         string                 `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"`   // optional GitHub token, for private repos
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeployRequest) Reset() {
+	*x = DeployRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeployRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeployRequest) ProtoMessage() {}
+
+func (x *DeployRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeployRequest.ProtoReflect.Descriptor instead.
+func (*DeployRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *DeployRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *DeployRequest) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *DeployRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+type DeployResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// status is always "in_progress" here — reconcile runs in the background,
+	// poll GetDeployment for the outcome.
+	Deployment    *Deployment `protobuf:"bytes,1,opt,name=deployment,proto3" json:"deployment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeployResponse) Reset() {
+	*x = DeployResponse{}
+	mi := &file_orchestrator_private_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeployResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeployResponse) ProtoMessage() {}
+
+func (x *DeployResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeployResponse.ProtoReflect.Descriptor instead.
+func (*DeployResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *DeployResponse) GetDeployment() *Deployment {
+	if x != nil {
+		return x.Deployment
+	}
+	return nil
+}
+
+type ListDeploymentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDeploymentsRequest) Reset() {
+	*x = ListDeploymentsRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDeploymentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDeploymentsRequest) ProtoMessage() {}
+
+func (x *ListDeploymentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDeploymentsRequest.ProtoReflect.Descriptor instead.
+func (*ListDeploymentsRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{29}
+}
+
+type ListDeploymentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Deployments   []*Deployment          `protobuf:"bytes,1,rep,name=deployments,proto3" json:"deployments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDeploymentsResponse) Reset() {
+	*x = ListDeploymentsResponse{}
+	mi := &file_orchestrator_private_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDeploymentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDeploymentsResponse) ProtoMessage() {}
+
+func (x *ListDeploymentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDeploymentsResponse.ProtoReflect.Descriptor instead.
+func (*ListDeploymentsResponse) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListDeploymentsResponse) GetDeployments() []*Deployment {
+	if x != nil {
+		return x.Deployments
+	}
+	return nil
+}
+
+type GetDeploymentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDeploymentRequest) Reset() {
+	*x = GetDeploymentRequest{}
+	mi := &file_orchestrator_private_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDeploymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDeploymentRequest) ProtoMessage() {}
+
+func (x *GetDeploymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_orchestrator_private_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDeploymentRequest.ProtoReflect.Descriptor instead.
+func (*GetDeploymentRequest) Descriptor() ([]byte, []int) {
+	return file_orchestrator_private_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetDeploymentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 var File_orchestrator_private_proto protoreflect.FileDescriptor
 
 const file_orchestrator_private_proto_rawDesc = "" +
@@ -1184,7 +1966,73 @@ const file_orchestrator_private_proto_rawDesc = "" +
 	"\x04port\x18\x06 \x01(\x05R\x04port\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x1b\n" +
-	"\tclosed_at\x18\b \x01(\tR\bclosedAt2\xc1\b\n" +
+	"\tclosed_at\x18\b \x01(\tR\bclosedAt\"\xc0\x01\n" +
+	"\tBuildSpec\x12\x18\n" +
+	"\acontext\x18\x01 \x01(\tR\acontext\x12\x1e\n" +
+	"\n" +
+	"dockerfile\x18\x02 \x01(\tR\n" +
+	"dockerfile\x12@\n" +
+	"\x04args\x18\x03 \x03(\v2,.orchestrator.private.v1.BuildSpec.ArgsEntryR\x04args\x1a7\n" +
+	"\tArgsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"<\n" +
+	"\n" +
+	"ExposeSpec\x12\x12\n" +
+	"\x04port\x18\x01 \x01(\x05R\x04port\x12\x1a\n" +
+	"\bhostname\x18\x02 \x01(\tR\bhostname\"h\n" +
+	"\tSourceRef\x12\x14\n" +
+	"\x05owner\x18\x01 \x01(\tR\x05owner\x12\x12\n" +
+	"\x04repo\x18\x02 \x01(\tR\x04repo\x12\x10\n" +
+	"\x03ref\x18\x03 \x01(\tR\x03ref\x12\x1f\n" +
+	"\varchive_url\x18\x04 \x01(\tR\n" +
+	"archiveUrl\"\xcf\x03\n" +
+	"\vServiceSpec\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05image\x18\x02 \x01(\tR\x05image\x128\n" +
+	"\x05build\x18\x03 \x01(\v2\".orchestrator.private.v1.BuildSpecR\x05build\x12\x14\n" +
+	"\x05ports\x18\x04 \x03(\tR\x05ports\x12W\n" +
+	"\venvironment\x18\x05 \x03(\v25.orchestrator.private.v1.ServiceSpec.EnvironmentEntryR\venvironment\x12\x1a\n" +
+	"\bnetworks\x18\x06 \x03(\tR\bnetworks\x12\x18\n" +
+	"\avolumes\x18\a \x03(\tR\avolumes\x12;\n" +
+	"\x06expose\x18\b \x01(\v2#.orchestrator.private.v1.ExposeSpecR\x06expose\x12:\n" +
+	"\x06source\x18\t \x01(\v2\".orchestrator.private.v1.SourceRefR\x06source\x1a>\n" +
+	"\x10EnvironmentEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
+	"\x15DeploymentNetworkSpec\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06driver\x18\x02 \x01(\tR\x06driver\"*\n" +
+	"\x14DeploymentVolumeSpec\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\xa9\x02\n" +
+	"\x0eDeploymentSpec\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04slug\x18\x03 \x01(\tR\x04slug\x12@\n" +
+	"\bservices\x18\x04 \x03(\v2$.orchestrator.private.v1.ServiceSpecR\bservices\x12J\n" +
+	"\bnetworks\x18\x05 \x03(\v2..orchestrator.private.v1.DeploymentNetworkSpecR\bnetworks\x12G\n" +
+	"\avolumes\x18\x06 \x03(\v2-.orchestrator.private.v1.DeploymentVolumeSpecR\avolumes\"\xad\x01\n" +
+	"\n" +
+	"Deployment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04repo\x18\x02 \x01(\tR\x04repo\x12\x10\n" +
+	"\x03ref\x18\x03 \x01(\tR\x03ref\x12;\n" +
+	"\x04spec\x18\x04 \x01(\v2'.orchestrator.private.v1.DeploymentSpecR\x04spec\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error\"O\n" +
+	"\rDeployRequest\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12\x10\n" +
+	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x14\n" +
+	"\x05token\x18\x03 \x01(\tR\x05token\"U\n" +
+	"\x0eDeployResponse\x12C\n" +
+	"\n" +
+	"deployment\x18\x01 \x01(\v2#.orchestrator.private.v1.DeploymentR\n" +
+	"deployment\"\x18\n" +
+	"\x16ListDeploymentsRequest\"`\n" +
+	"\x17ListDeploymentsResponse\x12E\n" +
+	"\vdeployments\x18\x01 \x03(\v2#.orchestrator.private.v1.DeploymentR\vdeployments\"&\n" +
+	"\x14GetDeploymentRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id2\xf7\n" +
+	"\n" +
 	"\x13OrchestratorPrivate\x12_\n" +
 	"\bGetNodes\x12(.orchestrator.private.v1.GetNodesRequest\x1a).orchestrator.private.v1.GetNodesResponse\x12_\n" +
 	"\bSqlQuery\x12(.orchestrator.private.v1.SqlQueryRequest\x1a).orchestrator.private.v1.SqlQueryResponse\x12n\n" +
@@ -1195,7 +2043,10 @@ const file_orchestrator_private_proto_rawDesc = "" +
 	"\vCloseStream\x12+.orchestrator.private.v1.CloseStreamRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
 	"\tGetStream\x12).orchestrator.private.v1.GetStreamRequest\x1a$.orchestrator.private.v1.StreamState\x12M\n" +
 	"\vListStreams\x12\x16.google.protobuf.Empty\x1a$.orchestrator.private.v1.StreamState0\x01\x12\x95\x01\n" +
-	"\x1aGetCloudRegistrationStatus\x12:.orchestrator.private.v1.GetCloudRegistrationStatusRequest\x1a;.orchestrator.private.v1.GetCloudRegistrationStatusResponseBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
+	"\x1aGetCloudRegistrationStatus\x12:.orchestrator.private.v1.GetCloudRegistrationStatusRequest\x1a;.orchestrator.private.v1.GetCloudRegistrationStatusResponse\x12Y\n" +
+	"\x06Deploy\x12&.orchestrator.private.v1.DeployRequest\x1a'.orchestrator.private.v1.DeployResponse\x12t\n" +
+	"\x0fListDeployments\x12/.orchestrator.private.v1.ListDeploymentsRequest\x1a0.orchestrator.private.v1.ListDeploymentsResponse\x12c\n" +
+	"\rGetDeployment\x12-.orchestrator.private.v1.GetDeploymentRequest\x1a#.orchestrator.private.v1.DeploymentBWZUgithub.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_privateb\x06proto3"
 
 var (
 	file_orchestrator_private_proto_rawDescOnce sync.Once
@@ -1209,7 +2060,7 @@ func file_orchestrator_private_proto_rawDescGZIP() []byte {
 	return file_orchestrator_private_proto_rawDescData
 }
 
-var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_orchestrator_private_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_orchestrator_private_proto_goTypes = []any{
 	(*GetNodesRequest)(nil),                    // 0: orchestrator.private.v1.GetNodesRequest
 	(*GetNodesResponse)(nil),                   // 1: orchestrator.private.v1.GetNodesResponse
@@ -1230,37 +2081,69 @@ var file_orchestrator_private_proto_goTypes = []any{
 	(*StreamState)(nil),                        // 16: orchestrator.private.v1.StreamState
 	(*GetStreamRequest)(nil),                   // 17: orchestrator.private.v1.GetStreamRequest
 	(*Stream)(nil),                             // 18: orchestrator.private.v1.Stream
-	(*emptypb.Empty)(nil),                      // 19: google.protobuf.Empty
+	(*BuildSpec)(nil),                          // 19: orchestrator.private.v1.BuildSpec
+	(*ExposeSpec)(nil),                         // 20: orchestrator.private.v1.ExposeSpec
+	(*SourceRef)(nil),                          // 21: orchestrator.private.v1.SourceRef
+	(*ServiceSpec)(nil),                        // 22: orchestrator.private.v1.ServiceSpec
+	(*DeploymentNetworkSpec)(nil),              // 23: orchestrator.private.v1.DeploymentNetworkSpec
+	(*DeploymentVolumeSpec)(nil),               // 24: orchestrator.private.v1.DeploymentVolumeSpec
+	(*DeploymentSpec)(nil),                     // 25: orchestrator.private.v1.DeploymentSpec
+	(*Deployment)(nil),                         // 26: orchestrator.private.v1.Deployment
+	(*DeployRequest)(nil),                      // 27: orchestrator.private.v1.DeployRequest
+	(*DeployResponse)(nil),                     // 28: orchestrator.private.v1.DeployResponse
+	(*ListDeploymentsRequest)(nil),             // 29: orchestrator.private.v1.ListDeploymentsRequest
+	(*ListDeploymentsResponse)(nil),            // 30: orchestrator.private.v1.ListDeploymentsResponse
+	(*GetDeploymentRequest)(nil),               // 31: orchestrator.private.v1.GetDeploymentRequest
+	nil,                                        // 32: orchestrator.private.v1.BuildSpec.ArgsEntry
+	nil,                                        // 33: orchestrator.private.v1.ServiceSpec.EnvironmentEntry
+	(*emptypb.Empty)(nil),                      // 34: google.protobuf.Empty
 }
 var file_orchestrator_private_proto_depIdxs = []int32{
 	2,  // 0: orchestrator.private.v1.GetNodesResponse.results:type_name -> orchestrator.private.v1.Node
 	0,  // 1: orchestrator.private.v1.GetNodesResponse.query:type_name -> orchestrator.private.v1.GetNodesRequest
 	7,  // 2: orchestrator.private.v1.ListContainersResponse.containers:type_name -> orchestrator.private.v1.Container
-	0,  // 3: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
-	3,  // 4: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
-	5,  // 5: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
-	8,  // 6: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
-	10, // 7: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:input_type -> orchestrator.private.v1.InitiateCloudRegistrationRequest
-	14, // 8: orchestrator.private.v1.OrchestratorPrivate.NewStream:input_type -> orchestrator.private.v1.NewStreamRequest
-	15, // 9: orchestrator.private.v1.OrchestratorPrivate.CloseStream:input_type -> orchestrator.private.v1.CloseStreamRequest
-	17, // 10: orchestrator.private.v1.OrchestratorPrivate.GetStream:input_type -> orchestrator.private.v1.GetStreamRequest
-	19, // 11: orchestrator.private.v1.OrchestratorPrivate.ListStreams:input_type -> google.protobuf.Empty
-	12, // 12: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:input_type -> orchestrator.private.v1.GetCloudRegistrationStatusRequest
-	1,  // 13: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
-	4,  // 14: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
-	6,  // 15: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
-	9,  // 16: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
-	11, // 17: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:output_type -> orchestrator.private.v1.InitiateCloudRegistrationResponse
-	18, // 18: orchestrator.private.v1.OrchestratorPrivate.NewStream:output_type -> orchestrator.private.v1.Stream
-	19, // 19: orchestrator.private.v1.OrchestratorPrivate.CloseStream:output_type -> google.protobuf.Empty
-	16, // 20: orchestrator.private.v1.OrchestratorPrivate.GetStream:output_type -> orchestrator.private.v1.StreamState
-	16, // 21: orchestrator.private.v1.OrchestratorPrivate.ListStreams:output_type -> orchestrator.private.v1.StreamState
-	13, // 22: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:output_type -> orchestrator.private.v1.GetCloudRegistrationStatusResponse
-	13, // [13:23] is the sub-list for method output_type
-	3,  // [3:13] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	32, // 3: orchestrator.private.v1.BuildSpec.args:type_name -> orchestrator.private.v1.BuildSpec.ArgsEntry
+	19, // 4: orchestrator.private.v1.ServiceSpec.build:type_name -> orchestrator.private.v1.BuildSpec
+	33, // 5: orchestrator.private.v1.ServiceSpec.environment:type_name -> orchestrator.private.v1.ServiceSpec.EnvironmentEntry
+	20, // 6: orchestrator.private.v1.ServiceSpec.expose:type_name -> orchestrator.private.v1.ExposeSpec
+	21, // 7: orchestrator.private.v1.ServiceSpec.source:type_name -> orchestrator.private.v1.SourceRef
+	22, // 8: orchestrator.private.v1.DeploymentSpec.services:type_name -> orchestrator.private.v1.ServiceSpec
+	23, // 9: orchestrator.private.v1.DeploymentSpec.networks:type_name -> orchestrator.private.v1.DeploymentNetworkSpec
+	24, // 10: orchestrator.private.v1.DeploymentSpec.volumes:type_name -> orchestrator.private.v1.DeploymentVolumeSpec
+	25, // 11: orchestrator.private.v1.Deployment.spec:type_name -> orchestrator.private.v1.DeploymentSpec
+	26, // 12: orchestrator.private.v1.DeployResponse.deployment:type_name -> orchestrator.private.v1.Deployment
+	26, // 13: orchestrator.private.v1.ListDeploymentsResponse.deployments:type_name -> orchestrator.private.v1.Deployment
+	0,  // 14: orchestrator.private.v1.OrchestratorPrivate.GetNodes:input_type -> orchestrator.private.v1.GetNodesRequest
+	3,  // 15: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:input_type -> orchestrator.private.v1.SqlQueryRequest
+	5,  // 16: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:input_type -> orchestrator.private.v1.TriggerIngestRequest
+	8,  // 17: orchestrator.private.v1.OrchestratorPrivate.ListContainers:input_type -> orchestrator.private.v1.ListContainersRequest
+	10, // 18: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:input_type -> orchestrator.private.v1.InitiateCloudRegistrationRequest
+	14, // 19: orchestrator.private.v1.OrchestratorPrivate.NewStream:input_type -> orchestrator.private.v1.NewStreamRequest
+	15, // 20: orchestrator.private.v1.OrchestratorPrivate.CloseStream:input_type -> orchestrator.private.v1.CloseStreamRequest
+	17, // 21: orchestrator.private.v1.OrchestratorPrivate.GetStream:input_type -> orchestrator.private.v1.GetStreamRequest
+	34, // 22: orchestrator.private.v1.OrchestratorPrivate.ListStreams:input_type -> google.protobuf.Empty
+	12, // 23: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:input_type -> orchestrator.private.v1.GetCloudRegistrationStatusRequest
+	27, // 24: orchestrator.private.v1.OrchestratorPrivate.Deploy:input_type -> orchestrator.private.v1.DeployRequest
+	29, // 25: orchestrator.private.v1.OrchestratorPrivate.ListDeployments:input_type -> orchestrator.private.v1.ListDeploymentsRequest
+	31, // 26: orchestrator.private.v1.OrchestratorPrivate.GetDeployment:input_type -> orchestrator.private.v1.GetDeploymentRequest
+	1,  // 27: orchestrator.private.v1.OrchestratorPrivate.GetNodes:output_type -> orchestrator.private.v1.GetNodesResponse
+	4,  // 28: orchestrator.private.v1.OrchestratorPrivate.SqlQuery:output_type -> orchestrator.private.v1.SqlQueryResponse
+	6,  // 29: orchestrator.private.v1.OrchestratorPrivate.TriggerIngest:output_type -> orchestrator.private.v1.TriggerIngestResponse
+	9,  // 30: orchestrator.private.v1.OrchestratorPrivate.ListContainers:output_type -> orchestrator.private.v1.ListContainersResponse
+	11, // 31: orchestrator.private.v1.OrchestratorPrivate.InitiateCloudRegistration:output_type -> orchestrator.private.v1.InitiateCloudRegistrationResponse
+	18, // 32: orchestrator.private.v1.OrchestratorPrivate.NewStream:output_type -> orchestrator.private.v1.Stream
+	34, // 33: orchestrator.private.v1.OrchestratorPrivate.CloseStream:output_type -> google.protobuf.Empty
+	16, // 34: orchestrator.private.v1.OrchestratorPrivate.GetStream:output_type -> orchestrator.private.v1.StreamState
+	16, // 35: orchestrator.private.v1.OrchestratorPrivate.ListStreams:output_type -> orchestrator.private.v1.StreamState
+	13, // 36: orchestrator.private.v1.OrchestratorPrivate.GetCloudRegistrationStatus:output_type -> orchestrator.private.v1.GetCloudRegistrationStatusResponse
+	28, // 37: orchestrator.private.v1.OrchestratorPrivate.Deploy:output_type -> orchestrator.private.v1.DeployResponse
+	30, // 38: orchestrator.private.v1.OrchestratorPrivate.ListDeployments:output_type -> orchestrator.private.v1.ListDeploymentsResponse
+	26, // 39: orchestrator.private.v1.OrchestratorPrivate.GetDeployment:output_type -> orchestrator.private.v1.Deployment
+	27, // [27:40] is the sub-list for method output_type
+	14, // [14:27] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_orchestrator_private_proto_init() }
@@ -1275,7 +2158,7 @@ func file_orchestrator_private_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orchestrator_private_proto_rawDesc), len(file_orchestrator_private_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

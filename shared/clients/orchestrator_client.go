@@ -80,6 +80,7 @@ func (c *OrchestratorClient) ReportContainers(ctx context.Context, nodeID string
 			Image:    c.Image,
 			Status:   c.Status,
 			Uptime:   c.Uptime,
+			Name:     c.Name,
 		})
 	}
 	_, err := c.client.ReportContainers(ctx, req)

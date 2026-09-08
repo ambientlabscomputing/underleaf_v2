@@ -113,6 +113,7 @@ func (s *OrchestratorGRPCPublicServer) ReportContainers(_ context.Context, req *
 			ContainerSpec: sharedtypes.ContainerSpec{Image: c.GetImage()},
 			ID:            c.GetId(),
 			DockerID:      c.GetDockerId(),
+			Name:          c.GetName(),
 			NodeID:        sharedtypes.ForeignKey(c.GetNodeId()),
 			Status:        c.GetStatus(),
 			Uptime:        c.GetUptime(),

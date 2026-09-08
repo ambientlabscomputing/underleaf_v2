@@ -9,7 +9,7 @@ V2: Truly local, unified management service; small, simple, flexible client; clo
 
 ## What Stays
 
-We keep the repo-backed manifest model: a `deploy gh:<user>/<repo>`-style command is meant to stay the flagship command. **Not implemented yet** — see [ROADMAP.md](ROADMAP.md) track 2. (`ufctl` isn't a real binary in this codebase today; the current CLIs are `orcli` and `ufagent`/`ufagentd`.)
+We keep the repo-backed manifest model: `deploy gh:<user>/<repo>` is the flagship command. **Implemented** — see [ROADMAP.md](ROADMAP.md) track 2 (RFDs/RFD-3.md has the design). Run it via `orcli deploy gh:<user>/<repo>` or the unified `ufctl deploy gh:<user>/<repo>` (`ufctl` is a real binary: a thin gateway mounting `orcli`'s and `ufagent`'s commands under one root, per RFD-3). An Orchestrator UI view for deployments is still pending.
 
 Cloud Gateway Features: we keep our network mesh model.
 
@@ -250,7 +250,7 @@ make stop
 - `edge/Procfile` runs `orch-server`, `ufagentd`, and the Orchestrator UI (`npm run dev`, port 5183).
 - `cloud/Procfile` runs `cloud_api` (`make run` inside `cloud/cloud_api`), `conn_worker`, and the Account (`5181`) and Cockpit (`5182`) UIs.
 - Per-group targets exist too: `cd edge && make run` / `cd cloud && make run`, or run a single service, e.g. `cd cloud && make run-cloud-api`.
-- `make build-orc` / `cd edge && make build` compiles the Go binaries (`orcli`, `orch-server`, `migrate`, `ufagent`, `ufagentd`) into `edge/bin`.
+- `make build-orc` / `cd edge && make build` compiles the Go binaries (`orcli`, `orch-server`, `migrate`, `ufagent`, `ufagentd`, `ufctl`) into `edge/bin`.
 - `docker-compose.yaml` + `configs/local/*.yaml` stand up a more production-like Cloud stack (nginx gateway, cloud_api, conn_worker, postgres, redis) as containers instead of local processes.
 - End-to-end tests live in [`e2e_testing/`](e2e_testing/README.md) (pytest) and expect the stack above to be running.
 - UI code (`account_ui`, `cockpit_ui`, `orchestrator_ui`) should follow [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md) — `edge/orchestrator_ui` is the reference implementation.
@@ -264,7 +264,7 @@ Main branch is `develop`
 
 On push to develop:
 - build new "develop" release
-    - build new binaries (ufagent, ufagentd and orcli)
+    - build new binaries (ufagent, ufagentd, orcli, orch-server, and ufctl)
     - overwrite "develop" release with new release
     - add binaries to this new release
 - build new "develop" docker image
@@ -273,7 +273,7 @@ On push to develop:
 
 On push to SemVer tag:
 - build new release for tag:
-    - build new binaries (ufagent, ufagentd and orcli)
+    - build new binaries (ufagent, ufagentd, orcli, orch-server, and ufctl)
     - create new "[0-9].[0-9].[0-9]" release
     - overwrite "latest" release with new release
     - add binaries to these new releases

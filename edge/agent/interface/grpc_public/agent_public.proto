@@ -21,6 +21,19 @@ service AgentPublic {
   // Log RPCs — agent is the source of truth for container logs.
   rpc GetContainerLogs(GetContainerLogsRequest) returns (GetContainerLogsResponse);
   rpc StreamContainerLogs(StreamContainerLogsRequest) returns (stream LogLine);
+
+  // Deployment lifecycle RPCs — orchestrator-initiated container/volume
+  // management. The orchestrator owns naming/identity decisions (names are
+  // already namespaced by the time they reach the agent); the agent is a
+  // thin, stateless-per-call Docker executor. Responses are accept/error
+  // only — a pull or build can take tens of seconds, so these don't block
+  // on it. Final state surfaces through the existing ReportContainers push.
+  rpc CreateVolume(CreateVolumeRequest) returns (CreateVolumeResponse);
+  rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
+  rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
+  rpc StartContainer(ContainerNameRequest) returns (google.protobuf.Empty);
+  rpc StopContainer(ContainerNameRequest) returns (google.protobuf.Empty);
+  rpc RemoveContainer(ContainerNameRequest) returns (google.protobuf.Empty);
 }
 
 message GetStatusRequest {}
@@ -46,6 +59,7 @@ message Container {
   string image     = 4;
   string status    = 5;
   int64  uptime    = 6;
+  string name      = 7;
 }
 
 message IngestContainersRequest {}
@@ -109,4 +123,53 @@ message StreamState {
 
 message GetStreamRequest {
     string stream_id = 1;
+}
+
+// ── Deployment lifecycle messages ───────────────────────────────────────────
+
+message BuildSource {
+  string archive_url = 1; // downloadable tarball of the build context
+  string context     = 2; // sub-directory within the archive, e.g. "."
+  string dockerfile  = 3; // path to the Dockerfile within context
+  map<string, string> args = 4;
+}
+
+message CreateContainerRequest {
+  string name = 1; // desired container name; already namespaced by the orchestrator
+  string image = 2; // set when not building from source
+  BuildSource build = 3; // set when building from source; mutually exclusive with image
+  map<string, string> environment = 4;
+  repeated string ports   = 5; // "hostPort:containerPort"
+  repeated string volumes = 6; // "volumeName:/container/path"; volumeName already namespaced
+  map<string, string> labels = 7;
+}
+
+message CreateContainerResponse {
+  string docker_id = 1;
+}
+
+message ContainerNameRequest {
+  string name = 1;
+}
+
+message CreateVolumeRequest {
+  string name   = 1; // already namespaced by the orchestrator
+  string driver = 2; // optional, defaults to "local"
+  map<string, string> labels = 3;
+}
+
+message CreateVolumeResponse {
+  string name = 1;
+}
+
+message ListVolumesRequest {}
+
+message VolumeInfo {
+  string name   = 1;
+  string driver = 2;
+  map<string, string> labels = 3;
+}
+
+message ListVolumesResponse {
+  repeated VolumeInfo volumes = 1;
 }

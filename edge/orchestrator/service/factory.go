@@ -48,6 +48,9 @@ func NewService(config utils.Config) Service {
 		logs:         &LogService{peer: peer},
 		registration: NewRegistrationService(repo.Registration, cloudClient, agentClient),
 		connections:  NewConnectionService(cloudClient, agentClient),
+		deployments:  &DeploymentService{Repository: repo},
+		manifests:    NewManifestService(),
+		reconciler:   &ReconcilerService{Repository: repo, AgentClient: agentClient},
 	}
 }
 

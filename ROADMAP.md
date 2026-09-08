@@ -1,6 +1,6 @@
 # Roadmap to MVP
 
-This is a living, point-in-time planning doc — unlike [RFDs](RFDs/), which capture durable design decisions, this file tracks *what's done, what's not, and what order to build it in*. Expect it to go stale and get rewritten; that's fine, that's what it's for. Last assessed: 2026-09-07.
+This is a living, point-in-time planning doc — unlike [RFDs](RFDs/), which capture durable design decisions, this file tracks *what's done, what's not, and what order to build it in*. Expect it to go stale and get rewritten; that's fine, that's what it's for. Last assessed: 2026-09-08.
 
 The root README and sub-project READMEs are now the source of truth for interfaces/ports/state; this doc should only ever add *sequencing and prioritization* on top of what they say, never contradict them. If you find a contradiction, the READMEs win — fix this doc, not the other way around.
 
@@ -16,7 +16,7 @@ The root README and every sub-project README have been corrected to match this �
 | ---- | ------ | ------ |
 | Tunnels (yamux) | **Substantially built** | Real yamux sessions on both ends: [edge/agent/lib/conn_client/utils.go](edge/agent/lib/conn_client/utils.go) (agent side, with reconnect/backoff) and [cloud/conn_worker/service/connection_manager.go](cloud/conn_worker/service/connection_manager.go) (conn_worker side). |
 | Cluster-cloud mTLS | **Partially built** | [shared/clients/cloud_client.go](shared/clients/cloud_client.go) already has a CSR/`RequestCertificate` flow against a `/registration/certificate` endpoint. Working dev certs exist locally in `certs/`. Server-side enforcement (nginx client-cert validation, cert renewal) is unverified/incomplete. |
-| App manifest (repo-backed `deploy gh:<user>/<repo>`) | **Not started** | A data model exists ([shared/types/app.go](shared/types/app.go): `AppSpec`/`App`/`Container`), but there's no manifest file format, no git-fetch, no `deploy` command in `orcli` or `ufagent`, and no `ufctl` binary anywhere in the code — only in prose (now marked as such in the [root README](README.md#what-stays)). |
+| App manifest (repo-backed `deploy gh:<user>/<repo>`) | **Done end-to-end, including UI** | See track 2 (done). `orcli deploy gh:<user>/<repo>` and the unified `ufctl deploy gh:<user>/<repo>` both work end-to-end: manifest resolution ([edge/orchestrator/service/manifest_service.go](edge/orchestrator/service/manifest_service.go)), a compile/observe/diff/plan reconciler ([reconciler_service.go](edge/orchestrator/service/reconciler_service.go)), and agent-side container/volume lifecycle + build-from-source ([docker_service.go](edge/agent/service/docker_service.go)) are all real and verified against the live `n8n` and `hello-world` repos. Reconcile runs async (`status`: `in_progress`/`succeeded`/`failed`, polled by the CLI and the Orchestrator UI's Deployments view) rather than blocking the request for the whole reconcile. A repo maps to at most one tracked deployment, so redeploying the same repo updates that record in place instead of piling up duplicate rows with an empty last-applied snapshot each time. Design in [RFDs/RFD-3.md](RFDs/RFD-3.md). |
 | Local core loop (Orchestrator + Agent + containers + node/stream mgmt) | **Substantially built** | Per git history: registration, container CRUD over REST+gRPC, node/stream management. |
 | Cloud API (billing, clusters, subscriptions) | **Substantially built** | Per git history. Actual interfaces: `:8080` internally (`/api/v2/cloud/`), fronted by nginx on `:443`. |
 | Cloud infra (docker-compose, nginx, Dockerfiles) | **Verified end-to-end** | `docker compose up` now builds and brings up cloud_api + conn_worker + nginx + postgres + redis, with healthchecks/depends_on wired and reachability confirmed (cloud_api migrates against postgres and serves `/health` both directly and through nginx; conn_worker serves its health route and starts cleanly against redis). See track 1 (done). |
@@ -25,7 +25,7 @@ The root README and every sub-project README have been corrected to match this �
 | E2E tests | **Thin** | Framework exists ([e2e_testing/](e2e_testing/README.md)), but coverage is currently just health-check tests, no golden-path test. |
 | Edge release CI | **Fixed** | [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) now points `setup-go` at the root `go.mod`/`go.sum`; all four edge binaries build locally with `working-directory: edge` unchanged. See track 1 (done). |
 
-**Net effect:** the manifest/deploy feature — the one thing the product is named for — is the actual bottleneck, not the gateway/mTLS work that used to top the README's TODO list before this doc replaced it.
+**Net effect:** the manifest/deploy feature — the one thing the product is named for — now works fully end-to-end, backend through UI, not the gateway/mTLS work that used to top the README's TODO list before this doc replaced it.
 
 ## Tracks
 
@@ -42,12 +42,18 @@ Along the way, fixed real config bugs that would have silently broken the stack 
 **Also fixed:** [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) pointed `setup-go` at a nonexistent `edge/go.mod`/`edge/go.sum` from before the Go module was consolidated to the repo root. Now points at root `go.mod`/`go.sum`; confirmed all four edge binaries (`ufagent`, `ufagentd`, `orcli`, `orch-server`) still build locally with `working-directory: edge` unchanged.
 
 ### 2. Manifest & deploy (the flagship feature)
-**Status:** not started · **Blocks:** MVP demo, golden-path e2e test (track 6) · **Size:** large — the critical path
+**Status:** done · **Blocks:** nothing (unblocks golden-path e2e test, track 6) · **Size:** large — the critical path
 
-- **Design first:** pick the manifest file format and how it maps to `AppSpec`. This is a real design decision, not something to back into via code — write it up as an RFD (repurpose the currently-empty [RFDs/RFD-2.md](RFDs/RFD-2.md), or add a new one; RFD-2's title "Connection Architecture" doesn't fit this topic, so probably a new RFD).
-- **Orchestrator:** git-fetch service (clone/pull at a ref), manifest parser (repo file → `AppSpec`), a reconciler that turns `AppSpec` into running `Container`s via the existing container primitives.
-- **CLI:** an actual `deploy` command on `orcli` (or the `ufctl` name if that's being revived).
-- **UI:** an "Apps" view in the Orchestrator UI, alongside the existing Containers view.
+Design is written up in [RFDs/RFD-3.md](RFDs/RFD-3.md) (manifest format, reconcile architecture, `ufctl` gateway design). Done:
+- **Manifest format:** `.underleaf/deploy.yaml`, backward-compatible with the pre-v2 format already checked into `ambientlabscomputing/n8n` (`image:`) and `ambientlabscomputing/hello-world` (`build:`). Resolved via GitHub's Contents API, no clone needed ([manifest_service.go](edge/orchestrator/service/manifest_service.go)).
+- **Orchestrator:** a real compile → observe → diff → plan → execute reconciler ([reconciler_service.go](edge/orchestrator/service/reconciler_service.go)) — topologically sorted, diffs against agent-observed state plus a persisted last-applied snapshot, never auto-deletes volumes.
+- **Agent:** container/volume lifecycle RPCs added to the existing `AgentPublic` gRPC service, including build-from-source (tarball download → hardened extraction → `ImageBuild`) ([docker_service.go](edge/agent/service/docker_service.go)). Two of v1's hardening defaults (cap-drop + read-only-rootfs, and a flat memory ceiling) were tried and dropped after they crash-looped real images (`nginx:alpine`, `n8n`) — see the comments in that file.
+- **CLI:** `orcli deploy gh:<user>/<repo> [--ref] [--token]`, plus a new `ufctl` binary — a thin, non-duplicative gateway mounting `orcli`'s and `ufagent`'s command packages onto one root, matching what the public n8n/hello-world docs already tell users to run.
+- **Async reconcile:** `POST /deployments` resolves+persists synchronously (fast) and reconciles in a background goroutine, using the same global `Status` (`in_progress`/`succeeded`/`failed`) convention already established by [shared/types/status.go](shared/types/status.go) and `RegistrationService`. `orcli deploy` polls for the outcome (mirroring `orcli cloud register`'s poll loop) instead of blocking on one long RPC; REST returns `202 Accepted`.
+- **Deploy idempotency:** a source repo maps to at most one tracked `Deployment` row ([deployment_repository.go](edge/orchestrator/repository/deployment_repository.go)'s `GetDeploymentByRepo`/`UpdateSpec`). Redeploying the same repo updates that record's spec/ref in place rather than inserting a new row — needed because each deployment ID owns its own last-applied snapshot, so a fresh row every redeploy meant the reconciler always saw the existing container as "not mine" and adopted it instead of applying spec changes.
+- **UI:** a "Deployments" view in the Orchestrator UI ([pages/Deployments.tsx](edge/orchestrator_ui/src/pages/Deployments.tsx)) — trigger a deploy, see a live Status column poll `in_progress` → `succeeded`/`failed` via TanStack Query (`refetchIntervalInBackground: true`, so it keeps polling even if the tab isn't focused).
+
+Deferred by design (see RFD-3), not planned for MVP: Docker network creation (manifests' `networks:` is parsed and stored but not acted on), per-service resource limits (no flat default is safe for arbitrary images — see the docker_service.go comment above), and end-to-end port exposure through the Cloud Gateway (the manifest's `expose:` field is parsed/stored but unwired — that's track 3/4 territory).
 
 ### 3. Finish Cloud Gateway integration
 **Status:** core plumbing done, integration incomplete · **Blocks:** nothing in 2 · **Size:** medium — can run in parallel with track 2
@@ -65,9 +71,9 @@ Confirm/finish the cloud_api server-side cert-issuance endpoint, agent-side cert
 Billing accounts, subscriptions, and usage events already exist per git history. Matters for charging people, not for proving the product works — sequence after the technical MVP.
 
 ### 6. Golden-path e2e test
-**Status:** blocked on track 2 · **Size:** small once track 2 lands
+**Status:** unblocked, not started · **Size:** small
 
-Add one real end-to-end test to [e2e_testing/](e2e_testing/README.md): deploy from a manifest → container running → (optionally) reachable via the gateway. Today's e2e coverage is health checks only.
+Track 2 is done, so nothing blocks this anymore. Add one real end-to-end test to [e2e_testing/](e2e_testing/README.md): deploy from a manifest → container running → (optionally) reachable via the gateway. Today's e2e coverage is health checks only.
 
 ## Sequencing
 
@@ -80,10 +86,10 @@ Add one real end-to-end test to [e2e_testing/](e2e_testing/README.md): deploy fr
 5 (billing polish) — after the above, not blocking
 ```
 
-Tracks 2, 3, and 4 don't block each other and can run in parallel. Track 2 is the heaviest lift and the only track that's genuinely zero-progress — staff it first and heaviest, since it's what the product is named for.
+Tracks 2, 3, and 4 don't block each other and can run in parallel. Track 2 is fully done (backend, CLI, and UI), so track 6 (golden-path e2e) is unblocked.
 
 ## Open decisions
 
-- Manifest file format and its RFD (see track 2).
-- Whether `ufctl` is the intended final CLI name for the deploy command, or whether `orcli`/`ufagent` absorb that role permanently — no `ufctl` binary exists today (the README now says so explicitly rather than implying otherwise).
 - What RFD-2 should actually cover, now that "Connection Architecture" content already lives informally in `cloud/conn_worker/README.md` and `cloud/docker/nginx/README.md`.
+
+Resolved: manifest file format and CLI naming — see [RFDs/RFD-3.md](RFDs/RFD-3.md) and track 2. `ufctl` is a real binary (a thin gateway over `orcli`/`ufagent`, not a separate implementation).

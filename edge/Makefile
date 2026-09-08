@@ -16,6 +16,7 @@ build: proto
 	go build -o bin/migrate ./orchestrator/cmd/migrate
 	go build -o bin/ufagent ./agent/cmd/ufagent
 	go build -o bin/ufagentd ./agent/cmd/ufagentd
+	go build -o bin/ufctl ./cmd/ufctl
 
 ## build-dev: Build with dev-mode commands enabled (includes sql, etc.)
 build-dev: proto
@@ -24,24 +25,27 @@ build-dev: proto
 	go build -o bin/migrate ./orchestrator/cmd/migrate
 	go build -o bin/ufagent ./agent/cmd/ufagent
 	go build -o bin/ufagentd ./agent/cmd/ufagentd
+	go build -tags devmode -o bin/ufctl ./cmd/ufctl
 
 ## install: Install the orchestrator binaries to  ~/.local/bin/
 install: build
-	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd
+	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd bin/ufctl
 	cp bin/orcli $(HOME)/.local/bin/orcli
 	cp bin/orch-server $(HOME)/.local/bin/orch-server
 	cp bin/migrate $(HOME)/.local/bin/migrate
 	cp bin/ufagent $(HOME)/.local/bin/ufagent
 	cp bin/ufagentd $(HOME)/.local/bin/ufagentd
+	cp bin/ufctl $(HOME)/.local/bin/ufctl
 
 ## install-dev: Install the dev-mode orchestrator binaries to  ~/.local/bin/
 install-dev: build-dev
-	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd
+	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd bin/ufctl
 	cp bin/orcli $(HOME)/.local/bin/orcli
 	cp bin/orch-server $(HOME)/.local/bin/orch-server
 	cp bin/migrate $(HOME)/.local/bin/migrate
 	cp bin/ufagent $(HOME)/.local/bin/ufagent
 	cp bin/ufagentd $(HOME)/.local/bin/ufagentd
+	cp bin/ufctl $(HOME)/.local/bin/ufctl
 
 ## fmt: Format the code using gofmt
 fmt:
@@ -99,3 +103,4 @@ clean: stop clean-db
 	rm -f $(HOME)/.local/bin/migrate
 	rm -f $(HOME)/.local/bin/ufagent
 	rm -f $(HOME)/.local/bin/ufagentd
+	rm -f $(HOME)/.local/bin/ufctl

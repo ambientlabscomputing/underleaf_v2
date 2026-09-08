@@ -30,6 +30,9 @@ const (
 	OrchestratorPrivate_GetStream_FullMethodName                  = "/orchestrator.private.v1.OrchestratorPrivate/GetStream"
 	OrchestratorPrivate_ListStreams_FullMethodName                = "/orchestrator.private.v1.OrchestratorPrivate/ListStreams"
 	OrchestratorPrivate_GetCloudRegistrationStatus_FullMethodName = "/orchestrator.private.v1.OrchestratorPrivate/GetCloudRegistrationStatus"
+	OrchestratorPrivate_Deploy_FullMethodName                     = "/orchestrator.private.v1.OrchestratorPrivate/Deploy"
+	OrchestratorPrivate_ListDeployments_FullMethodName            = "/orchestrator.private.v1.OrchestratorPrivate/ListDeployments"
+	OrchestratorPrivate_GetDeployment_FullMethodName              = "/orchestrator.private.v1.OrchestratorPrivate/GetDeployment"
 )
 
 // OrchestratorPrivateClient is the client API for OrchestratorPrivate service.
@@ -48,6 +51,10 @@ type OrchestratorPrivateClient interface {
 	GetStream(ctx context.Context, in *GetStreamRequest, opts ...grpc.CallOption) (*StreamState, error)
 	ListStreams(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamState], error)
 	GetCloudRegistrationStatus(ctx context.Context, in *GetCloudRegistrationStatusRequest, opts ...grpc.CallOption) (*GetCloudRegistrationStatusResponse, error)
+	// Deployment RPCs — track 2 (manifest & deploy).
+	Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*DeployResponse, error)
+	ListDeployments(ctx context.Context, in *ListDeploymentsRequest, opts ...grpc.CallOption) (*ListDeploymentsResponse, error)
+	GetDeployment(ctx context.Context, in *GetDeploymentRequest, opts ...grpc.CallOption) (*Deployment, error)
 }
 
 type orchestratorPrivateClient struct {
@@ -167,6 +174,36 @@ func (c *orchestratorPrivateClient) GetCloudRegistrationStatus(ctx context.Conte
 	return out, nil
 }
 
+func (c *orchestratorPrivateClient) Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*DeployResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeployResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_Deploy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orchestratorPrivateClient) ListDeployments(ctx context.Context, in *ListDeploymentsRequest, opts ...grpc.CallOption) (*ListDeploymentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDeploymentsResponse)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_ListDeployments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orchestratorPrivateClient) GetDeployment(ctx context.Context, in *GetDeploymentRequest, opts ...grpc.CallOption) (*Deployment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Deployment)
+	err := c.cc.Invoke(ctx, OrchestratorPrivate_GetDeployment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrchestratorPrivateServer is the server API for OrchestratorPrivate service.
 // All implementations must embed UnimplementedOrchestratorPrivateServer
 // for forward compatibility.
@@ -183,6 +220,10 @@ type OrchestratorPrivateServer interface {
 	GetStream(context.Context, *GetStreamRequest) (*StreamState, error)
 	ListStreams(*emptypb.Empty, grpc.ServerStreamingServer[StreamState]) error
 	GetCloudRegistrationStatus(context.Context, *GetCloudRegistrationStatusRequest) (*GetCloudRegistrationStatusResponse, error)
+	// Deployment RPCs — track 2 (manifest & deploy).
+	Deploy(context.Context, *DeployRequest) (*DeployResponse, error)
+	ListDeployments(context.Context, *ListDeploymentsRequest) (*ListDeploymentsResponse, error)
+	GetDeployment(context.Context, *GetDeploymentRequest) (*Deployment, error)
 	mustEmbedUnimplementedOrchestratorPrivateServer()
 }
 
@@ -222,6 +263,15 @@ func (UnimplementedOrchestratorPrivateServer) ListStreams(*emptypb.Empty, grpc.S
 }
 func (UnimplementedOrchestratorPrivateServer) GetCloudRegistrationStatus(context.Context, *GetCloudRegistrationStatusRequest) (*GetCloudRegistrationStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCloudRegistrationStatus not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) Deploy(context.Context, *DeployRequest) (*DeployResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Deploy not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) ListDeployments(context.Context, *ListDeploymentsRequest) (*ListDeploymentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListDeployments not implemented")
+}
+func (UnimplementedOrchestratorPrivateServer) GetDeployment(context.Context, *GetDeploymentRequest) (*Deployment, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDeployment not implemented")
 }
 func (UnimplementedOrchestratorPrivateServer) mustEmbedUnimplementedOrchestratorPrivateServer() {}
 func (UnimplementedOrchestratorPrivateServer) testEmbeddedByValue()                             {}
@@ -417,6 +467,60 @@ func _OrchestratorPrivate_GetCloudRegistrationStatus_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrchestratorPrivate_Deploy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeployRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).Deploy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_Deploy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).Deploy(ctx, req.(*DeployRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrchestratorPrivate_ListDeployments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDeploymentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).ListDeployments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_ListDeployments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).ListDeployments(ctx, req.(*ListDeploymentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrchestratorPrivate_GetDeployment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDeploymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrchestratorPrivateServer).GetDeployment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrchestratorPrivate_GetDeployment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrchestratorPrivateServer).GetDeployment(ctx, req.(*GetDeploymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrchestratorPrivate_ServiceDesc is the grpc.ServiceDesc for OrchestratorPrivate service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -459,6 +563,18 @@ var OrchestratorPrivate_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCloudRegistrationStatus",
 			Handler:    _OrchestratorPrivate_GetCloudRegistrationStatus_Handler,
+		},
+		{
+			MethodName: "Deploy",
+			Handler:    _OrchestratorPrivate_Deploy_Handler,
+		},
+		{
+			MethodName: "ListDeployments",
+			Handler:    _OrchestratorPrivate_ListDeployments_Handler,
+		},
+		{
+			MethodName: "GetDeployment",
+			Handler:    _OrchestratorPrivate_GetDeployment_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

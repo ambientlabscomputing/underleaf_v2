@@ -131,3 +131,88 @@ func (c *AgentClient) ListStreams(ctx context.Context) ([]*agentpb.StreamState, 
 	}
 	return streams, nil
 }
+
+// CreateVolume tells the agent to create a named Docker volume. Idempotent —
+// safe to call again for a volume that already exists.
+func (c *AgentClient) CreateVolume(ctx context.Context, name, driver string, labels map[string]string) error {
+	_, err := c.client.CreateVolume(ctx, &agentpb.CreateVolumeRequest{
+		Name:   name,
+		Driver: driver,
+		Labels: labels,
+	})
+	return err
+}
+
+// ListVolumes fetches the Docker volumes known to the agent.
+func (c *AgentClient) ListVolumes(ctx context.Context) ([]*agentpb.VolumeInfo, error) {
+	resp, err := c.client.ListVolumes(ctx, &agentpb.ListVolumesRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Volumes, nil
+}
+
+// BuildSourceRequest identifies a downloadable archive to build a container
+// image from, and where within it the Docker build context lives.
+type BuildSourceRequest struct {
+	ArchiveURL string
+	Context    string
+	Dockerfile string
+	Args       map[string]string
+}
+
+// CreateContainerRequest describes a container to create on the agent.
+// Exactly one of Image or Build should be set.
+type CreateContainerRequest struct {
+	Name        string
+	Image       string
+	Build       *BuildSourceRequest
+	Environment map[string]string
+	Ports       []string // "hostPort:containerPort"
+	Volumes     []string // "volumeName:/container/path"
+	Labels      map[string]string
+}
+
+// CreateContainer tells the agent to resolve the image (pulling or building
+// it) and create the container. It does not start it — see StartContainer.
+func (c *AgentClient) CreateContainer(ctx context.Context, req CreateContainerRequest) (string, error) {
+	pbReq := &agentpb.CreateContainerRequest{
+		Name:        req.Name,
+		Image:       req.Image,
+		Environment: req.Environment,
+		Ports:       req.Ports,
+		Volumes:     req.Volumes,
+		Labels:      req.Labels,
+	}
+	if req.Build != nil {
+		pbReq.Build = &agentpb.BuildSource{
+			ArchiveUrl: req.Build.ArchiveURL,
+			Context:    req.Build.Context,
+			Dockerfile: req.Build.Dockerfile,
+			Args:       req.Build.Args,
+		}
+	}
+	resp, err := c.client.CreateContainer(ctx, pbReq)
+	if err != nil {
+		return "", err
+	}
+	return resp.DockerId, nil
+}
+
+// StartContainer tells the agent to start a previously created container.
+func (c *AgentClient) StartContainer(ctx context.Context, name string) error {
+	_, err := c.client.StartContainer(ctx, &agentpb.ContainerNameRequest{Name: name})
+	return err
+}
+
+// StopContainer tells the agent to stop a running container.
+func (c *AgentClient) StopContainer(ctx context.Context, name string) error {
+	_, err := c.client.StopContainer(ctx, &agentpb.ContainerNameRequest{Name: name})
+	return err
+}
+
+// RemoveContainer tells the agent to force-remove a container.
+func (c *AgentClient) RemoveContainer(ctx context.Context, name string) error {
+	_, err := c.client.RemoveContainer(ctx, &agentpb.ContainerNameRequest{Name: name})
+	return err
+}

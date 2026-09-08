@@ -68,6 +68,7 @@ func (s *AgentGRPCPublicServer) IngestContainers(ctx context.Context, _ *grpc_pu
 			Image:    c.Image,
 			Status:   c.Status,
 			Uptime:   c.Uptime,
+			Name:     c.Name,
 		})
 	}
 	return resp, nil
@@ -168,4 +169,79 @@ func (s *AgentGRPCPublicServer) GetNode(ctx context.Context, _ *emptypb.Empty) (
 		Os:        node.OS,
 		Arch:      node.Arch,
 	}, nil
+}
+
+// CreateVolume implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) CreateVolume(ctx context.Context, req *grpc_public.CreateVolumeRequest) (*grpc_public.CreateVolumeResponse, error) {
+	if err := s.Service.Docker().CreateVolume(ctx, req.Name, req.Driver, req.Labels); err != nil {
+		return nil, err
+	}
+	return &grpc_public.CreateVolumeResponse{Name: req.Name}, nil
+}
+
+// ListVolumes implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) ListVolumes(ctx context.Context, _ *grpc_public.ListVolumesRequest) (*grpc_public.ListVolumesResponse, error) {
+	volumes, err := s.Service.Docker().ListVolumes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp := &grpc_public.ListVolumesResponse{}
+	for _, v := range volumes {
+		resp.Volumes = append(resp.Volumes, &grpc_public.VolumeInfo{
+			Name:   v.Name,
+			Driver: v.Driver,
+			Labels: v.Labels,
+		})
+	}
+	return resp, nil
+}
+
+// CreateContainer implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) CreateContainer(ctx context.Context, req *grpc_public.CreateContainerRequest) (*grpc_public.CreateContainerResponse, error) {
+	opts := service.ContainerCreateOptions{
+		Name:        req.Name,
+		Image:       req.Image,
+		Environment: req.Environment,
+		Ports:       req.Ports,
+		Volumes:     req.Volumes,
+		Labels:      req.Labels,
+	}
+	if req.Build != nil {
+		opts.Build = &service.BuildSource{
+			ArchiveURL: req.Build.ArchiveUrl,
+			Context:    req.Build.Context,
+			Dockerfile: req.Build.Dockerfile,
+			Args:       req.Build.Args,
+		}
+	}
+
+	dockerID, err := s.Service.Docker().CreateContainer(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &grpc_public.CreateContainerResponse{DockerId: dockerID}, nil
+}
+
+// StartContainer implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) StartContainer(ctx context.Context, req *grpc_public.ContainerNameRequest) (*emptypb.Empty, error) {
+	if err := s.Service.Docker().StartContainer(ctx, req.Name); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// StopContainer implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) StopContainer(ctx context.Context, req *grpc_public.ContainerNameRequest) (*emptypb.Empty, error) {
+	if err := s.Service.Docker().StopContainer(ctx, req.Name); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// RemoveContainer implements AgentPublicServer.
+func (s *AgentGRPCPublicServer) RemoveContainer(ctx context.Context, req *grpc_public.ContainerNameRequest) (*emptypb.Empty, error) {
+	if err := s.Service.Docker().RemoveContainer(ctx, req.Name); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }

@@ -70,6 +70,7 @@ message Container {
   string image     = 4;
   string status    = 5;
   int64  uptime    = 6;
+  string name      = 7;
 }
 
 message ReportContainersRequest {

@@ -18,20 +18,21 @@ func NewContainerRepository(db *sql.DB) *ContainerRepository {
 // UpsertContainer inserts or updates a container keyed by its Docker container ID.
 func (r *ContainerRepository) UpsertContainer(c *types.Container) error {
 	_, err := r.db.Exec(`
-		INSERT INTO containers (id, docker_id, node_id, image, status, uptime)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO containers (id, docker_id, node_id, image, status, uptime, name)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(docker_id) DO UPDATE SET
 			node_id  = excluded.node_id,
 			image    = excluded.image,
 			status   = excluded.status,
-			uptime   = excluded.uptime
-	`, c.ID, c.DockerID, string(c.NodeID), c.Image, c.Status, c.Uptime)
+			uptime   = excluded.uptime,
+			name     = excluded.name
+	`, c.ID, c.DockerID, string(c.NodeID), c.Image, c.Status, c.Uptime, c.Name)
 	return err
 }
 
 // ListContainers returns all containers known to the local agent.
 func (r *ContainerRepository) ListContainers() ([]*types.Container, error) {
-	rows, err := r.db.Query(`SELECT id, docker_id, node_id, image, status, uptime FROM containers`)
+	rows, err := r.db.Query(`SELECT id, docker_id, node_id, image, status, uptime, name FROM containers`)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +42,7 @@ func (r *ContainerRepository) ListContainers() ([]*types.Container, error) {
 	for rows.Next() {
 		var c types.Container
 		var nodeID string
-		if err := rows.Scan(&c.ID, &c.DockerID, &nodeID, &c.Image, &c.Status, &c.Uptime); err != nil {
+		if err := rows.Scan(&c.ID, &c.DockerID, &nodeID, &c.Image, &c.Status, &c.Uptime, &c.Name); err != nil {
 			return nil, err
 		}
 		c.NodeID = types.ForeignKey(nodeID)

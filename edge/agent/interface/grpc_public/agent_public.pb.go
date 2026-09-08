@@ -214,6 +214,7 @@ type Container struct {
 	Image         string                 `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	Uptime        int64                  `protobuf:"varint,6,opt,name=uptime,proto3" json:"uptime,omitempty"`
+	Name          string                 `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -288,6 +289,13 @@ func (x *Container) GetUptime() int64 {
 		return x.Uptime
 	}
 	return 0
+}
+
+func (x *Container) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
 }
 
 type IngestContainersRequest struct {
@@ -918,6 +926,498 @@ func (x *GetStreamRequest) GetStreamId() string {
 	return ""
 }
 
+type BuildSource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ArchiveUrl    string                 `protobuf:"bytes,1,opt,name=archive_url,json=archiveUrl,proto3" json:"archive_url,omitempty"` // downloadable tarball of the build context
+	Context       string                 `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`                         // sub-directory within the archive, e.g. "."
+	Dockerfile    string                 `protobuf:"bytes,3,opt,name=dockerfile,proto3" json:"dockerfile,omitempty"`                   // path to the Dockerfile within context
+	Args          map[string]string      `protobuf:"bytes,4,rep,name=args,proto3" json:"args,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BuildSource) Reset() {
+	*x = BuildSource{}
+	mi := &file_agent_public_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BuildSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BuildSource) ProtoMessage() {}
+
+func (x *BuildSource) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BuildSource.ProtoReflect.Descriptor instead.
+func (*BuildSource) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *BuildSource) GetArchiveUrl() string {
+	if x != nil {
+		return x.ArchiveUrl
+	}
+	return ""
+}
+
+func (x *BuildSource) GetContext() string {
+	if x != nil {
+		return x.Context
+	}
+	return ""
+}
+
+func (x *BuildSource) GetDockerfile() string {
+	if x != nil {
+		return x.Dockerfile
+	}
+	return ""
+}
+
+func (x *BuildSource) GetArgs() map[string]string {
+	if x != nil {
+		return x.Args
+	}
+	return nil
+}
+
+type CreateContainerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`   // desired container name; already namespaced by the orchestrator
+	Image         string                 `protobuf:"bytes,2,opt,name=image,proto3" json:"image,omitempty"` // set when not building from source
+	Build         *BuildSource           `protobuf:"bytes,3,opt,name=build,proto3" json:"build,omitempty"` // set when building from source; mutually exclusive with image
+	Environment   map[string]string      `protobuf:"bytes,4,rep,name=environment,proto3" json:"environment,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Ports         []string               `protobuf:"bytes,5,rep,name=ports,proto3" json:"ports,omitempty"`     // "hostPort:containerPort"
+	Volumes       []string               `protobuf:"bytes,6,rep,name=volumes,proto3" json:"volumes,omitempty"` // "volumeName:/container/path"; volumeName already namespaced
+	Labels        map[string]string      `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateContainerRequest) Reset() {
+	*x = CreateContainerRequest{}
+	mi := &file_agent_public_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateContainerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateContainerRequest) ProtoMessage() {}
+
+func (x *CreateContainerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateContainerRequest.ProtoReflect.Descriptor instead.
+func (*CreateContainerRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CreateContainerRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateContainerRequest) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *CreateContainerRequest) GetBuild() *BuildSource {
+	if x != nil {
+		return x.Build
+	}
+	return nil
+}
+
+func (x *CreateContainerRequest) GetEnvironment() map[string]string {
+	if x != nil {
+		return x.Environment
+	}
+	return nil
+}
+
+func (x *CreateContainerRequest) GetPorts() []string {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *CreateContainerRequest) GetVolumes() []string {
+	if x != nil {
+		return x.Volumes
+	}
+	return nil
+}
+
+func (x *CreateContainerRequest) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+type CreateContainerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DockerId      string                 `protobuf:"bytes,1,opt,name=docker_id,json=dockerId,proto3" json:"docker_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateContainerResponse) Reset() {
+	*x = CreateContainerResponse{}
+	mi := &file_agent_public_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateContainerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateContainerResponse) ProtoMessage() {}
+
+func (x *CreateContainerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateContainerResponse.ProtoReflect.Descriptor instead.
+func (*CreateContainerResponse) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CreateContainerResponse) GetDockerId() string {
+	if x != nil {
+		return x.DockerId
+	}
+	return ""
+}
+
+type ContainerNameRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContainerNameRequest) Reset() {
+	*x = ContainerNameRequest{}
+	mi := &file_agent_public_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContainerNameRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContainerNameRequest) ProtoMessage() {}
+
+func (x *ContainerNameRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContainerNameRequest.ProtoReflect.Descriptor instead.
+func (*ContainerNameRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ContainerNameRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type CreateVolumeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`     // already namespaced by the orchestrator
+	Driver        string                 `protobuf:"bytes,2,opt,name=driver,proto3" json:"driver,omitempty"` // optional, defaults to "local"
+	Labels        map[string]string      `protobuf:"bytes,3,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateVolumeRequest) Reset() {
+	*x = CreateVolumeRequest{}
+	mi := &file_agent_public_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateVolumeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateVolumeRequest) ProtoMessage() {}
+
+func (x *CreateVolumeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateVolumeRequest.ProtoReflect.Descriptor instead.
+func (*CreateVolumeRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CreateVolumeRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateVolumeRequest) GetDriver() string {
+	if x != nil {
+		return x.Driver
+	}
+	return ""
+}
+
+func (x *CreateVolumeRequest) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+type CreateVolumeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateVolumeResponse) Reset() {
+	*x = CreateVolumeResponse{}
+	mi := &file_agent_public_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateVolumeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateVolumeResponse) ProtoMessage() {}
+
+func (x *CreateVolumeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateVolumeResponse.ProtoReflect.Descriptor instead.
+func (*CreateVolumeResponse) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CreateVolumeResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListVolumesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVolumesRequest) Reset() {
+	*x = ListVolumesRequest{}
+	mi := &file_agent_public_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVolumesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVolumesRequest) ProtoMessage() {}
+
+func (x *ListVolumesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVolumesRequest.ProtoReflect.Descriptor instead.
+func (*ListVolumesRequest) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{22}
+}
+
+type VolumeInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Driver        string                 `protobuf:"bytes,2,opt,name=driver,proto3" json:"driver,omitempty"`
+	Labels        map[string]string      `protobuf:"bytes,3,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VolumeInfo) Reset() {
+	*x = VolumeInfo{}
+	mi := &file_agent_public_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VolumeInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VolumeInfo) ProtoMessage() {}
+
+func (x *VolumeInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VolumeInfo.ProtoReflect.Descriptor instead.
+func (*VolumeInfo) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *VolumeInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *VolumeInfo) GetDriver() string {
+	if x != nil {
+		return x.Driver
+	}
+	return ""
+}
+
+func (x *VolumeInfo) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+type ListVolumesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Volumes       []*VolumeInfo          `protobuf:"bytes,1,rep,name=volumes,proto3" json:"volumes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVolumesResponse) Reset() {
+	*x = ListVolumesResponse{}
+	mi := &file_agent_public_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVolumesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVolumesResponse) ProtoMessage() {}
+
+func (x *ListVolumesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_public_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVolumesResponse.ProtoReflect.Descriptor instead.
+func (*ListVolumesResponse) Descriptor() ([]byte, []int) {
+	return file_agent_public_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ListVolumesResponse) GetVolumes() []*VolumeInfo {
+	if x != nil {
+		return x.Volumes
+	}
+	return nil
+}
+
 var File_agent_public_proto protoreflect.FileDescriptor
 
 const file_agent_public_proto_rawDesc = "" +
@@ -931,14 +1431,15 @@ const file_agent_public_proto_rawDesc = "" +
 	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"X\n" +
 	"\fPingResponse\x12\x1c\n" +
 	"\tresponder\x18\x01 \x01(\tR\tresponder\x12*\n" +
-	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"\x97\x01\n" +
+	"\x11timestamp_unix_ms\x18\x02 \x01(\x03R\x0ftimestampUnixMs\"\xab\x01\n" +
 	"\tContainer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tdocker_id\x18\x02 \x01(\tR\bdockerId\x12\x17\n" +
 	"\anode_id\x18\x03 \x01(\tR\x06nodeId\x12\x14\n" +
 	"\x05image\x18\x04 \x01(\tR\x05image\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12\x16\n" +
-	"\x06uptime\x18\x06 \x01(\x03R\x06uptime\"\x19\n" +
+	"\x06uptime\x18\x06 \x01(\x03R\x06uptime\x12\x12\n" +
+	"\x04name\x18\a \x01(\tR\x04name\"\x19\n" +
 	"\x17IngestContainersRequest\"V\n" +
 	"\x18IngestContainersResponse\x12:\n" +
 	"\n" +
@@ -982,7 +1483,57 @@ const file_agent_public_proto_rawDesc = "" +
 	"\rconnection_id\x18\x03 \x01(\tR\fconnectionId\x12\x14\n" +
 	"\x05state\x18\x04 \x01(\tR\x05state\"/\n" +
 	"\x10GetStreamRequest\x12\x1b\n" +
-	"\tstream_id\x18\x01 \x01(\tR\bstreamId2\xbb\x06\n" +
+	"\tstream_id\x18\x01 \x01(\tR\bstreamId\"\xdd\x01\n" +
+	"\vBuildSource\x12\x1f\n" +
+	"\varchive_url\x18\x01 \x01(\tR\n" +
+	"archiveUrl\x12\x18\n" +
+	"\acontext\x18\x02 \x01(\tR\acontext\x12\x1e\n" +
+	"\n" +
+	"dockerfile\x18\x03 \x01(\tR\n" +
+	"dockerfile\x12:\n" +
+	"\x04args\x18\x04 \x03(\v2&.agent.public.v1.BuildSource.ArgsEntryR\x04args\x1a7\n" +
+	"\tArgsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xca\x03\n" +
+	"\x16CreateContainerRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05image\x18\x02 \x01(\tR\x05image\x122\n" +
+	"\x05build\x18\x03 \x01(\v2\x1c.agent.public.v1.BuildSourceR\x05build\x12Z\n" +
+	"\venvironment\x18\x04 \x03(\v28.agent.public.v1.CreateContainerRequest.EnvironmentEntryR\venvironment\x12\x14\n" +
+	"\x05ports\x18\x05 \x03(\tR\x05ports\x12\x18\n" +
+	"\avolumes\x18\x06 \x03(\tR\avolumes\x12K\n" +
+	"\x06labels\x18\a \x03(\v23.agent.public.v1.CreateContainerRequest.LabelsEntryR\x06labels\x1a>\n" +
+	"\x10EnvironmentEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"6\n" +
+	"\x17CreateContainerResponse\x12\x1b\n" +
+	"\tdocker_id\x18\x01 \x01(\tR\bdockerId\"*\n" +
+	"\x14ContainerNameRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\xc6\x01\n" +
+	"\x13CreateVolumeRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06driver\x18\x02 \x01(\tR\x06driver\x12H\n" +
+	"\x06labels\x18\x03 \x03(\v20.agent.public.v1.CreateVolumeRequest.LabelsEntryR\x06labels\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"*\n" +
+	"\x14CreateVolumeResponse\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\x14\n" +
+	"\x12ListVolumesRequest\"\xb4\x01\n" +
+	"\n" +
+	"VolumeInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06driver\x18\x02 \x01(\tR\x06driver\x12?\n" +
+	"\x06labels\x18\x03 \x03(\v2'.agent.public.v1.VolumeInfo.LabelsEntryR\x06labels\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"L\n" +
+	"\x13ListVolumesResponse\x125\n" +
+	"\avolumes\x18\x01 \x03(\v2\x1b.agent.public.v1.VolumeInfoR\avolumes2\xcb\n" +
+	"\n" +
 	"\vAgentPublic\x12R\n" +
 	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponse\x12C\n" +
 	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponse\x12g\n" +
@@ -993,7 +1544,13 @@ const file_agent_public_proto_rawDesc = "" +
 	"\tGetStream\x12!.agent.public.v1.GetStreamRequest\x1a\x1c.agent.public.v1.StreamState\x12E\n" +
 	"\vListStreams\x12\x16.google.protobuf.Empty\x1a\x1c.agent.public.v1.StreamState0\x01\x12g\n" +
 	"\x10GetContainerLogs\x12(.agent.public.v1.GetContainerLogsRequest\x1a).agent.public.v1.GetContainerLogsResponse\x12^\n" +
-	"\x13StreamContainerLogs\x12+.agent.public.v1.StreamContainerLogsRequest\x1a\x18.agent.public.v1.LogLine0\x01BOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
+	"\x13StreamContainerLogs\x12+.agent.public.v1.StreamContainerLogsRequest\x1a\x18.agent.public.v1.LogLine0\x01\x12[\n" +
+	"\fCreateVolume\x12$.agent.public.v1.CreateVolumeRequest\x1a%.agent.public.v1.CreateVolumeResponse\x12X\n" +
+	"\vListVolumes\x12#.agent.public.v1.ListVolumesRequest\x1a$.agent.public.v1.ListVolumesResponse\x12d\n" +
+	"\x0fCreateContainer\x12'.agent.public.v1.CreateContainerRequest\x1a(.agent.public.v1.CreateContainerResponse\x12O\n" +
+	"\x0eStartContainer\x12%.agent.public.v1.ContainerNameRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
+	"\rStopContainer\x12%.agent.public.v1.ContainerNameRequest\x1a\x16.google.protobuf.Empty\x12P\n" +
+	"\x0fRemoveContainer\x12%.agent.public.v1.ContainerNameRequest\x1a\x16.google.protobuf.EmptyBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
 
 var (
 	file_agent_public_proto_rawDescOnce sync.Once
@@ -1007,7 +1564,7 @@ func file_agent_public_proto_rawDescGZIP() []byte {
 	return file_agent_public_proto_rawDescData
 }
 
-var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_agent_public_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_agent_public_proto_goTypes = []any{
 	(*GetStatusRequest)(nil),           // 0: agent.public.v1.GetStatusRequest
 	(*GetStatusResponse)(nil),          // 1: agent.public.v1.GetStatusResponse
@@ -1025,36 +1582,69 @@ var file_agent_public_proto_goTypes = []any{
 	(*CloseStreamRequest)(nil),         // 13: agent.public.v1.CloseStreamRequest
 	(*StreamState)(nil),                // 14: agent.public.v1.StreamState
 	(*GetStreamRequest)(nil),           // 15: agent.public.v1.GetStreamRequest
-	(*emptypb.Empty)(nil),              // 16: google.protobuf.Empty
+	(*BuildSource)(nil),                // 16: agent.public.v1.BuildSource
+	(*CreateContainerRequest)(nil),     // 17: agent.public.v1.CreateContainerRequest
+	(*CreateContainerResponse)(nil),    // 18: agent.public.v1.CreateContainerResponse
+	(*ContainerNameRequest)(nil),       // 19: agent.public.v1.ContainerNameRequest
+	(*CreateVolumeRequest)(nil),        // 20: agent.public.v1.CreateVolumeRequest
+	(*CreateVolumeResponse)(nil),       // 21: agent.public.v1.CreateVolumeResponse
+	(*ListVolumesRequest)(nil),         // 22: agent.public.v1.ListVolumesRequest
+	(*VolumeInfo)(nil),                 // 23: agent.public.v1.VolumeInfo
+	(*ListVolumesResponse)(nil),        // 24: agent.public.v1.ListVolumesResponse
+	nil,                                // 25: agent.public.v1.BuildSource.ArgsEntry
+	nil,                                // 26: agent.public.v1.CreateContainerRequest.EnvironmentEntry
+	nil,                                // 27: agent.public.v1.CreateContainerRequest.LabelsEntry
+	nil,                                // 28: agent.public.v1.CreateVolumeRequest.LabelsEntry
+	nil,                                // 29: agent.public.v1.VolumeInfo.LabelsEntry
+	(*emptypb.Empty)(nil),              // 30: google.protobuf.Empty
 }
 var file_agent_public_proto_depIdxs = []int32{
 	4,  // 0: agent.public.v1.IngestContainersResponse.containers:type_name -> agent.public.v1.Container
 	7,  // 1: agent.public.v1.GetContainerLogsResponse.lines:type_name -> agent.public.v1.LogLine
-	0,  // 2: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
-	2,  // 3: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
-	5,  // 4: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
-	16, // 5: agent.public.v1.AgentPublic.GetNode:input_type -> google.protobuf.Empty
-	12, // 6: agent.public.v1.AgentPublic.NewStream:input_type -> agent.public.v1.NewStreamRequest
-	13, // 7: agent.public.v1.AgentPublic.CloseStream:input_type -> agent.public.v1.CloseStreamRequest
-	15, // 8: agent.public.v1.AgentPublic.GetStream:input_type -> agent.public.v1.GetStreamRequest
-	16, // 9: agent.public.v1.AgentPublic.ListStreams:input_type -> google.protobuf.Empty
-	8,  // 10: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
-	10, // 11: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
-	1,  // 12: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
-	3,  // 13: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
-	6,  // 14: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
-	11, // 15: agent.public.v1.AgentPublic.GetNode:output_type -> agent.public.v1.Node
-	16, // 16: agent.public.v1.AgentPublic.NewStream:output_type -> google.protobuf.Empty
-	16, // 17: agent.public.v1.AgentPublic.CloseStream:output_type -> google.protobuf.Empty
-	14, // 18: agent.public.v1.AgentPublic.GetStream:output_type -> agent.public.v1.StreamState
-	14, // 19: agent.public.v1.AgentPublic.ListStreams:output_type -> agent.public.v1.StreamState
-	9,  // 20: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
-	7,  // 21: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
-	12, // [12:22] is the sub-list for method output_type
-	2,  // [2:12] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	25, // 2: agent.public.v1.BuildSource.args:type_name -> agent.public.v1.BuildSource.ArgsEntry
+	16, // 3: agent.public.v1.CreateContainerRequest.build:type_name -> agent.public.v1.BuildSource
+	26, // 4: agent.public.v1.CreateContainerRequest.environment:type_name -> agent.public.v1.CreateContainerRequest.EnvironmentEntry
+	27, // 5: agent.public.v1.CreateContainerRequest.labels:type_name -> agent.public.v1.CreateContainerRequest.LabelsEntry
+	28, // 6: agent.public.v1.CreateVolumeRequest.labels:type_name -> agent.public.v1.CreateVolumeRequest.LabelsEntry
+	29, // 7: agent.public.v1.VolumeInfo.labels:type_name -> agent.public.v1.VolumeInfo.LabelsEntry
+	23, // 8: agent.public.v1.ListVolumesResponse.volumes:type_name -> agent.public.v1.VolumeInfo
+	0,  // 9: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
+	2,  // 10: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
+	5,  // 11: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
+	30, // 12: agent.public.v1.AgentPublic.GetNode:input_type -> google.protobuf.Empty
+	12, // 13: agent.public.v1.AgentPublic.NewStream:input_type -> agent.public.v1.NewStreamRequest
+	13, // 14: agent.public.v1.AgentPublic.CloseStream:input_type -> agent.public.v1.CloseStreamRequest
+	15, // 15: agent.public.v1.AgentPublic.GetStream:input_type -> agent.public.v1.GetStreamRequest
+	30, // 16: agent.public.v1.AgentPublic.ListStreams:input_type -> google.protobuf.Empty
+	8,  // 17: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
+	10, // 18: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
+	20, // 19: agent.public.v1.AgentPublic.CreateVolume:input_type -> agent.public.v1.CreateVolumeRequest
+	22, // 20: agent.public.v1.AgentPublic.ListVolumes:input_type -> agent.public.v1.ListVolumesRequest
+	17, // 21: agent.public.v1.AgentPublic.CreateContainer:input_type -> agent.public.v1.CreateContainerRequest
+	19, // 22: agent.public.v1.AgentPublic.StartContainer:input_type -> agent.public.v1.ContainerNameRequest
+	19, // 23: agent.public.v1.AgentPublic.StopContainer:input_type -> agent.public.v1.ContainerNameRequest
+	19, // 24: agent.public.v1.AgentPublic.RemoveContainer:input_type -> agent.public.v1.ContainerNameRequest
+	1,  // 25: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
+	3,  // 26: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
+	6,  // 27: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
+	11, // 28: agent.public.v1.AgentPublic.GetNode:output_type -> agent.public.v1.Node
+	30, // 29: agent.public.v1.AgentPublic.NewStream:output_type -> google.protobuf.Empty
+	30, // 30: agent.public.v1.AgentPublic.CloseStream:output_type -> google.protobuf.Empty
+	14, // 31: agent.public.v1.AgentPublic.GetStream:output_type -> agent.public.v1.StreamState
+	14, // 32: agent.public.v1.AgentPublic.ListStreams:output_type -> agent.public.v1.StreamState
+	9,  // 33: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
+	7,  // 34: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
+	21, // 35: agent.public.v1.AgentPublic.CreateVolume:output_type -> agent.public.v1.CreateVolumeResponse
+	24, // 36: agent.public.v1.AgentPublic.ListVolumes:output_type -> agent.public.v1.ListVolumesResponse
+	18, // 37: agent.public.v1.AgentPublic.CreateContainer:output_type -> agent.public.v1.CreateContainerResponse
+	30, // 38: agent.public.v1.AgentPublic.StartContainer:output_type -> google.protobuf.Empty
+	30, // 39: agent.public.v1.AgentPublic.StopContainer:output_type -> google.protobuf.Empty
+	30, // 40: agent.public.v1.AgentPublic.RemoveContainer:output_type -> google.protobuf.Empty
+	25, // [25:41] is the sub-list for method output_type
+	9,  // [9:25] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agent_public_proto_init() }
@@ -1068,7 +1658,7 @@ func file_agent_public_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_public_proto_rawDesc), len(file_agent_public_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

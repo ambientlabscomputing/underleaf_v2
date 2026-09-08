@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import HubIcon from '@mui/icons-material/Hub';
-import StorageIcon from '@mui/icons-material/Storage';
 
-import { AppDataGrid, PageShell, type GridColDef, type GridSortModel, type NavItem } from '../components';
+import { AppDataGrid, HubIcon, PageShell, RocketLaunchIcon, StorageIcon, type GridColDef, type GridSortModel, type NavItem } from '../components';
 import { useNodes } from '../datastore';
 import type { Node } from '../api/services/NodesService';
 import type { GetNodesRequest } from '../api/services/NodesService';
@@ -67,6 +65,12 @@ export function Home() {
       label: 'Containers',
       icon: <StorageIcon fontSize="small" />,
       onClick: () => navigate('/containers'),
+      selected: false,
+    },
+    {
+      label: 'Deployments',
+      icon: <RocketLaunchIcon fontSize="small" />,
+      onClick: () => navigate('/deployments'),
       selected: false,
     },
   ];

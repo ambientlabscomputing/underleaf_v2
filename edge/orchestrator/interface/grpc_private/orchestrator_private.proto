@@ -18,6 +18,11 @@ service OrchestratorPrivate {
   rpc GetStream(GetStreamRequest) returns (StreamState);
   rpc ListStreams(google.protobuf.Empty) returns (stream StreamState);
   rpc GetCloudRegistrationStatus(GetCloudRegistrationStatusRequest) returns (GetCloudRegistrationStatusResponse);
+
+  // Deployment RPCs — track 2 (manifest & deploy).
+  rpc Deploy(DeployRequest) returns (DeployResponse);
+  rpc ListDeployments(ListDeploymentsRequest) returns (ListDeploymentsResponse);
+  rpc GetDeployment(GetDeploymentRequest) returns (Deployment);
 }
 
 message GetNodesRequest {
@@ -121,4 +126,85 @@ message Stream {
     int32 port = 6;
     string created_at = 7;
     string closed_at = 8;
+}
+
+// ── Deployment messages ─────────────────────────────────────────────────────
+
+message BuildSpec {
+  string context    = 1;
+  string dockerfile = 2;
+  map<string, string> args = 3;
+}
+
+message ExposeSpec {
+  int32  port     = 1;
+  string hostname = 2;
+}
+
+message SourceRef {
+  string owner       = 1;
+  string repo        = 2;
+  string ref         = 3;
+  string archive_url = 4;
+}
+
+message ServiceSpec {
+  string name        = 1;
+  string image       = 2;
+  BuildSpec build    = 3;
+  repeated string ports = 4;
+  map<string, string> environment = 5;
+  repeated string networks = 6;
+  repeated string volumes  = 7;
+  ExposeSpec expose  = 8;
+  SourceRef source   = 9;
+}
+
+message DeploymentNetworkSpec {
+  string name   = 1;
+  string driver = 2;
+}
+
+message DeploymentVolumeSpec {
+  string name = 1;
+}
+
+message DeploymentSpec {
+  string version = 1;
+  string name    = 2;
+  string slug    = 3;
+  repeated ServiceSpec services = 4;
+  repeated DeploymentNetworkSpec networks = 5;
+  repeated DeploymentVolumeSpec  volumes  = 6;
+}
+
+message Deployment {
+  string id     = 1;
+  string repo   = 2;
+  string ref    = 3;
+  DeploymentSpec spec = 4;
+  string status = 5; // "in_progress" | "succeeded" | "failed"
+  string error  = 6; // populated when status is "failed"
+}
+
+message DeployRequest {
+  string source = 1; // "gh:<owner>/<repo>[@ref]"
+  string ref    = 2; // optional; overrides any "@ref" embedded in source
+  string token  = 3; // optional GitHub token, for private repos
+}
+
+message DeployResponse {
+  // status is always "in_progress" here — reconcile runs in the background,
+  // poll GetDeployment for the outcome.
+  Deployment deployment = 1;
+}
+
+message ListDeploymentsRequest {}
+
+message ListDeploymentsResponse {
+  repeated Deployment deployments = 1;
+}
+
+message GetDeploymentRequest {
+  string id = 1;
 }

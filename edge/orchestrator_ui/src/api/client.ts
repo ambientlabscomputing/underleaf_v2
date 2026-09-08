@@ -26,8 +26,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const response = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as { message?: string };
-        throw new ApiError(response.status, errorData.message ?? 'Network error occurred', errorData);
+        const errorData = await response.json().catch(() => ({})) as { message?: string; error?: string };
+        throw new ApiError(response.status, errorData.message ?? errorData.error ?? 'Network error occurred', errorData);
     }
 
     return response.json() as Promise<T>;

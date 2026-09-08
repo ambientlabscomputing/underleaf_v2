@@ -156,3 +156,95 @@ func (s *OrchestratorGRPCPrivateServer) NewStream(ctx context.Context, req *NewS
 	}
 	return resp, nil
 }
+
+// Deploy implements OrchestratorPrivateServer — resolves a manifest and
+// persists it as a deployment (fast, synchronous), then reconciles it onto
+// the agent in the background. The returned deployment's status is always
+// "in_progress"; poll GetDeployment for the outcome.
+func (s *OrchestratorGRPCPrivateServer) Deploy(ctx context.Context, req *DeployRequest) (*DeployResponse, error) {
+	deployment, err := s.Service.DeployFromSource(ctx, req.Source, req.Ref, req.Token)
+	if err != nil {
+		return nil, err
+	}
+	return &DeployResponse{Deployment: toProtoDeployment(deployment)}, nil
+}
+
+// ListDeployments implements OrchestratorPrivateServer.
+func (s *OrchestratorGRPCPrivateServer) ListDeployments(_ context.Context, _ *ListDeploymentsRequest) (*ListDeploymentsResponse, error) {
+	deployments, err := s.Service.Deployments().GetDeployments()
+	if err != nil {
+		return nil, err
+	}
+	resp := &ListDeploymentsResponse{}
+	for _, d := range deployments {
+		resp.Deployments = append(resp.Deployments, toProtoDeployment(d))
+	}
+	return resp, nil
+}
+
+// GetDeployment implements OrchestratorPrivateServer.
+func (s *OrchestratorGRPCPrivateServer) GetDeployment(_ context.Context, req *GetDeploymentRequest) (*Deployment, error) {
+	d, err := s.Service.Deployments().GetDeployment(req.Id)
+	if err != nil {
+		return nil, err
+	}
+	return toProtoDeployment(d), nil
+}
+
+func toProtoDeployment(d *types.Deployment) *Deployment {
+	if d == nil {
+		return nil
+	}
+	return &Deployment{
+		Id:     d.ID,
+		Repo:   d.Repo,
+		Ref:    d.Ref,
+		Spec:   toProtoDeploymentSpec(d.Spec),
+		Status: string(d.Status),
+		Error:  d.Error,
+	}
+}
+
+func toProtoDeploymentSpec(spec types.DeploymentSpec) *DeploymentSpec {
+	pb := &DeploymentSpec{
+		Version: spec.Version,
+		Name:    spec.Name,
+		Slug:    spec.Slug,
+	}
+	for _, svc := range spec.Services {
+		pb.Services = append(pb.Services, toProtoServiceSpec(svc))
+	}
+	for _, n := range spec.Networks {
+		pb.Networks = append(pb.Networks, &DeploymentNetworkSpec{Name: n.Name, Driver: n.Driver})
+	}
+	for _, v := range spec.Volumes {
+		pb.Volumes = append(pb.Volumes, &DeploymentVolumeSpec{Name: v.Name})
+	}
+	return pb
+}
+
+func toProtoServiceSpec(svc types.ServiceSpec) *ServiceSpec {
+	pb := &ServiceSpec{
+		Name:        svc.Name,
+		Image:       svc.Image,
+		Ports:       svc.Ports,
+		Environment: svc.Environment,
+		Networks:    svc.Networks,
+		Volumes:     svc.Volumes,
+	}
+	if svc.Build != nil {
+		pb.Build = &BuildSpec{Context: svc.Build.Context, Dockerfile: svc.Build.Dockerfile, Args: svc.Build.Args}
+	}
+	if svc.Expose != nil {
+		pb.Expose = &ExposeSpec{Port: int32(svc.Expose.Port), Hostname: svc.Expose.Hostname}
+	}
+	if svc.Source != nil {
+		pb.Source = &SourceRef{
+			Owner:      svc.Source.Owner,
+			Repo:       svc.Source.Repo,
+			Ref:        svc.Source.Ref,
+			ArchiveUrl: svc.Source.ArchiveURL,
+		}
+	}
+	return pb
+}

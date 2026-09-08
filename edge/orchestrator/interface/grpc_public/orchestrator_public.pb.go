@@ -521,6 +521,7 @@ type Container struct {
 	Image         string                 `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	Uptime        int64                  `protobuf:"varint,6,opt,name=uptime,proto3" json:"uptime,omitempty"`
+	Name          string                 `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -595,6 +596,13 @@ func (x *Container) GetUptime() int64 {
 		return x.Uptime
 	}
 	return 0
+}
+
+func (x *Container) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
 }
 
 type ReportContainersRequest struct {
@@ -745,14 +753,15 @@ const file_orchestrator_public_proto_rawDesc = "" +
 	"\n" +
 	"ip_address\x18\x03 \x01(\tR\tipAddress\x12\x0e\n" +
 	"\x02os\x18\x04 \x01(\tR\x02os\x12\x12\n" +
-	"\x04arch\x18\x05 \x01(\tR\x04arch\"\x97\x01\n" +
+	"\x04arch\x18\x05 \x01(\tR\x04arch\"\xab\x01\n" +
 	"\tContainer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tdocker_id\x18\x02 \x01(\tR\bdockerId\x12\x17\n" +
 	"\anode_id\x18\x03 \x01(\tR\x06nodeId\x12\x14\n" +
 	"\x05image\x18\x04 \x01(\tR\x05image\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12\x16\n" +
-	"\x06uptime\x18\x06 \x01(\x03R\x06uptime\"u\n" +
+	"\x06uptime\x18\x06 \x01(\x03R\x06uptime\x12\x12\n" +
+	"\x04name\x18\a \x01(\tR\x04name\"u\n" +
 	"\x17ReportContainersRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12A\n" +
 	"\n" +

@@ -30,6 +30,12 @@ const (
 	AgentPublic_ListStreams_FullMethodName         = "/agent.public.v1.AgentPublic/ListStreams"
 	AgentPublic_GetContainerLogs_FullMethodName    = "/agent.public.v1.AgentPublic/GetContainerLogs"
 	AgentPublic_StreamContainerLogs_FullMethodName = "/agent.public.v1.AgentPublic/StreamContainerLogs"
+	AgentPublic_CreateVolume_FullMethodName        = "/agent.public.v1.AgentPublic/CreateVolume"
+	AgentPublic_ListVolumes_FullMethodName         = "/agent.public.v1.AgentPublic/ListVolumes"
+	AgentPublic_CreateContainer_FullMethodName     = "/agent.public.v1.AgentPublic/CreateContainer"
+	AgentPublic_StartContainer_FullMethodName      = "/agent.public.v1.AgentPublic/StartContainer"
+	AgentPublic_StopContainer_FullMethodName       = "/agent.public.v1.AgentPublic/StopContainer"
+	AgentPublic_RemoveContainer_FullMethodName     = "/agent.public.v1.AgentPublic/RemoveContainer"
 )
 
 // AgentPublicClient is the client API for AgentPublic service.
@@ -50,6 +56,18 @@ type AgentPublicClient interface {
 	// Log RPCs — agent is the source of truth for container logs.
 	GetContainerLogs(ctx context.Context, in *GetContainerLogsRequest, opts ...grpc.CallOption) (*GetContainerLogsResponse, error)
 	StreamContainerLogs(ctx context.Context, in *StreamContainerLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error)
+	// Deployment lifecycle RPCs — orchestrator-initiated container/volume
+	// management. The orchestrator owns naming/identity decisions (names are
+	// already namespaced by the time they reach the agent); the agent is a
+	// thin, stateless-per-call Docker executor. Responses are accept/error
+	// only — a pull or build can take tens of seconds, so these don't block
+	// on it. Final state surfaces through the existing ReportContainers push.
+	CreateVolume(ctx context.Context, in *CreateVolumeRequest, opts ...grpc.CallOption) (*CreateVolumeResponse, error)
+	ListVolumes(ctx context.Context, in *ListVolumesRequest, opts ...grpc.CallOption) (*ListVolumesResponse, error)
+	CreateContainer(ctx context.Context, in *CreateContainerRequest, opts ...grpc.CallOption) (*CreateContainerResponse, error)
+	StartContainer(ctx context.Context, in *ContainerNameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	StopContainer(ctx context.Context, in *ContainerNameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RemoveContainer(ctx context.Context, in *ContainerNameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type agentPublicClient struct {
@@ -178,6 +196,66 @@ func (c *agentPublicClient) StreamContainerLogs(ctx context.Context, in *StreamC
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentPublic_StreamContainerLogsClient = grpc.ServerStreamingClient[LogLine]
 
+func (c *agentPublicClient) CreateVolume(ctx context.Context, in *CreateVolumeRequest, opts ...grpc.CallOption) (*CreateVolumeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateVolumeResponse)
+	err := c.cc.Invoke(ctx, AgentPublic_CreateVolume_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) ListVolumes(ctx context.Context, in *ListVolumesRequest, opts ...grpc.CallOption) (*ListVolumesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListVolumesResponse)
+	err := c.cc.Invoke(ctx, AgentPublic_ListVolumes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) CreateContainer(ctx context.Context, in *CreateContainerRequest, opts ...grpc.CallOption) (*CreateContainerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateContainerResponse)
+	err := c.cc.Invoke(ctx, AgentPublic_CreateContainer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) StartContainer(ctx context.Context, in *ContainerNameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AgentPublic_StartContainer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) StopContainer(ctx context.Context, in *ContainerNameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AgentPublic_StopContainer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentPublicClient) RemoveContainer(ctx context.Context, in *ContainerNameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AgentPublic_RemoveContainer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentPublicServer is the server API for AgentPublic service.
 // All implementations must embed UnimplementedAgentPublicServer
 // for forward compatibility.
@@ -196,6 +274,18 @@ type AgentPublicServer interface {
 	// Log RPCs — agent is the source of truth for container logs.
 	GetContainerLogs(context.Context, *GetContainerLogsRequest) (*GetContainerLogsResponse, error)
 	StreamContainerLogs(*StreamContainerLogsRequest, grpc.ServerStreamingServer[LogLine]) error
+	// Deployment lifecycle RPCs — orchestrator-initiated container/volume
+	// management. The orchestrator owns naming/identity decisions (names are
+	// already namespaced by the time they reach the agent); the agent is a
+	// thin, stateless-per-call Docker executor. Responses are accept/error
+	// only — a pull or build can take tens of seconds, so these don't block
+	// on it. Final state surfaces through the existing ReportContainers push.
+	CreateVolume(context.Context, *CreateVolumeRequest) (*CreateVolumeResponse, error)
+	ListVolumes(context.Context, *ListVolumesRequest) (*ListVolumesResponse, error)
+	CreateContainer(context.Context, *CreateContainerRequest) (*CreateContainerResponse, error)
+	StartContainer(context.Context, *ContainerNameRequest) (*emptypb.Empty, error)
+	StopContainer(context.Context, *ContainerNameRequest) (*emptypb.Empty, error)
+	RemoveContainer(context.Context, *ContainerNameRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAgentPublicServer()
 }
 
@@ -235,6 +325,24 @@ func (UnimplementedAgentPublicServer) GetContainerLogs(context.Context, *GetCont
 }
 func (UnimplementedAgentPublicServer) StreamContainerLogs(*StreamContainerLogsRequest, grpc.ServerStreamingServer[LogLine]) error {
 	return status.Errorf(codes.Unimplemented, "method StreamContainerLogs not implemented")
+}
+func (UnimplementedAgentPublicServer) CreateVolume(context.Context, *CreateVolumeRequest) (*CreateVolumeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateVolume not implemented")
+}
+func (UnimplementedAgentPublicServer) ListVolumes(context.Context, *ListVolumesRequest) (*ListVolumesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListVolumes not implemented")
+}
+func (UnimplementedAgentPublicServer) CreateContainer(context.Context, *CreateContainerRequest) (*CreateContainerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateContainer not implemented")
+}
+func (UnimplementedAgentPublicServer) StartContainer(context.Context, *ContainerNameRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartContainer not implemented")
+}
+func (UnimplementedAgentPublicServer) StopContainer(context.Context, *ContainerNameRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopContainer not implemented")
+}
+func (UnimplementedAgentPublicServer) RemoveContainer(context.Context, *ContainerNameRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveContainer not implemented")
 }
 func (UnimplementedAgentPublicServer) mustEmbedUnimplementedAgentPublicServer() {}
 func (UnimplementedAgentPublicServer) testEmbeddedByValue()                     {}
@@ -423,6 +531,114 @@ func _AgentPublic_StreamContainerLogs_Handler(srv interface{}, stream grpc.Serve
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentPublic_StreamContainerLogsServer = grpc.ServerStreamingServer[LogLine]
 
+func _AgentPublic_CreateVolume_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateVolumeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).CreateVolume(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_CreateVolume_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).CreateVolume(ctx, req.(*CreateVolumeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_ListVolumes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVolumesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).ListVolumes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_ListVolumes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).ListVolumes(ctx, req.(*ListVolumesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_CreateContainer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateContainerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).CreateContainer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_CreateContainer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).CreateContainer(ctx, req.(*CreateContainerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_StartContainer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContainerNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).StartContainer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_StartContainer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).StartContainer(ctx, req.(*ContainerNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_StopContainer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContainerNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).StopContainer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_StopContainer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).StopContainer(ctx, req.(*ContainerNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentPublic_RemoveContainer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContainerNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentPublicServer).RemoveContainer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentPublic_RemoveContainer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentPublicServer).RemoveContainer(ctx, req.(*ContainerNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentPublic_ServiceDesc is the grpc.ServiceDesc for AgentPublic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -461,6 +677,30 @@ var AgentPublic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetContainerLogs",
 			Handler:    _AgentPublic_GetContainerLogs_Handler,
+		},
+		{
+			MethodName: "CreateVolume",
+			Handler:    _AgentPublic_CreateVolume_Handler,
+		},
+		{
+			MethodName: "ListVolumes",
+			Handler:    _AgentPublic_ListVolumes_Handler,
+		},
+		{
+			MethodName: "CreateContainer",
+			Handler:    _AgentPublic_CreateContainer_Handler,
+		},
+		{
+			MethodName: "StartContainer",
+			Handler:    _AgentPublic_StartContainer_Handler,
+		},
+		{
+			MethodName: "StopContainer",
+			Handler:    _AgentPublic_StopContainer_Handler,
+		},
+		{
+			MethodName: "RemoveContainer",
+			Handler:    _AgentPublic_RemoveContainer_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

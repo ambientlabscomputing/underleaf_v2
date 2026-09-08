@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import HubIcon from '@mui/icons-material/Hub';
-import StorageIcon from '@mui/icons-material/Storage';
 
-import { AppDataGrid, PageShell, type GridColDef, type NavItem } from '../components';
+import { AppDataGrid, HubIcon, PageShell, RocketLaunchIcon, StorageIcon, type GridColDef, type NavItem } from '../components';
 import { useContainers } from '../datastore';
 import type { Container } from '../api/services/ContainersService';
 
@@ -61,6 +59,12 @@ export function Containers() {
       icon: <StorageIcon fontSize="small" />,
       onClick: () => {},
       selected: true,
+    },
+    {
+      label: 'Deployments',
+      icon: <RocketLaunchIcon fontSize="small" />,
+      onClick: () => navigate('/deployments'),
+      selected: false,
     },
   ];
 

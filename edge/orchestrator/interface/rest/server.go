@@ -34,6 +34,7 @@ func (s *OrchestratorRESTServer) Serve() {
 	s.RegisterNodeRoutes(v2, s.Service)
 	s.RegisterContainerRoutes(v2, s.Service)
 	s.RegisterLogRoutes(v2, s.Service)
+	s.RegisterDeploymentRoutes(v2, s.Service)
 	health := v2.Group("/health")
 	health.GET("", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})

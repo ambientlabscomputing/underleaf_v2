@@ -55,6 +55,7 @@ jobs:
           go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/ufagentd-${{ matrix.goos }}-${{ matrix.goarch }}     ./agent/cmd/ufagentd
           go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/orcli-${{ matrix.goos }}-${{ matrix.goarch }}         ./orchestrator/cmd/cli
           go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/orch-server-${{ matrix.goos }}-${{ matrix.goarch }} ./orchestrator/cmd/server
+          go build -ldflags="-s -w" ${{ steps.tags.outputs.value }} -o bin/ufctl-${{ matrix.goos }}-${{ matrix.goarch }}         ./cmd/ufctl
 
       - uses: actions/upload-artifact@v4
         with:

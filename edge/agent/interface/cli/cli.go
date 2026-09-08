@@ -15,11 +15,19 @@ var RootCmd = &cobra.Command{
 	Short: "Agent CLI for managing the edge agent",
 }
 
+// AddCommands mounts every agent command onto root. Exposed separately from
+// init() so the ufctl gateway binary can mount the exact same command
+// implementations onto its own root without duplicating any command logic
+// — ufagent itself just calls this on its own RootCmd below.
+func AddCommands(root *cobra.Command) {
+	root.AddCommand(start.StartCmd)
+	root.AddCommand(ping.PingCmd)
+	root.AddCommand(register.RegisterCmd)
+	root.AddCommand(containers.ContainersCmd)
+}
+
 func init() {
-	RootCmd.AddCommand(start.StartCmd)
-	RootCmd.AddCommand(ping.PingCmd)
-	RootCmd.AddCommand(register.RegisterCmd)
-	RootCmd.AddCommand(containers.ContainersCmd)
+	AddCommands(RootCmd)
 }
 
 func (o *AgentCLI) Execute() {

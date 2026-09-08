@@ -8,7 +8,7 @@ type IDPrefix string
 
 const (
 	NodeIDPrefix       IDPrefix = "node"
-	AppIDPrefix        IDPrefix = "app"
+	DeploymentIDPrefix IDPrefix = "deployment"
 	ContainerIDPrefix  IDPrefix = "container"
 	VolumeIDPrefix     IDPrefix = "volume"
 	ConnectionIDPrefix IDPrefix = "conn"
