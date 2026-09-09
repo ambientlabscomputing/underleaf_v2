@@ -167,22 +167,59 @@ func (s *RegistrationService) pollLoop(ctx context.Context, deviceCode string, i
 	}
 }
 
-func (s *RegistrationService) requestCertificate(oneTimeToken, clusterID, certDir, nodeID string) (certPEM, keyPEM string, err error) {
-	// Generate RSA keypair
-	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+// generateKeyAndCSR creates a fresh RSA keypair and a CSR for it with the
+// given CN. Shared by initial registration and renewal so both produce
+// identical CSR shapes.
+func generateKeyAndCSR(commonName string) (privKey *rsa.PrivateKey, csrPEM string, err error) {
+	privKey, err = rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return "", "", fmt.Errorf("generate key: %w", err)
+		return nil, "", fmt.Errorf("generate key: %w", err)
 	}
 
-	// Build CSR
 	csrTemplate := &x509.CertificateRequest{
-		Subject: pkix.Name{CommonName: clusterID},
+		Subject: pkix.Name{CommonName: commonName},
 	}
 	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privKey)
 	if err != nil {
-		return "", "", fmt.Errorf("create CSR: %w", err)
+		return nil, "", fmt.Errorf("create CSR: %w", err)
 	}
-	csrPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER}))
+	csrPEM = string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER}))
+	return privKey, csrPEM, nil
+}
+
+// persistCertFiles writes the four PEM files that make up a cluster's mTLS
+// identity to certDir. Shared by initial registration and renewal.
+func persistCertFiles(certDir, certPEM, keyPEM, caChainPEM, nodeCertPEM string) error {
+	if certDir == "" {
+		return nil
+	}
+	if err := os.MkdirAll(certDir, 0700); err != nil {
+		return fmt.Errorf("create cert dir: %w", err)
+	}
+
+	files := []struct {
+		name string
+		data string
+		perm os.FileMode
+	}{
+		{string(types.CertFileNameClusterCert), certPEM, 0600},
+		{string(types.CertFileNameClusterKey), keyPEM, 0600},
+		{string(types.CertFileNameCAChain), caChainPEM, 0644},
+		{string(types.CertFileNameNodeCert), nodeCertPEM, 0600},
+	}
+	for _, f := range files {
+		if err := os.WriteFile(filepath.Join(certDir, f.name), []byte(f.data), f.perm); err != nil {
+			return fmt.Errorf("write %s: %w", f.name, err)
+		}
+	}
+	return nil
+}
+
+func (s *RegistrationService) requestCertificate(oneTimeToken, clusterID, certDir, nodeID string) (certPEM, keyPEM string, err error) {
+	privKey, csrPEM, err := generateKeyAndCSR(clusterID)
+	if err != nil {
+		return "", "", err
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -198,15 +235,74 @@ func (s *RegistrationService) requestCertificate(oneTimeToken, clusterID, certDi
 		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
 	}))
 
-	// Persist cert and key to disk
-	if certDir != "" {
-		if err := os.MkdirAll(certDir, 0700); err == nil {
-			_ = os.WriteFile(filepath.Join(certDir, string(types.CertFileNameClusterCert)), []byte(certPEM), 0600)
-			_ = os.WriteFile(filepath.Join(certDir, string(types.CertFileNameClusterKey)), []byte(keyPEM), 0600)
-			_ = os.WriteFile(filepath.Join(certDir, string(types.CertFileNameCAChain)), []byte(resp.CAChainPEM), 0644)
-			_ = os.WriteFile(filepath.Join(certDir, string(types.CertFileNameNodeCert)), []byte(resp.NodeCertificatePEM), 0600)
-		}
+	if err := persistCertFiles(certDir, certPEM, keyPEM, resp.CAChainPEM, resp.NodeCertificatePEM); err != nil {
+		return "", "", fmt.Errorf("persist cert: %w", err)
 	}
 
 	return certPEM, keyPEM, nil
+}
+
+// certRenewalThreshold is how far ahead of a cert's expiry CheckAndRenewCertificate
+// attempts renewal. Renewal authenticates with the *existing* client cert (see
+// CloudClient.RenewCertificate), so this must fire well before actual expiry —
+// once a cert has expired, nginx's TLS handshake rejects the caller before any
+// renewal request can even be made. Certs are issued with 730-day validity
+// (cert_lib.py), so a 30-day threshold leaves a wide margin.
+const certRenewalThreshold = 30 * 24 * time.Hour
+
+// CheckAndRenewCertificate re-issues the cluster's mTLS certificate if it's
+// within certRenewalThreshold of expiring. Safe to call on a timer: it's a
+// no-op both when no cert has been issued yet (nothing to renew) and when
+// the existing cert isn't due for renewal yet.
+func (s *RegistrationService) CheckAndRenewCertificate(ctx context.Context, certDir string) error {
+	logger := utils.LoggerFromContext(ctx)
+
+	certPEM, err := os.ReadFile(filepath.Join(certDir, string(types.CertFileNameClusterCert)))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read cluster cert: %w", err)
+	}
+
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return fmt.Errorf("decode cluster cert: no PEM block found")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("parse cluster cert: %w", err)
+	}
+
+	if time.Until(cert.NotAfter) > certRenewalThreshold {
+		return nil
+	}
+	logger.Info("registration: certificate renewal due", "not_after", cert.NotAfter)
+
+	node, err := s.agentClient.GetNode(ctx)
+	if err != nil {
+		return fmt.Errorf("get node: %w", err)
+	}
+
+	privKey, csrPEM, err := generateKeyAndCSR(cert.Subject.CommonName)
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.cloudClient.RenewCertificate(ctx, csrPEM, node.Id)
+	if err != nil {
+		return fmt.Errorf("renew certificate: %w", err)
+	}
+
+	keyPEM := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
+	}))
+
+	if err := persistCertFiles(certDir, resp.CertificatePEM, keyPEM, resp.CAChainPEM, resp.NodeCertificatePEM); err != nil {
+		return fmt.Errorf("persist renewed cert: %w", err)
+	}
+
+	logger.Info("registration: certificate renewed successfully")
+	return nil
 }

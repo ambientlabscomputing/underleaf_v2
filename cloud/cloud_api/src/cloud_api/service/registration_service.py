@@ -12,26 +12,23 @@ Endpoints handled by this service:
 import hashlib
 import secrets
 import string
-from datetime import datetime, timedelta, timezone
-from typing import Literal
+from datetime import UTC, datetime, timedelta
 
 from cloud_api import app_config, logger
 from cloud_api.lib.cert_lib import CertLib
 from cloud_api.models.api import (
     ApproveCandidateResponse,
-    Cluster,
-    ClusterCandidate,
     CandidateStatus,
+    ClusterCandidate,
     CreateClusterRequest,
     DeviceAuthResponse,
     IssueCertificateResponse,
     PollTokenResponse,
     RegisterDeviceRequest,
 )
-from cloud_api.models.base import generate_id, IDPrefix
+from cloud_api.models.base import IDPrefix, generate_id
 from cloud_api.repository.cluster_repository import ClusterRepository
 from cloud_api.repository.registration_repository import RegistrationRepository
-
 
 # ---------------------------------------------------------------------------
 # Custom exceptions (translated to HTTP in the router)
@@ -81,7 +78,10 @@ def _sha256(value: str) -> str:
 def _generate_user_code() -> str:
     """Generate an 8-char uppercase alphanumeric user code (XXXX-XXXX)."""
     alphabet = string.ascii_uppercase + string.digits
-    part = lambda: "".join(secrets.choice(alphabet) for _ in range(4))
+
+    def part() -> str:
+        return "".join(secrets.choice(alphabet) for _ in range(4))
+
     return f"{part()}-{part()}"
 
 
@@ -112,7 +112,7 @@ class RegistrationService:
         device_code = secrets.token_hex(_DEVICE_CODE_BYTES)
         user_code = _generate_user_code()
         device_code_hash = _sha256(device_code)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(seconds=_DEVICE_CODE_TTL_SECONDS)
 
         await self.registration_repo.create_candidate(
@@ -149,12 +149,12 @@ class RegistrationService:
         if candidate is None:
             raise CandidateNotFoundError("Unknown device_code")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Expire check
         expires = candidate.device_code_expires_at
         if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
+            expires = expires.replace(tzinfo=UTC)
         if now > expires:
             raise CandidateExpiredError("device_code has expired")
 
@@ -162,7 +162,7 @@ class RegistrationService:
         if candidate.last_polled_at is not None:
             last = candidate.last_polled_at
             if last.tzinfo is None:
-                last = last.replace(tzinfo=timezone.utc)
+                last = last.replace(tzinfo=UTC)
             elapsed = (now - last).total_seconds()
             if elapsed < _MIN_POLL_INTERVAL_SECONDS:
                 raise SlowDownError("Polling too fast")
@@ -177,7 +177,6 @@ class RegistrationService:
 
         if candidate.status == "approved":
             # Issue the one-time token now (it was already set on approval)
-            one_time_token = secrets.token_hex(_ONE_TIME_TOKEN_BYTES)
             # We store the hash; re-minting would break the hash. Return the
             # stored plaintext from creation — instead, we store it during
             # approve() and return it here.
@@ -213,10 +212,10 @@ class RegistrationService:
         if candidate is None:
             raise CandidateNotFoundError(f"No candidate for user_code={user_code}")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = candidate.device_code_expires_at
         if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
+            expires = expires.replace(tzinfo=UTC)
         if now > expires:
             raise CandidateExpiredError("Registration has expired")
 
@@ -240,10 +239,10 @@ class RegistrationService:
         if candidate is None:
             raise CandidateNotFoundError(f"No candidate for user_code={user_code}")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = candidate.device_code_expires_at
         if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
+            expires = expires.replace(tzinfo=UTC)
         if now > expires:
             raise CandidateExpiredError("Registration has expired")
 
@@ -290,10 +289,10 @@ class RegistrationService:
             )
             raise InvalidOneTimeTokenError("Invalid or already-used token")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = candidate.one_time_token_expires_at
         if expires and expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
+            expires = expires.replace(tzinfo=UTC)
         if expires is None or now > expires:
             logger.error(
                 "One-time token has expired",
@@ -311,6 +310,25 @@ class RegistrationService:
         logger.bind(candidate_id=candidate.id, subject_id=subject_id).info(
             "Certificate issued, candidate consumed"
         )
+        return IssueCertificateResponse(
+            certificate_pem=cert_pem,
+            node_certificate_pem=node_cert_pem,
+            ca_chain_pem=ca_chain_pem,
+        )
+
+    async def renew_certificate(
+        self, subject_id: str, csr_pem: str, node_id: str
+    ) -> IssueCertificateResponse:
+        """Re-sign a CSR for an already-registered caller renewing ahead of
+        cert expiry. No one-time-token/candidate bookkeeping: reaching this
+        method at all already proves the caller holds a currently-valid mTLS
+        client certificate — nginx only forwards X-Subject-Id after
+        validating one, and that's what subject_id (claims.sub) came from.
+        """
+        cert_pem, ca_chain_pem = self.cert_lib.sign_csr(csr_pem, subject_id)
+        node_cert_pem, _ = self.cert_lib.sign_csr(csr_pem, node_id)
+
+        logger.bind(subject_id=subject_id).info("Certificate renewed")
         return IssueCertificateResponse(
             certificate_pem=cert_pem,
             node_certificate_pem=node_cert_pem,

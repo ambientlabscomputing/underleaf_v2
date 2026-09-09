@@ -29,6 +29,17 @@ func NewCloudClient() *CloudClient {
 	}
 }
 
+// NewCloudClientWithBaseURL builds a CloudClient against an explicit base
+// URL and HTTP client, bypassing global config. Useful for tests (e.g.
+// wiring against an httptest.Server) where neither global config nor an
+// mTLS client cert is available.
+func NewCloudClientWithBaseURL(baseURL string, httpClient *http.Client) *CloudClient {
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 15 * time.Second}
+	}
+	return &CloudClient{baseURL: baseURL, httpClient: httpClient}
+}
+
 func NewCloudClientWithCert(cfg utils.Config) (*CloudClient, error) {
 	hc, err := HttpClientWithCert(cfg)
 	if err != nil {
@@ -81,6 +92,11 @@ type IssueCertificateResponse struct {
 	CertificatePEM     string `json:"certificate_pem"`
 	NodeCertificatePEM string `json:"node_certificate_pem"`
 	CAChainPEM         string `json:"ca_chain_pem"`
+}
+
+type RenewCertificateRequest struct {
+	CSRPEM string `json:"csr_pem"`
+	NodeID string `json:"node_id"`
 }
 
 // ---- Client methods ----
@@ -154,6 +170,21 @@ func (c *CloudClient) RequestCertificate(ctx context.Context, oneTimeToken strin
 		oneTimeToken,
 	); err != nil {
 		return nil, fmt.Errorf("cloud: request certificate: %w", err)
+	}
+	return &resp, nil
+}
+
+// RenewCertificate calls POST /registration/renew, authenticated by the
+// client's existing (still-valid) mTLS certificate rather than a one-time
+// token — c.httpClient must already be an mTLS client (NewCloudClientWithCert)
+// for this to succeed.
+func (c *CloudClient) RenewCertificate(ctx context.Context, csrPEM, nodeID string) (*IssueCertificateResponse, error) {
+	var resp IssueCertificateResponse
+	if err := c.post(ctx, "/registration/renew", RenewCertificateRequest{
+		CSRPEM: csrPEM,
+		NodeID: nodeID,
+	}, &resp); err != nil {
+		return nil, fmt.Errorf("cloud: renew certificate: %w", err)
 	}
 	return &resp, nil
 }

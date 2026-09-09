@@ -23,6 +23,7 @@ from cloud_api.models.api import (
     PollTokenRequest,
     PollTokenResponse,
     RegisterDeviceRequest,
+    RenewCertificateRequest,
 )
 from cloud_api.service.registration_service import (
     AuthorizationPendingError,
@@ -169,3 +170,20 @@ async def issue_certificate(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": "invalid_token", "error_description": str(exc)},
         )
+
+
+@router.post(
+    "/renew",
+    response_model=IssueCertificateResponse,
+    summary="Renew an mTLS client certificate ahead of expiry",
+)
+async def renew_certificate(
+    req: RenewCertificateRequest,
+    claims: AccessTokenClaims = Depends(get_access_claims),
+    svc: RegistrationService = Depends(get_registration_service),
+) -> IssueCertificateResponse:
+    # No one-time-token check here by design: get_access_claims only succeeds
+    # for a caller nginx already validated a still-live mTLS client cert for
+    # (see interface/deps.py's x_subject_id_token_middleware_). claims.sub is
+    # that cert's CN — the cluster/node identity to re-sign for.
+    return await svc.renew_certificate(claims.sub, req.csr_pem, req.node_id)

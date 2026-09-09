@@ -27,3 +27,20 @@ dependencies = [
     "grpcio-tools>=1.81.1",
     "scipy>=1.18.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff.lint]
+# B008 (no function calls in argument defaults) flags every FastAPI
+# `Depends(...)` default across this codebase -- that's the required,
+# idiomatic way to declare a dependency, not a bug. Ruff's own docs call out
+# ignoring B008 for exactly this reason in FastAPI projects.
+ignore = ["B008"]

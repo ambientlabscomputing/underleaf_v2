@@ -24,17 +24,17 @@ func GetTLSConfig(cfg utils.Config) (*tls.Config, error) {
 
 	clientCert, err := tls.LoadX509KeyPair(crtPath, keyPath)
 	if err != nil {
-		panic(fmt.Sprintf("failed to load client certificate: %v", err))
+		return nil, fmt.Errorf("failed to load client certificate: %w", err)
 	}
 
 	caCert, err := os.ReadFile(caPath)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read CA certificate: %v", err))
+		return nil, fmt.Errorf("failed to read CA certificate: %w", err)
 	}
 
 	caCertPool := x509.NewCertPool()
 	if !caCertPool.AppendCertsFromPEM(caCert) {
-		panic("failed to append CA certificate to pool")
+		return nil, fmt.Errorf("failed to append CA certificate to pool")
 	}
 
 	tlsConfig := &tls.Config{

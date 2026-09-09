@@ -5,7 +5,7 @@ services:
         - underleaf
     depends_on:
       cloud_api:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -27,8 +27,12 @@ services:
     volumes:
         - ./configs/local/cloud_api.yaml:/etc/underleaf/config.yaml:ro
         - ./certs:/var/lib/underleaf/certs
-    ports:
-      - "8080:8080"
+    # No host port mapping: cloud_api trusts the X-Subject-Id header nginx
+    # injects only after validating a client cert (see interface/deps.py's
+    # x_subject_id_token_middleware_). Publishing 8080 directly to the host
+    # would let anyone skip nginx's mTLS check and mint an access token by
+    # just setting that header themselves. Reach cloud_api through nginx
+    # (https://localhost) or `docker compose exec`, not localhost:8080.
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,7 +60,11 @@ services:
       - "9070:9070"
       - "50102:50102"
       - "9020:9020"
-      - "9021:9021"
+    # 9021 (node_connections_port) intentionally has no host mapping: nginx's
+    # stream listener on 19021 (ssl_verify_client on) is the only mTLS-checked
+    # path to it. connection_manager.go's handleNewConnection does no cert
+    # validation of its own, so exposing 9021 directly would let anyone open
+    # a tunnel without ever presenting a client certificate.
     depends_on:
       redis:
         condition: service_healthy

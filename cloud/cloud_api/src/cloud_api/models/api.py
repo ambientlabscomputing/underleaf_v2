@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field
-from cloud_api.models.base import Base, generate_id, IDPrefix
-from enum import StrEnum
 from datetime import datetime
+from enum import StrEnum
+
+from pydantic import BaseModel, Field
+
+from cloud_api.models.base import Base, IDPrefix, generate_id
 
 
 class Status(StrEnum):
@@ -584,3 +586,19 @@ class IssueCertificateResponse(BaseModel):
         ..., description="Signed node certificate in PEM format"
     )
     ca_chain_pem: str = Field(..., description="Root CA certificate in PEM format")
+
+
+class RenewCertificateRequest(BaseModel):
+    """Like IssueCertificateRequest, but for an already-registered caller
+    renewing its cert ahead of expiry. No one-time token: the caller's
+    identity comes from the still-valid mTLS certificate it authenticated
+    this request with (see get_access_claims / X-Subject-Id), not from a
+    consumable candidate token.
+    """
+
+    csr_pem: str = Field(
+        ..., description="PEM-encoded PKCS#10 certificate signing request"
+    )
+    node_id: str = Field(
+        ..., description="Node ID to also issue a node certificate for"
+    )

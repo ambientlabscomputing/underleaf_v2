@@ -5,6 +5,28 @@ import yaml
 from pydantic import BaseModel, Field
 
 
+def _repo_root_cert_path(filename: str) -> str:
+    """Resolve a cert filename relative to the repo-root certs/ dir.
+
+    Anchored to this file's on-disk location rather than the process cwd, so
+    bare-metal `make run` (cwd=cloud/cloud_api, src-layout: .../src/cloud_api/config.py)
+    resolves to the same repo-root certs/ dir Docker uses, instead of falling
+    back to a different `./certs` relative to wherever the process happened
+    to start. Walks up looking for a repo-root marker rather than assuming a
+    fixed depth, since the installed layout differs: Docker's image flattens
+    this to /app/cloud_api/config.py (no src/ layer, no .git or certs/
+    anywhere above it), where a fixed parents[N] index would go out of range.
+    Docker's actual runtime path always comes from
+    configs/local/cloud_api.yaml (mounted to /var/lib/underleaf/certs)
+    regardless of this default, so falling back to the original relative
+    path there is harmless -- it's overwritten before use.
+    """
+    for ancestor in pathlib.Path(__file__).resolve().parents:
+        if (ancestor / ".git").exists() or (ancestor / "certs").is_dir():
+            return str(ancestor / "certs" / filename)
+    return f"./certs/{filename}"
+
+
 class DBConfig(BaseModel):
     host: str = Field(
         default="localhost:5432",
@@ -67,11 +89,11 @@ class OAuthConfig(BaseModel):
     )
     # Certs
     root_ca_cert_path: str = Field(
-        default="./certs/root_ca_cert.pem",
+        default_factory=lambda: _repo_root_cert_path("root_ca_cert.pem"),
         description="File path to the root CA certificate for validating OAuth tokens",
     )
     private_key_path: str = Field(
-        default="./certs/private_key.pem",
+        default_factory=lambda: _repo_root_cert_path("private_key.pem"),
         description="File path to the private key for signing OAuth tokens",
     )
     bootstrap_certs: bool = Field(

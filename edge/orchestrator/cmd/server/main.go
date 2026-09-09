@@ -105,6 +105,34 @@ func Run() {
 		}
 	}()
 
+	// Start cert renewal check task (periodic check, renews if within threshold of expiry).
+	go func() {
+		intervalStr := os.Getenv("CERT_RENEWAL_CHECK_INTERVAL_SECS")
+		interval := 6 * 60 * 60 // default 6 hours -- certs are valid 730 days, no need to check more often
+		if intervalStr != "" {
+			if parsed, err := strconv.Atoi(intervalStr); err == nil && parsed > 0 {
+				interval = parsed
+			}
+		}
+		if interval <= 0 {
+			fmt.Println("[cert-renewal] cert renewal check disabled (interval <= 0)")
+			return
+		}
+		fmt.Printf("[cert-renewal] cert renewal check task started (interval=%ds)\n", interval)
+
+		ticker := time.NewTicker(time.Duration(interval) * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			err := svc.Registration().CheckAndRenewCertificate(ctx, config.CertDir)
+			cancel()
+			if err != nil {
+				fmt.Printf("[cert-renewal] check failed: %v\n", err)
+			}
+		}
+	}()
+
 	// Block main goroutine to keep servers running
 	select {}
 }

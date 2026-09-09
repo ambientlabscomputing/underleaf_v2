@@ -13,14 +13,14 @@ Usage:
 
 from functools import lru_cache
 
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import APIKeyHeader
+from pydantic import Field
+
 from cloud_api import logger
+from cloud_api.lib.auth_lib import AuthLib, InvalidTokenError, JWTClaims
 from cloud_api.models.api import Cluster, Node
 from cloud_api.repository.user_repository import UserRepository
-from pydantic import Field
-from fastapi import Depends, HTTPException, Request, Request, status
-from fastapi.security import APIKeyHeader
-
-from cloud_api.lib.auth_lib import AuthLib, InvalidTokenError, JWTClaims
 from cloud_api.service_manager import (
     get_auth_lib,
     get_cluster_repo,
@@ -106,7 +106,6 @@ async def fetch_data_for_node_or_cluster(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Node with ID {subject_id} not found",
             )
-        node_id = node.id
         cluster = await get_cluster_repo().get_cluster(node.cluster_id)
         if not cluster:
             raise HTTPException(
@@ -133,11 +132,9 @@ async def x_subject_id_token_middleware_(request: Request, call_next):
     if "X-Subject-Id" not in request.headers:
         # skip this helper if the header is not present
         logger.debug("X-Subject-Id header not present, skipping token minting")
-        pass
     elif request.headers.get("Authorization"):
         # skip this helper if the Authorization header is already present
         logger.debug("Authorization header already present, skipping token minting")
-        pass
     else:
         logger.debug("X-Subject-Id header present, minting token for request")
         subject_id = request.headers["X-Subject-Id"]
@@ -145,7 +142,7 @@ async def x_subject_id_token_middleware_(request: Request, call_next):
         if not cluster:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Cluster not found",
+                detail="Cluster not found",
             )
 
         auth_lib = get_auth_lib(get_user_repo())
@@ -156,10 +153,18 @@ async def x_subject_id_token_middleware_(request: Request, call_next):
             cluster_id=cluster.id,
         )
         logger.debug("Minted token for request", extra={"token": token[:20]})
+        # ASGI header names in the raw (name, value) tuple list must be
+        # lowercase (per the ASGI spec) -- Starlette's Headers lookups don't
+        # re-normalize case when scanning this list, so a capitalized name
+        # here is silently invisible to every downstream `request.headers`
+        # read, including the APIKeyHeader dependency this exists to satisfy.
         request.headers.__dict__["_list"].append(
-            (b"Authorization", f"Bearer {token}".encode())
+            (b"authorization", f"Bearer {token}".encode())
         )
-        logger.debug("Added Authorization header to request", extra={"token": request.headers.get("Authorization", "" *20)[:20]})
+        logger.debug(
+            "Added Authorization header to request",
+            extra={"token": request.headers.get("Authorization", "" * 20)[:20]},
+        )
 
     response = await call_next(request)
     return response
