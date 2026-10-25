@@ -48,7 +48,9 @@ class DBConfig(BaseModel):
     @property
     def sync_connection_string(self) -> str:
         """Constructs the database connection string."""
-        return f"postgresql://{self.username}:{self.password}@{self.host}/{self.name}"
+        # Name the driver: SQLAlchemy 2.1 defaults a bare postgresql:// to
+        # psycopg (v3), but we depend on psycopg2.
+        return f"postgresql+psycopg2://{self.username}:{self.password}@{self.host}/{self.name}"
 
     @property
     def async_connection_string(self) -> str:

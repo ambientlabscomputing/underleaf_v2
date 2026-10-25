@@ -141,3 +141,26 @@ async def test_handler_error_is_recorded_and_reraised():
         )
 
     deps["webhook_event_repo"].mark_processed.assert_awaited_once_with("evt_1", "boom")
+
+
+@pytest.mark.asyncio
+async def test_real_stripe_event_objects_are_handled_not_just_dicts():
+    # Production events come from stripe.Webhook.construct_event as
+    # StripeObjects, which don't support dict methods like .get(); the fakes
+    # above are dicts, which is how this once slipped through to a 500.
+    import stripe
+
+    service, deps = _make_service()
+    event = stripe.Event.construct_from(
+        {
+            "id": "evt_real",
+            "object": "event",
+            "type": "checkout.session.completed",
+            "data": {"object": {"id": "cs_1", "metadata": {}}},
+        },
+        "sk_test_x",
+    )
+
+    await service.handle_event(event)
+
+    deps["webhook_event_repo"].mark_processed.assert_awaited_once_with("evt_real", None)

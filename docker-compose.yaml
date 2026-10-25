@@ -49,6 +49,28 @@ services:
       retries: 10
       start_period: 10s
 
+  # Sandbox-only Stripe webhook forwarder. Opt-in (`make stripe-up`, which
+  # also exports the matching UNDERLEAF_STRIPE_WEBHOOK_SECRET into cloud_api):
+  # a plain `docker compose up` never starts it. It forwards straight to
+  # cloud_api over the compose network rather than through nginx, because
+  # the webhook route authenticates by Stripe signature, not mTLS/bearer.
+  stripe_cli:
+    profiles: ["stripe"]
+    image: stripe/stripe-cli:v1.55.1
+    networks:
+      - underleaf
+    environment:
+      - STRIPE_API_KEY=${UNDERLEAF_STRIPE_API_KEY:-}
+    command:
+      - listen
+      - --forward-to
+      - http://cloud_api:8080/api/v2/cloud/stripe/webhooks
+      - --events
+      - checkout.session.completed,customer.subscription.updated,customer.subscription.deleted,invoice.paid,invoice.payment_failed
+    depends_on:
+      cloud_api:
+        condition: service_healthy
+
   conn_worker:
     build:
       context: .

@@ -22,7 +22,7 @@ The root README and every sub-project README have been corrected to match this �
 | Cloud infra (docker-compose, nginx, Dockerfiles) | **Verified end-to-end** | `docker compose up` now builds and brings up cloud_api + conn_worker + nginx + postgres + redis, with healthchecks/depends_on wired and reachability confirmed (cloud_api migrates against postgres and serves `/health` both directly and through nginx; conn_worker serves its health route and starts cleanly against redis). See track 1 (done). |
 | Cloud Gateway (tunnel create/list/inspect via `orcli streams`) | **Done end-to-end** | See track 3 (done). Cloud API talks to Conn Worker over gRPC, not REST — [service.go](cloud/conn_worker/service/service.go) only ever needed to serve `/health`; the tunnel CRUD sketch that used to live in [cloud/conn_worker/README.md](cloud/conn_worker/README.md) was unused and has been removed. Fixed the gRPC↔protobuf field-mapping bug in [interface/grpc/server.go](cloud/conn_worker/interface/grpc/server.go), implemented the previously-unimplemented agent-side stream RPCs ([edge/agent/interface/grpc_public/server/server.go](edge/agent/interface/grpc_public/server/server.go)), and wired up `orcli streams ls` end-to-end. |
 | UIs | **Uneven** | `orchestrator_ui` and `account_ui` have a real `api`/`datastore`/`components`/`pages` layer per [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md). `cockpit_ui` is **still the unmodified `create-vite` scaffold** — no API integration, no TanStack Query dependency, nothing built. |
-| Billing / metering / overage policy | **Done in code** | See track 5. Integration-tested against real Postgres; Stripe paths stubbed (not yet run against Stripe test mode). |
+| Billing / metering / overage policy | **Done in code** | See track 5. Integration-tested against real Postgres. Webhook delivery is now verified against Stripe's sandbox through a Stripe CLI listener (track 6); subscribing through Checkout and off-session top-ups are still unproven there. |
 | E2E tests | **Thin** | Framework exists ([e2e_testing/](e2e_testing/README.md)), but coverage is currently just health-check tests, no golden-path test. |
 | Edge release CI | **Fixed** | [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) now points `setup-go` at the root `go.mod`/`go.sum`; all four edge binaries build locally with `working-directory: edge` unchanged. See track 1 (done). |
 
@@ -43,7 +43,7 @@ Along the way, fixed real config bugs that would have silently broken the stack 
 **Also fixed:** [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) pointed `setup-go` at a nonexistent `edge/go.mod`/`edge/go.sum` from before the Go module was consolidated to the repo root. Now points at root `go.mod`/`go.sum`; confirmed all four edge binaries (`ufagent`, `ufagentd`, `orcli`, `orch-server`) still build locally with `working-directory: edge` unchanged.
 
 ### 2. Manifest & deploy (the flagship feature)
-**Status:** done · **Blocks:** nothing (unblocks golden-path e2e test, track 6) · **Size:** large — the critical path
+**Status:** done · **Blocks:** nothing (unblocks golden-path e2e test, track 7) · **Size:** large — the critical path
 
 Design is written up in [RFDs/RFD-3.md](RFDs/RFD-3.md) (manifest format, reconcile architecture, `ufctl` gateway design). Done:
 - **Manifest format:** `.underleaf/deploy.yaml`, backward-compatible with the pre-v2 format already checked into `ambientlabscomputing/n8n` (`image:`) and `ambientlabscomputing/hello-world` (`build:`). Resolved via GitHub's Contents API, no clone needed ([manifest_service.go](edge/orchestrator/service/manifest_service.go)).
@@ -90,27 +90,38 @@ Design and policy in [RFDs/RFD-4.md](RFDs/RFD-4.md): tiers (Free / Maker $9·100
 
 Bugs found and fixed along the way (all pre-existing, none visible to mock-based tests): conn_worker's raw gRPC messages were treated as pydantic models (so `create_connection`/`create_stream` crashed on any real response), local IDs diverged from conn_worker's, `PATCH` ignored `state` (so nothing ever read back as closed), `terminate_connection` read `.status` off `None`, query filters passed kwargs to `Select.filter()`, and dropped connections never freed their slot.
 
-Still open: no notification *delivery* (alerts are UI/log only); off-session top-ups unproven against real Stripe.
+Still open: no notification *delivery* (alerts are UI/log only); off-session top-ups unproven against real Stripe. Webhook delivery against the sandbox is covered by track 6.
 
 Also hardened: tenant isolation on the connection/stream endpoints (cross-tenant access is a 404, and creating against another tenant's node/connection is refused, so allowances can't be consumed across tenants).
 
-### 6. Golden-path e2e test
+### 6. Stripe sandbox webhook listener
+**Status:** listener done and verified; Checkout and top-ups still to exercise by hand · **Size:** small
+
+An opt-in `stripe_cli` compose service (profile `stripe`) runs `stripe listen` against the sandbox and forwards signed events straight to `cloud_api` on the compose network. `make stripe-up` derives the matching `whsec_` secret from the sandbox key and passes it to `cloud_api`, so signatures verify with no copy-pasting; `make stripe-smoke` fires a real sandbox event and asserts it was verified, recorded and processed. Usage is in [cloud/cloud_api/README.md](cloud/cloud_api/README.md#testing-stripe-end-to-end-sandbox). Test-mode keys only: `scripts/stripe_env.sh` refuses anything else.
+
+Running it against the real sandbox found two bugs that unit tests and the local venv had hidden:
+- **Every real webhook returned 500.** stripe-python's event objects don't support `.get()`, which every handler used; the tests passed plain dicts. `handle_event` now normalizes to a dict once, with a regression test using a real `stripe.Event`.
+- **The `cloud_api` image couldn't start.** Unpinned in the image, SQLAlchemy resolved to 2.1, where a bare `postgresql://` URL means psycopg v3, not the psycopg2 we depend on. The sync URL now names `psycopg2`.
+
+Smoke-tested for all five handled event types. Still open: `stripe trigger` makes its own customers, so it doesn't exercise Checkout against a real billing account or off-session top-ups; do that by hand with test card 4242 while the listener is up.
+
+### 7. Golden-path e2e test
 **Status:** unblocked, not started · **Size:** small
 
-Track 2 is done, so nothing blocks this anymore. Add one real end-to-end test to [e2e_testing/](e2e_testing/README.md): deploy from a manifest → container running → (optionally) reachable via the gateway. Today's e2e coverage is health checks only.
+Track 2 is done, so nothing blocks this anymore. Add one real end-to-end test to [e2e_testing/](e2e_testing/README.md): deploy from a manifest → container running → (optionally) reachable via the gateway. Today's e2e coverage is health checks only. (This was track 6 until the Stripe sandbox listener took that number.)
 
 ## Sequencing
 
 ```
 1 (infra check, done) ──┐
-                         ├─→ 2 (manifest/deploy, done) ──→ 6 (golden-path e2e)
+                         ├─→ 2 (manifest/deploy, done) ──→ 7 (golden-path e2e)
                          ├─→ 3 (gateway integration, done)
                          └─→ 4 (mTLS, done)
 
-5 (billing & overage policy, done) — not blocking
+5 (billing & overage policy, done) ──→ 6 (Stripe sandbox listener, done) — not blocking
 ```
 
-Tracks 2, 3, and 4 don't block each other and can run in parallel. All three are now fully done, so track 6 (golden-path e2e) is unblocked and could optionally also cover the gateway and cloud-connected mTLS paths now.
+Tracks 2, 3, and 4 don't block each other and can run in parallel. All three are now fully done, so track 7 (golden-path e2e) is unblocked and could optionally also cover the gateway and cloud-connected mTLS paths now.
 
 ## Open decisions
 

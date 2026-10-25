@@ -47,6 +47,27 @@ stop: stop-cloud stop-edge
 clean:
 	-docker rm -f cloud-api-db redis 2>/dev/null || true
 
+## stripe-up: Start the stack plus a Stripe CLI webhook listener (sandbox only)
+stripe-up:
+	./scripts/stripe_env.sh docker compose --profile stripe up -d
+
+## stripe-down: Stop the Stripe CLI webhook listener
+stripe-down:
+	docker compose --profile stripe stop stripe_cli
+	docker compose --profile stripe rm -f stripe_cli
+
+## stripe-logs: Follow the webhook listener (shows each event and cloud_api's response)
+stripe-logs:
+	docker compose --profile stripe logs -f stripe_cli
+
+## stripe-trigger: Fire a sandbox event through the listener, e.g. make stripe-trigger EVENT=invoice.paid
+stripe-trigger:
+	./scripts/stripe_env.sh sh -c 'stripe trigger $${EVENT:-checkout.session.completed} --api-key "$$UNDERLEAF_STRIPE_API_KEY"'
+
+## stripe-smoke: Trigger an event and assert cloud_api accepted and recorded it
+stripe-smoke:
+	./scripts/stripe_smoke.sh
+
 cloud-docker-build:
 	docker build . -t ghcr.io/ambientlabscomputing/underleaf/cloud_api:latest -f cloud/docker/cloud_api/Dockerfile
 	docker build . -t ghcr.io/ambientlabscomputing/underleaf/conn_worker:latest -f cloud/docker/conn_worker/Dockerfile

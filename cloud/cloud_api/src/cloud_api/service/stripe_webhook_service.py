@@ -85,8 +85,11 @@ class StripeWebhookService:
         }
 
     async def handle_event(self, event) -> None:
+        # Handlers read events with dict methods (.get), which stripe-python's
+        # StripeObject stopped supporting -- normalize to plain dicts once here.
+        event = event.to_dict(for_json=True)
         is_new = await self.webhook_event_repo.record_if_new(
-            event["id"], event["type"], event.to_dict(for_json=True)
+            event["id"], event["type"], event
         )
         if not is_new and not await self.webhook_event_repo.needs_reprocessing(
             event["id"]
