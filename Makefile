@@ -72,5 +72,7 @@ cloud-docker-build:
 	docker build . -t ghcr.io/ambientlabscomputing/underleaf/cloud_api:latest -f cloud/docker/cloud_api/Dockerfile
 	docker build . -t ghcr.io/ambientlabscomputing/underleaf/conn_worker:latest -f cloud/docker/conn_worker/Dockerfile
 
+# Same-origin API path so the bundle works behind nginx on any hostname
+# (nginx proxies /api/v2/cloud/ to cloud_api, which isn't published to the host).
 cloud-ui-build:
-	cd cloud/account_ui && npm run build
+	cd cloud/account_ui && VITE_API_URL=/api/v2/cloud npm run build

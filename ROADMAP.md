@@ -23,7 +23,7 @@ The root README and every sub-project README have been corrected to match this �
 | Cloud Gateway (tunnel create/list/inspect via `orcli streams`) | **Done end-to-end** | See track 3 (done). Cloud API talks to Conn Worker over gRPC, not REST — [service.go](cloud/conn_worker/service/service.go) only ever needed to serve `/health`; the tunnel CRUD sketch that used to live in [cloud/conn_worker/README.md](cloud/conn_worker/README.md) was unused and has been removed. Fixed the gRPC↔protobuf field-mapping bug in [interface/grpc/server.go](cloud/conn_worker/interface/grpc/server.go), implemented the previously-unimplemented agent-side stream RPCs ([edge/agent/interface/grpc_public/server/server.go](edge/agent/interface/grpc_public/server/server.go)), and wired up `orcli streams ls` end-to-end. |
 | UIs | **Uneven** | `orchestrator_ui` and `account_ui` have a real `api`/`datastore`/`components`/`pages` layer per [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md). `cockpit_ui` is **still the unmodified `create-vite` scaffold** — no API integration, no TanStack Query dependency, nothing built. |
 | Billing / metering / overage policy | **Done in code** | See track 5. Integration-tested against real Postgres. Webhook delivery is now verified against Stripe's sandbox through a Stripe CLI listener (track 6); subscribing through Checkout and off-session top-ups are still unproven there. |
-| E2E tests | **Thin** | Framework exists ([e2e_testing/](e2e_testing/README.md)), but coverage is currently just health-check tests, no golden-path test. |
+| E2E tests | **Cloud half covered** | Health checks plus one Playwright golden-path test: signup → Stripe sandbox subscription → webhook activates the plan (track 7). Edge deploy → container → gateway is not yet covered. |
 | Edge release CI | **Fixed** | [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) now points `setup-go` at the root `go.mod`/`go.sum`; all four edge binaries build locally with `working-directory: edge` unchanged. See track 1 (done). |
 
 **Net effect:** the manifest/deploy feature — the one thing the product is named for — now works fully end-to-end, backend through UI, not the gateway/mTLS work that used to top the README's TODO list before this doc replaced it.
@@ -106,19 +106,23 @@ Running it against the real sandbox found two bugs that unit tests and the local
 Smoke-tested for all five handled event types. Still open: `stripe trigger` makes its own customers, so it doesn't exercise Checkout against a real billing account or off-session top-ups; do that by hand with test card 4242 while the listener is up.
 
 ### 7. Golden-path e2e test
-**Status:** unblocked, not started · **Size:** small
+**Status:** cloud half done (Playwright); edge half not started · **Size:** medium
 
-Track 2 is done, so nothing blocks this anymore. Add one real end-to-end test to [e2e_testing/](e2e_testing/README.md): deploy from a manifest → container running → (optionally) reachable via the gateway. Today's e2e coverage is health checks only. (This was track 6 until the Stripe sandbox listener took that number.)
+Browser-driven with Playwright in [e2e_testing/tests/golden_path/](e2e_testing/tests/golden_path/test_account_to_subscription.py), against the real compose stack with Stripe's sandbox calling back through track 6's listener. Done and passing (3 consecutive headless runs, ~10-13 s each): sign up in the Account UI → pick Maker → pay on Stripe's hosted Checkout with the `4242` test card → the `checkout.session.completed` webhook flips the account to the paid plan, shown as "Current plan" in the UI. Fixtures fail fast with the command to run if the stack, listener or UI bundle isn't ready; the test refuses to enter a card unless the Checkout session is a sandbox (`cs_test_`) one. Run it with `make cloud-ui-build stripe-up` then `cd e2e_testing && uv run pytest tests/golden_path --headed` (see [e2e_testing/README.md](e2e_testing/README.md)).
+
+Fixes made along the way: the UI bundle is now built with a same-origin API path (`/api/v2/cloud`) so it works behind nginx; Stripe's return URLs point at the nginx-served app; the UI's token-refresh URL didn't match its login URL (`…/cloud/oauth/token` vs `…/api/v2/cloud/oauth/token`) and now does.
+
+Still to do to make this the whole golden path: register an edge cluster against this account (mTLS), deploy a manifest (`ufctl deploy gh:<user>/<repo>`) → container running → reachable through the gateway, with usage metered against the plan the test just bought. Not exercised here: off-session top-ups.
 
 ## Sequencing
 
 ```
 1 (infra check, done) ──┐
-                         ├─→ 2 (manifest/deploy, done) ──→ 7 (golden-path e2e)
+                         ├─→ 2 (manifest/deploy, done) ──→ 7 (golden-path e2e, cloud half done)
                          ├─→ 3 (gateway integration, done)
                          └─→ 4 (mTLS, done)
 
-5 (billing & overage policy, done) ──→ 6 (Stripe sandbox listener, done) — not blocking
+5 (billing & overage policy, done) ──→ 6 (Stripe sandbox listener, done) ──→ 7 (needs it for the subscription step)
 ```
 
 Tracks 2, 3, and 4 don't block each other and can run in parallel. All three are now fully done, so track 7 (golden-path e2e) is unblocked and could optionally also cover the gateway and cloud-connected mTLS paths now.

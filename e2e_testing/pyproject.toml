@@ -6,8 +6,12 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "grpcio>=1.81.1",
+    # Pinned to the release whose Chromium build is the one already installed
+    # (`playwright install chromium`); bump together with that install.
+    "playwright==1.63.0",
     "pydantic>=2.13.4",
     "pytest>=9.1.1",
+    "pytest-playwright>=0.8.0",
     "pyyaml>=6.0.2",
     "requests>=2.32.0",
 ]
@@ -16,6 +20,7 @@ dependencies = [
 pythonpath = [".."]
 markers = [
     "infra: mark test as an infrastructure test",
+    "golden_path: browser-driven customer journey against the compose stack and Stripe's sandbox",
 ]
 
 [dependency-groups]
