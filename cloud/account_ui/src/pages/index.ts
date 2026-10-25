@@ -6,3 +6,6 @@ export { ClusterRegistration } from './ClusterRegistration';
 export { Streams } from './Streams';
 export { Connections } from './Connections';
 export { Subscriptions } from './Subscriptions';
+export { Plans } from './Plans';
+export { Invoices } from './Invoices';
+export { Usage } from './Usage';

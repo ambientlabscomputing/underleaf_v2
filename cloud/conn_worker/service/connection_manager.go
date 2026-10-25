@@ -23,6 +23,10 @@ type LiveConnection struct {
 type LiveStream struct {
 	StreamID   string
 	StreamConn net.Conn
+	// Counter is the same object as StreamConn (wrapped once at creation in
+	// HandleStream), kept as its concrete type so byte counts can be read
+	// back for flushing into Redis without a type assertion at each call site.
+	Counter *countingConn
 }
 
 type ConnectionManager struct {
@@ -56,6 +60,7 @@ func NewConnectionManager(
 }
 
 func (cm *ConnectionManager) Serve(ctx context.Context) {
+	go cm.PeriodicallyFlushStreamBytes(ctx)
 	for {
 		conn, err := cm.listener.Accept()
 		if err != nil {
@@ -155,9 +160,15 @@ func (cm *ConnectionManager) HandleStream(ctx context.Context, streamConn net.Co
 		streamConn.Close()
 		return
 	}
+	// Wrap once, here, so every consumer of this conn (LiveStreams tracking,
+	// the gateway's bridge() via gwChan) transparently gets byte counting --
+	// bridge() just calls io.Copy on the net.Conn interface, no changes
+	// needed there.
+	counted := newCountingConn(streamConn)
 	cm.LiveStreams[streamID] = &LiveStream{
 		StreamID:   streamID,
-		StreamConn: streamConn,
+		StreamConn: counted,
+		Counter:    counted,
 	}
 
 	var stream types.Stream
@@ -177,7 +188,7 @@ func (cm *ConnectionManager) HandleStream(ctx context.Context, streamConn net.Co
 	case types.StreamTypeGW:
 		cm.gwChan <- StreamHandlerReq{
 			StreamID: streamID,
-			Stream:   streamConn,
+			Stream:   counted,
 			Ctx:      ctx,
 		}
 	default:
@@ -240,17 +251,69 @@ func (cm *ConnectionManager) CloseStream(ctx context.Context, streamID string) e
 	}
 
 	if liveStream, exists := cm.LiveStreams[streamID]; exists {
+		if liveStream.Counter != nil {
+			stream.BytesIn = liveStream.Counter.BytesRead()
+			stream.BytesOut = liveStream.Counter.BytesWritten()
+		}
 		liveStream.StreamConn.Close()
 		delete(cm.LiveStreams, streamID)
 	}
 
 	stream.State = types.StreamStateClosed
-	if err := cm.repository.Set(ctx, stream.ID, string(stream.ToJSON()), time.Duration(cm.config.Redis.TTLSeconds)*time.Second); err != nil {
+	closedAt := time.Now().UTC().Format(time.RFC3339)
+	stream.ClosedAt = &closedAt
+	// Extend past the configured TTL by closedRecordFlushGrace so
+	// cloud_api's poll loop has a real window to read final byte counts
+	// even if its own sync cycle is stalled at the moment this stream
+	// closes (see track 5 plan §2's Redis-TTL-vs-poll-cadence risk).
+	ttl := time.Duration(cm.config.Redis.TTLSeconds)*time.Second + closedRecordFlushGrace
+	if err := cm.repository.Set(ctx, stream.ID, string(stream.ToJSON()), ttl); err != nil {
 		utils.Logger.ErrorContext(ctx, "failed to update stream in repository", "error", err)
 		return err
 	}
 
 	return nil
+}
+
+// PeriodicallyFlushStreamBytes persists still-active streams' running byte
+// counts into Redis every flushIntervalSeconds, so a crash mid-stream loses
+// at most one flush interval's worth of usage instead of everything back to
+// stream creation. Intended to be run as its own goroutine for the lifetime
+// of the process (see Serve()).
+func (cm *ConnectionManager) PeriodicallyFlushStreamBytes(ctx context.Context) {
+	ticker := time.NewTicker(flushIntervalSeconds * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			cm.flushActiveStreamBytes(ctx)
+		}
+	}
+}
+
+func (cm *ConnectionManager) flushActiveStreamBytes(ctx context.Context) {
+	for streamID, liveStream := range cm.LiveStreams {
+		if liveStream.Counter == nil {
+			continue
+		}
+		streamStr, err := cm.repository.Get(ctx, streamID)
+		if err != nil || streamStr == "" {
+			continue
+		}
+		var stream types.Stream
+		if err := streamStr.Parse(&stream); err != nil {
+			utils.Logger.ErrorContext(ctx, "failed to unmarshal stream during byte flush", "error", err, "stream_id", streamID)
+			continue
+		}
+		stream.BytesIn = liveStream.Counter.BytesRead()
+		stream.BytesOut = liveStream.Counter.BytesWritten()
+		// 0 TTL: same "no expiry while active" convention NewStream uses.
+		if err := cm.repository.Set(ctx, stream.ID, string(stream.ToJSON()), 0); err != nil {
+			utils.Logger.ErrorContext(ctx, "failed to flush stream bytes", "error", err, "stream_id", streamID)
+		}
+	}
 }
 
 func isConnectionActive(connection types.Connection) bool {

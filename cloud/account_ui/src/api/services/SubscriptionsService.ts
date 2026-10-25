@@ -3,7 +3,7 @@ import type { ListResponse } from './Common';
 
 // -- Types ---------------------------------------------------------------------
 
-export type SubscriptionTier = 'free' | 'builder' | 'pro';
+export type SubscriptionTier = 'free' | 'maker' | 'builder' | 'studio' | 'fleet';
 
 export interface Subscription {
   id: string;

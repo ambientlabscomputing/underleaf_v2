@@ -44,6 +44,11 @@ message Stream {
     int32 port = 7;
     string created_at = 8;
     string closed_at = 9;
+    // Cumulative bytes transferred through this stream's tunnel connection,
+    // counted at the gateway bridge. Monotonically increasing while the
+    // stream is active; frozen once state=closed.
+    int64 bytes_in = 10;
+    int64 bytes_out = 11;
 }
 
 message GetStreamRequest {

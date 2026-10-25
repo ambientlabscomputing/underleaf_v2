@@ -251,6 +251,17 @@ class Stream(Base):
     closed_at: datetime | None = Field(
         default=None, description="Timestamp when the stream was closed"
     )
+    last_reported_bytes: int = Field(
+        default=0,
+        description=(
+            "Cumulative bytes already turned into a usage_events row for "
+            "this stream -- internal bookkeeping, not client-settable"
+        ),
+    )
+    # Running totals as reported by conn_worker. Transient: not a DB column,
+    # so excluded from model_dump (batch inserts) and API responses.
+    bytes_in: int = Field(default=0, exclude=True)
+    bytes_out: int = Field(default=0, exclude=True)
 
 
 class PatchStreamRequest(BaseModel):
@@ -302,6 +313,14 @@ class BillingAccount(Base):
     stripe_data: dict = Field(
         default={}, description="Stripe-related data for the billing account"
     )
+    auto_top_up_enabled: bool = Field(
+        default=False,
+        description="Automatically buy a prepaid data block when the allowance runs out",
+    )
+    monthly_top_up_cap_cents: int = Field(
+        default=5000,
+        description="Max automatic top-up spend per billing period, in cents",
+    )
 
 
 class CreateBillingAccountRequest(BaseModel):
@@ -312,7 +331,24 @@ class CreateBillingAccountRequest(BaseModel):
 
 
 class PatchBillingAccountRequest(BaseModel):
+    """Customer-facing PATCH. Deliberately excludes Stripe identifiers: a
+    customer-settable stripe_customer_id would let anyone point their account
+    at someone else's Stripe customer (and have top-ups charged to them)."""
+
     name: str | None = Field(None, description="Name of the billing account")
+    auto_top_up_enabled: bool | None = Field(
+        None, description="Enable/disable automatic data top-ups"
+    )
+    monthly_top_up_cap_cents: int | None = Field(
+        None,
+        ge=0,
+        description="Max automatic top-up spend per billing period, in cents",
+    )
+
+
+class InternalPatchBillingAccountRequest(PatchBillingAccountRequest):
+    """Server-side superset used by the Stripe integration only."""
+
     stripe_customer_id: str | None = Field(
         None, description="Stripe customer ID associated with the billing account"
     )
@@ -351,6 +387,31 @@ class EntitlementsBucket(Base):
         default=0,
         description="Available balance for connection slots in the entitlements bucket",
     )
+    network_traffic_allowance: int = Field(
+        default=0,
+        description="Bytes available this period (included + purchased top-ups); the denominator for usage %",
+    )
+    connection_slot_limit: int = Field(
+        default=0, description="Max concurrently open connections"
+    )
+    grace_policy_bytes: int = Field(
+        default=0,
+        description="Temporary grace allowance granted once when the allowance is exhausted (0 = hard stop)",
+    )
+    grace_balance: int = Field(default=0, description="Grace bytes remaining")
+    grace_granted_at: datetime | None = Field(
+        default=None, description="When the current grace allowance was granted"
+    )
+    period_start: datetime | None = Field(
+        default=None, description="Start of the current allowance period"
+    )
+    period_end: datetime | None = Field(
+        default=None, description="End of the current allowance period"
+    )
+    stripe_managed_period: bool = Field(
+        default=False,
+        description="True when renewals come from Stripe (paid); False = calendar-month free tier",
+    )
 
 
 class CreateEntitlementsBucketRequest(BaseModel):
@@ -358,6 +419,12 @@ class CreateEntitlementsBucketRequest(BaseModel):
     billing_account_id: str = Field(
         ..., description="ID of the associated billing account"
     )
+    network_traffic_allowance: int = Field(default=0)
+    connection_slot_limit: int = Field(default=0)
+    grace_policy_bytes: int = Field(default=0)
+    period_start: datetime | None = Field(default=None)
+    period_end: datetime | None = Field(default=None)
+    stripe_managed_period: bool = Field(default=False)
 
 
 class PatchEntitlementsBucketRequest(BaseModel):
@@ -375,6 +442,147 @@ class QueryEntitlementsBucketRequest(BaseModel):
     billing_account_id: str | None = Field(
         None, description="ID of the associated billing account"
     )
+
+
+class ListEntitlementsBucketResponse(BaseModel):
+    items: list[EntitlementsBucket] = Field(
+        ..., description="List of entitlements buckets"
+    )
+    total: int = Field(..., description="Total number of matching entitlements buckets")
+
+
+class EntitlementsBalance(BaseModel):
+    id: str = Field(..., description="ID of the entitlements bucket")
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+    network_traffic_balance: int = Field(
+        ..., description="Remaining network traffic balance in bytes"
+    )
+    connection_slot_balance: int = Field(
+        ..., description="Remaining connection slot balance"
+    )
+
+
+class Plan(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.PLAN),
+        description="Unique identifier for the plan",
+    )
+    name: str = Field(..., description="Name of the plan (e.g. 'free', 'builder')")
+    stripe_product_id: str | None = Field(
+        default=None, description="Associated Stripe product ID"
+    )
+    is_active: bool = Field(default=True, description="Whether the plan is offered")
+
+
+class CreatePlanRequest(BaseModel):
+    name: str = Field(..., description="Name of the plan")
+    stripe_product_id: str | None = Field(
+        default=None, description="Associated Stripe product ID"
+    )
+    is_active: bool = Field(default=True, description="Whether the plan is offered")
+
+
+class PatchPlanRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the plan")
+    stripe_product_id: str | None = Field(
+        None, description="Associated Stripe product ID"
+    )
+    is_active: bool | None = Field(None, description="Whether the plan is offered")
+
+
+class QueryPlanRequest(BaseModel):
+    name: str | None = Field(None, description="Name of the plan")
+    is_active: bool | None = Field(None, description="Whether the plan is offered")
+
+
+class ListPlanResponse(BaseModel):
+    items: list[Plan] = Field(..., description="List of plans")
+    total: int = Field(..., description="Total number of matching plans")
+
+
+class PlanPrice(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.PLAN_PRICE),
+        description="Unique identifier for the plan price",
+    )
+    plan_id: str = Field(..., description="ID of the associated plan")
+    stripe_price_id: str | None = Field(
+        default=None, description="Associated Stripe price ID"
+    )
+    interval: str = Field(..., description="Billing interval ('month' or 'year')")
+    unit_amount_cents: int = Field(..., description="Price in cents")
+    currency: str = Field(default="usd", description="ISO currency code")
+    is_active: bool = Field(default=True, description="Whether the price is offered")
+    network_traffic_limit_bytes: int = Field(
+        ..., description="Network traffic entitlement this price grants, in bytes"
+    )
+    connection_slot_limit: int = Field(
+        ..., description="Connection slot entitlement this price grants"
+    )
+    grace_bytes: int = Field(
+        default=0, description="Temporary grace allowance granted at 100% usage"
+    )
+    top_up_block_bytes: int = Field(
+        default=0, description="Size of one prepaid top-up block (0 = no top-ups)"
+    )
+    top_up_price_cents: int = Field(
+        default=0, description="Price of one top-up block, in cents"
+    )
+
+
+class CreatePlanPriceRequest(BaseModel):
+    plan_id: str = Field(..., description="ID of the associated plan")
+    stripe_price_id: str | None = Field(
+        default=None, description="Associated Stripe price ID"
+    )
+    interval: str = Field(..., description="Billing interval ('month' or 'year')")
+    unit_amount_cents: int = Field(..., description="Price in cents")
+    currency: str = Field(default="usd", description="ISO currency code")
+    is_active: bool = Field(default=True, description="Whether the price is offered")
+    network_traffic_limit_bytes: int = Field(
+        ..., description="Network traffic entitlement this price grants, in bytes"
+    )
+    connection_slot_limit: int = Field(
+        ..., description="Connection slot entitlement this price grants"
+    )
+    grace_bytes: int = Field(default=0)
+    top_up_block_bytes: int = Field(default=0)
+    top_up_price_cents: int = Field(default=0)
+
+
+class PatchPlanPriceRequest(BaseModel):
+    stripe_price_id: str | None = Field(None, description="Associated Stripe price ID")
+    is_active: bool | None = Field(None, description="Whether the price is offered")
+    unit_amount_cents: int | None = Field(None, description="Price in cents")
+    network_traffic_limit_bytes: int | None = Field(
+        None, description="Network traffic entitlement this price grants, in bytes"
+    )
+    connection_slot_limit: int | None = Field(
+        None, description="Connection slot entitlement this price grants"
+    )
+
+
+class QueryPlanPriceRequest(BaseModel):
+    plan_id: str | None = Field(None, description="ID of the associated plan")
+    stripe_price_id: str | None = Field(None, description="Associated Stripe price ID")
+    is_active: bool | None = Field(None, description="Whether the price is offered")
+
+
+class ListPlanPriceResponse(BaseModel):
+    items: list[PlanPrice] = Field(..., description="List of plan prices")
+    total: int = Field(..., description="Total number of matching plan prices")
+
+
+class CreateCheckoutSessionRequest(BaseModel):
+    plan_price_id: str = Field(
+        ..., description="ID of the plan price to subscribe the billing account to"
+    )
+
+
+class CreateCheckoutSessionResponse(BaseModel):
+    url: str = Field(..., description="Stripe-hosted Checkout URL to redirect to")
 
 
 class UsageEventType(StrEnum):
@@ -398,6 +606,22 @@ class UsageEvent(Base):
     event_type: UsageEventType = Field(..., description="Type of the usage event")
     usage_unit: UsageUnits = Field(..., description="Units of usage for the event")
     usage_amount: int = Field(..., description="Amount of usage for the event")
+    stream_id: str | None = Field(
+        default=None, description="Source stream, when derived from stream activity"
+    )
+    period_start: datetime = Field(
+        ..., description="Start of the window this event's usage_amount covers"
+    )
+    period_end: datetime = Field(
+        ..., description="End of the window this event's usage_amount covers"
+    )
+    idempotency_key: str = Field(
+        ..., description="Caller-supplied dedupe key; unique across all usage events"
+    )
+    billing_period_id: str | None = Field(
+        default=None,
+        description="Billing period this event has been rolled up into, if any",
+    )
 
 
 class CreateUsageEventRequest(BaseModel):
@@ -407,6 +631,18 @@ class CreateUsageEventRequest(BaseModel):
     event_type: UsageEventType = Field(..., description="Type of the usage event")
     usage_unit: UsageUnits = Field(..., description="Units of usage for the event")
     usage_amount: int = Field(..., description="Amount of usage for the event")
+    stream_id: str | None = Field(
+        default=None, description="Source stream, when derived from stream activity"
+    )
+    period_start: datetime = Field(
+        ..., description="Start of the window this event's usage_amount covers"
+    )
+    period_end: datetime = Field(
+        ..., description="End of the window this event's usage_amount covers"
+    )
+    idempotency_key: str = Field(
+        ..., description="Caller-supplied dedupe key; unique across all usage events"
+    )
 
 
 class QueryUsageEventRequest(BaseModel):
@@ -419,12 +655,20 @@ class QueryUsageEventRequest(BaseModel):
     usage_unit: UsageUnits | None = Field(
         None, description="Units of usage for the event"
     )
+    stream_id: str | None = Field(None, description="Source stream ID")
+
+
+class ListUsageEventResponse(BaseModel):
+    items: list[UsageEvent] = Field(..., description="List of usage events")
+    total: int = Field(..., description="Total number of matching usage events")
 
 
 class SubscriptionTier(StrEnum):
     FREE = "free"
+    MAKER = "maker"
     BUILDER = "builder"
-    PRO = "pro"
+    STUDIO = "studio"
+    FLEET = "fleet"
 
 
 class Subscription(Base):
@@ -436,6 +680,24 @@ class Subscription(Base):
         ..., description="ID of the associated billing account"
     )
     tier: SubscriptionTier = Field(..., description="Subscription tier")
+    plan_price_id: str | None = Field(
+        default=None, description="ID of the plan price this subscription is on"
+    )
+    stripe_subscription_id: str | None = Field(
+        default=None, description="Associated Stripe subscription ID"
+    )
+    stripe_status: str | None = Field(
+        default=None, description="Stripe's own subscription status"
+    )
+    current_period_start: datetime | None = Field(
+        default=None, description="Start of the current Stripe billing period"
+    )
+    current_period_end: datetime | None = Field(
+        default=None, description="End of the current Stripe billing period"
+    )
+    cancel_at_period_end: bool = Field(
+        default=False, description="Whether the subscription cancels at period end"
+    )
 
 
 class CreateSubscriptionRequest(BaseModel):
@@ -447,6 +709,29 @@ class CreateSubscriptionRequest(BaseModel):
 
 class PatchSubscriptionRequest(BaseModel):
     tier: SubscriptionTier | None = Field(None, description="Subscription tier")
+
+
+class StripeSyncSubscriptionRequest(BaseModel):
+    """Fields the Stripe webhook handler (and only the webhook handler) is
+    allowed to write -- kept separate from PatchSubscriptionRequest, which is
+    the client-facing PATCH surface, so the two can never be confused at a
+    call site."""
+
+    tier: SubscriptionTier | None = Field(None, description="Subscription tier")
+    plan_price_id: str | None = Field(None, description="ID of the plan price")
+    stripe_subscription_id: str | None = Field(
+        None, description="Associated Stripe subscription ID"
+    )
+    stripe_status: str | None = Field(None, description="Stripe's own status")
+    current_period_start: datetime | None = Field(
+        None, description="Start of the current Stripe billing period"
+    )
+    current_period_end: datetime | None = Field(
+        None, description="End of the current Stripe billing period"
+    )
+    cancel_at_period_end: bool | None = Field(
+        None, description="Whether the subscription cancels at period end"
+    )
 
 
 class QuerySubscriptionRequest(BaseModel):
@@ -462,6 +747,132 @@ class QuerySubscriptionRequest(BaseModel):
 class ListSubscriptionResponse(BaseModel):
     items: list[Subscription] = Field(..., description="List of subscriptions")
     total: int = Field(..., description="Total number of matching subscriptions")
+
+
+class Invoice(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.INVOICE),
+        description="Unique identifier for the invoice",
+    )
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+    stripe_invoice_id: str = Field(..., description="Associated Stripe invoice ID")
+    status: str = Field(..., description="Stripe's own invoice status")
+    amount_due_cents: int = Field(..., description="Amount due, in cents")
+    amount_paid_cents: int = Field(..., description="Amount paid, in cents")
+    currency: str = Field(default="usd", description="ISO currency code")
+    hosted_invoice_url: str | None = Field(
+        default=None, description="Stripe-hosted invoice page URL"
+    )
+    invoice_pdf_url: str | None = Field(
+        default=None, description="Stripe invoice PDF URL"
+    )
+
+
+class UpsertInvoiceRequest(BaseModel):
+    """Internal write surface for the Stripe webhook handler only -- there
+    is no client-facing create/patch for invoices, they're a read-only
+    mirror of Stripe's own invoice objects."""
+
+    billing_account_id: str = Field(
+        ..., description="ID of the associated billing account"
+    )
+    stripe_invoice_id: str = Field(..., description="Associated Stripe invoice ID")
+    status: str = Field(..., description="Stripe's own invoice status")
+    amount_due_cents: int = Field(..., description="Amount due, in cents")
+    amount_paid_cents: int = Field(..., description="Amount paid, in cents")
+    currency: str = Field(default="usd", description="ISO currency code")
+    hosted_invoice_url: str | None = Field(
+        default=None, description="Stripe-hosted invoice page URL"
+    )
+    invoice_pdf_url: str | None = Field(
+        default=None, description="Stripe invoice PDF URL"
+    )
+
+
+class QueryInvoiceRequest(BaseModel):
+    billing_account_id: str | None = Field(
+        None, description="ID of the associated billing account"
+    )
+
+
+class ListInvoiceResponse(BaseModel):
+    items: list[Invoice] = Field(..., description="List of invoices")
+    total: int = Field(..., description="Total number of matching invoices")
+
+
+class UsageAlertKind(StrEnum):
+    USAGE_80 = "usage_80"
+    USAGE_95 = "usage_95"
+    USAGE_100 = "usage_100"
+    TOP_UP_CAP_REACHED = "top_up_cap_reached"
+    TOP_UP_FAILED = "top_up_failed"
+
+
+class UsageAlert(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.ALERT),
+        description="Unique identifier for the alert",
+    )
+    billing_account_id: str = Field(..., description="Associated billing account")
+    kind: UsageAlertKind = Field(..., description="What happened")
+    period_start: datetime = Field(..., description="Allowance period it belongs to")
+
+
+class TopUpStatus(StrEnum):
+    PENDING = "pending"
+    PAID = "paid"
+    FAILED = "failed"
+
+
+class TopUpSource(StrEnum):
+    AUTO = "auto"
+    MANUAL = "manual"
+
+
+class TopUp(Base):
+    id: str = Field(
+        default_factory=lambda: generate_id(IDPrefix.TOP_UP),
+        description="Unique identifier for the top-up",
+    )
+    billing_account_id: str = Field(..., description="Associated billing account")
+    bytes: int = Field(..., description="Data block size purchased")
+    amount_cents: int = Field(..., description="Price charged, in cents")
+    source: TopUpSource = Field(..., description="auto (overage policy) or manual")
+    status: TopUpStatus = Field(default=TopUpStatus.PENDING)
+    stripe_invoice_id: str | None = Field(default=None)
+    period_start: datetime = Field(..., description="Billing period it counts against")
+    failure_reason: str | None = Field(default=None)
+
+
+class UsageSummary(BaseModel):
+    billing_account_id: str
+    tier: SubscriptionTier
+    paid: bool = Field(..., description="On a Stripe-managed paid plan")
+    period_start: datetime | None
+    period_end: datetime | None
+    allowance_bytes: int
+    used_bytes: int
+    remaining_bytes: int
+    percent_used: float
+    grace_policy_bytes: int
+    grace_remaining_bytes: int
+    grace_active: bool = Field(
+        ..., description="Allowance exhausted and running on the grace allowance"
+    )
+    blocked: bool = Field(
+        ..., description="Gateway-relayed traffic is currently stopped"
+    )
+    connection_slot_limit: int
+    connection_slots_remaining: int
+    auto_top_up_enabled: bool
+    monthly_top_up_cap_cents: int
+    top_up_spent_cents: int
+    top_up_block_bytes: int
+    top_up_price_cents: int
+    can_top_up: bool
+    alerts: list[UsageAlert]
 
 
 class UserSignUpResponse(BaseModel):

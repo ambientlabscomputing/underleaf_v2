@@ -1,6 +1,6 @@
 # Roadmap to MVP
 
-This is a living, point-in-time planning doc — unlike [RFDs](RFDs/), which capture durable design decisions, this file tracks *what's done, what's not, and what order to build it in*. Expect it to go stale and get rewritten; that's fine, that's what it's for. Last assessed: 2026-09-08.
+This is a living, point-in-time planning doc — unlike [RFDs](RFDs/), which capture durable design decisions, this file tracks *what's done, what's not, and what order to build it in*. Expect it to go stale and get rewritten; that's fine, that's what it's for. Last assessed: 2026-10-24.
 
 The root README and sub-project READMEs are now the source of truth for interfaces/ports/state; this doc should only ever add *sequencing and prioritization* on top of what they say, never contradict them. If you find a contradiction, the READMEs win — fix this doc, not the other way around.
 
@@ -22,6 +22,7 @@ The root README and every sub-project README have been corrected to match this �
 | Cloud infra (docker-compose, nginx, Dockerfiles) | **Verified end-to-end** | `docker compose up` now builds and brings up cloud_api + conn_worker + nginx + postgres + redis, with healthchecks/depends_on wired and reachability confirmed (cloud_api migrates against postgres and serves `/health` both directly and through nginx; conn_worker serves its health route and starts cleanly against redis). See track 1 (done). |
 | Cloud Gateway (tunnel create/list/inspect via `orcli streams`) | **Done end-to-end** | See track 3 (done). Cloud API talks to Conn Worker over gRPC, not REST — [service.go](cloud/conn_worker/service/service.go) only ever needed to serve `/health`; the tunnel CRUD sketch that used to live in [cloud/conn_worker/README.md](cloud/conn_worker/README.md) was unused and has been removed. Fixed the gRPC↔protobuf field-mapping bug in [interface/grpc/server.go](cloud/conn_worker/interface/grpc/server.go), implemented the previously-unimplemented agent-side stream RPCs ([edge/agent/interface/grpc_public/server/server.go](edge/agent/interface/grpc_public/server/server.go)), and wired up `orcli streams ls` end-to-end. |
 | UIs | **Uneven** | `orchestrator_ui` and `account_ui` have a real `api`/`datastore`/`components`/`pages` layer per [RFDs/UI-STANDARD.md](RFDs/UI-STANDARD.md). `cockpit_ui` is **still the unmodified `create-vite` scaffold** — no API integration, no TanStack Query dependency, nothing built. |
+| Billing / metering / overage policy | **Done in code** | See track 5. Integration-tested against real Postgres; Stripe paths stubbed (not yet run against Stripe test mode). |
 | E2E tests | **Thin** | Framework exists ([e2e_testing/](e2e_testing/README.md)), but coverage is currently just health-check tests, no golden-path test. |
 | Edge release CI | **Fixed** | [.github/workflows/edge-publish-binaries.yaml](.github/workflows/edge-publish-binaries.yaml) now points `setup-go` at the root `go.mod`/`go.sum`; all four edge binaries build locally with `working-directory: edge` unchanged. See track 1 (done). |
 
@@ -78,9 +79,20 @@ The CSR/issuance pipeline (agent CSR generation, cloud_api CA signing, nginx `ss
 Not required for a local-only MVP demo (unregistered clusters skip mTLS entirely, per [edge/agent/service/service.go](edge/agent/service/service.go)'s gate on `node_cert.pem` existing).
 
 ### 5. Billing / Cloud API polish
-**Status:** substantially built · **Blocks:** monetization, not the technical MVP · **Size:** defer
+**Status:** done in code; needs one pass against Stripe test mode before launch · **Blocks:** monetization, not the technical MVP · **Size:** large (turned out to be mostly net-new — the earlier "substantially built" was only true of the CRUD scaffolding)
 
-Billing accounts, subscriptions, and usage events already exist per git history. Matters for charging people, not for proving the product works — sequence after the technical MVP.
+Design and policy in [RFDs/RFD-4.md](RFDs/RFD-4.md): tiers (Free / Maker $9·100 GB / Builder $24·500 GB / Studio $59·2 TB / Fleet $119·5 TB), 80/95/100% notifications, grace allowance, opt-in auto top-up ($5 per 100 GB) with a monthly cap, hard stop for Free. Done and verified against a real Postgres (integration tests in `cloud/cloud_api/tests/integration/`, run with `make db-up migrate test`):
+- **Metering:** byte counting at conn_worker's gateway bridge, a background sync loop, idempotent `usage_events`, at-most-once charging, atomic allowance draw.
+- **Policy:** thresholds, once-per-exhaustion grace, auto top-up (Stripe one-off invoice, credited only on `invoice.paid`), spend cap, hard stop that closes active streams.
+- **Refill:** paid allowance refills only on a paid renewal; free refills lazily each month; plan changes preserve usage.
+- **Stripe:** Checkout, signature-verified idempotent webhooks (failed deliveries are retried, not swallowed), `make stripe-sync` links the seeded catalog to Stripe Products/Prices.
+- **UI:** Plans, Usage (meter, alerts, auto top-up controls, buy-now), Invoices.
+
+Bugs found and fixed along the way (all pre-existing, none visible to mock-based tests): conn_worker's raw gRPC messages were treated as pydantic models (so `create_connection`/`create_stream` crashed on any real response), local IDs diverged from conn_worker's, `PATCH` ignored `state` (so nothing ever read back as closed), `terminate_connection` read `.status` off `None`, query filters passed kwargs to `Select.filter()`, and dropped connections never freed their slot.
+
+Still open: no notification *delivery* (alerts are UI/log only); off-session top-ups unproven against real Stripe.
+
+Also hardened: tenant isolation on the connection/stream endpoints (cross-tenant access is a 404, and creating against another tenant's node/connection is refused, so allowances can't be consumed across tenants).
 
 ### 6. Golden-path e2e test
 **Status:** unblocked, not started · **Size:** small
@@ -95,7 +107,7 @@ Track 2 is done, so nothing blocks this anymore. Add one real end-to-end test to
                          ├─→ 3 (gateway integration, done)
                          └─→ 4 (mTLS, done)
 
-5 (billing polish) — after the above, not blocking
+5 (billing & overage policy, done) — not blocking
 ```
 
 Tracks 2, 3, and 4 don't block each other and can run in parallel. All three are now fully done, so track 6 (golden-path e2e) is unblocked and could optionally also cover the gateway and cloud-connected mTLS paths now.

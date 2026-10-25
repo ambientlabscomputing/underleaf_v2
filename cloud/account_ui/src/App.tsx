@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './auth/ProtectedRoute';
-import { Login, Signup, BillingAccounts, Clusters, ClusterRegistration, Streams, Connections, Subscriptions } from './pages';
+import { Login, Signup, BillingAccounts, Clusters, ClusterRegistration, Streams, Connections, Subscriptions, Plans, Invoices, Usage } from './pages';
 
 export function App() {
   return (
@@ -13,6 +13,9 @@ export function App() {
       <Route path="/streams" element={<ProtectedRoute><Streams /></ProtectedRoute>} />
       <Route path="/connections" element={<ProtectedRoute><Connections /></ProtectedRoute>} />
       <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+      <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
+      <Route path="/usage" element={<ProtectedRoute><Usage /></ProtectedRoute>} />
+      <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/billing-accounts" replace />} />
     </Routes>
   );

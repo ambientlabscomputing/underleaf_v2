@@ -17,8 +17,10 @@ import type { SelectChangeEvent } from '../components';
 
 const TIER_COLOR: Record<SubscriptionTier, 'default' | 'primary' | 'secondary'> = {
   free: 'default',
+  maker: 'primary',
   builder: 'primary',
-  pro: 'secondary',
+  studio: 'secondary',
+  fleet: 'secondary',
 };
 
 const BASE_COLUMNS: GridColDef<Subscription>[] = [
@@ -153,8 +155,10 @@ export function Subscriptions() {
             onChange={(e: SelectChangeEvent) => setFormTier(e.target.value as SubscriptionTier)}
           >
             <AppMenuItem value="free">Free</AppMenuItem>
+            <AppMenuItem value="maker">Maker</AppMenuItem>
             <AppMenuItem value="builder">Builder</AppMenuItem>
-            <AppMenuItem value="pro">Pro</AppMenuItem>
+            <AppMenuItem value="studio">Studio</AppMenuItem>
+            <AppMenuItem value="fleet">Fleet</AppMenuItem>
           </Select>
         </FormControl>
       </AppDialog>

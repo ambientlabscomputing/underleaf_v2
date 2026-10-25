@@ -24,6 +24,10 @@ services:
         - underleaf
     environment:
         - UNDERLEAF_CONFIG=/etc/underleaf/config.yaml
+        # Stripe secrets come from the host environment / an .env file, never
+        # from the committed config. Unset = billing endpoints answer 503.
+        - UNDERLEAF_STRIPE_API_KEY=${UNDERLEAF_STRIPE_API_KEY:-}
+        - UNDERLEAF_STRIPE_WEBHOOK_SECRET=${UNDERLEAF_STRIPE_WEBHOOK_SECRET:-}
     volumes:
         - ./configs/local/cloud_api.yaml:/etc/underleaf/config.yaml:ro
         - ./certs:/var/lib/underleaf/certs

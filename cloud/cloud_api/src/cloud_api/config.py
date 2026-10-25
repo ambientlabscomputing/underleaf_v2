@@ -136,6 +136,39 @@ class ConnWorkerConfig(BaseModel):
     )
 
 
+class StripeConfig(BaseModel):
+    api_key: str = Field(
+        default="",
+        description="Stripe secret API key. Empty by default; must be set via "
+        "config/env before any Stripe-backed endpoint is used.",
+    )
+    webhook_secret: str = Field(
+        default="",
+        description="Signing secret for verifying Stripe webhook payloads "
+        "(stripe.Webhook.construct_event) -- never trust an unverified webhook body.",
+    )
+    success_url: str = Field(
+        default="http://localhost:5173/billing/success",
+        description="Where Stripe Checkout redirects on a completed session",
+    )
+    cancel_url: str = Field(
+        default="http://localhost:5173/billing/cancel",
+        description="Where Stripe Checkout redirects on a cancelled session",
+    )
+
+
+class BillingConfig(BaseModel):
+    usage_sync_enabled: bool = Field(
+        default=True,
+        description="Run the background loop that meters conn_worker traffic and enforces allowances",
+    )
+    usage_sync_interval_seconds: int = Field(
+        default=30,
+        description="How often traffic is metered; also the worst-case overshoot window "
+        "before a hard stop (the grace allowance is sized to absorb it)",
+    )
+
+
 class AppConfig(BaseModel):
     reload: bool = Field(
         default=True,
@@ -164,6 +197,13 @@ class AppConfig(BaseModel):
         default_factory=ConnWorkerConfig,
         description="Connection worker service configuration settings",
     )
+    stripe: StripeConfig = Field(
+        default_factory=StripeConfig, description="Stripe integration settings"
+    )
+    billing: BillingConfig = Field(
+        default_factory=BillingConfig,
+        description="Usage metering / enforcement settings",
+    )
 
 
 app_config: AppConfig | None = None
@@ -182,4 +222,10 @@ def load_config() -> AppConfig:
             config_data = yaml.safe_load(f)
         # merge the loaded config with the default config
         app_config = AppConfig(**{**app_config.model_dump(), **config_data})
+    # Secrets come from the environment so they never have to be committed in
+    # a config file; an env var wins over the file.
+    if os.getenv("UNDERLEAF_STRIPE_API_KEY"):
+        app_config.stripe.api_key = os.environ["UNDERLEAF_STRIPE_API_KEY"]
+    if os.getenv("UNDERLEAF_STRIPE_WEBHOOK_SECRET"):
+        app_config.stripe.webhook_secret = os.environ["UNDERLEAF_STRIPE_WEBHOOK_SECRET"]
     return app_config

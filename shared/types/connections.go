@@ -67,6 +67,10 @@ type Stream struct {
 	Port         *int        `json:"port"`
 	CreatedAt    string      `json:"created_at"`
 	ClosedAt     *string     `json:"closed_at,omitempty"`
+	// Cumulative bytes transferred through this stream's tunnel connection,
+	// as counted at the gateway bridge (see conn_worker/service/byte_counter.go).
+	BytesIn  int64 `json:"bytes_in,omitempty"`
+	BytesOut int64 `json:"bytes_out,omitempty"`
 }
 
 func (s *Stream) ToJSON() []byte {
