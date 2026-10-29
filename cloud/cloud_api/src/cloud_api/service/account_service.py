@@ -1,16 +1,21 @@
-from cloud_api.repository import (
-    principal_account_repository,
-    billing_account_repository,
-    usage_event_repository,
-    user_repository,
-    subscription_repository,
-)
+from argon2 import PasswordHasher
+
+from cloud_api import logger
+from cloud_api.lib import catalog
 from cloud_api.models.api import (
+    CreateEntitlementsBucketRequest,
+    EntitlementsBucket,
     SubscriptionTier,
     UserSignUpResponse,
 )
-from cloud_api import logger
-from argon2 import PasswordHasher
+from cloud_api.repository import (
+    billing_account_repository,
+    entitlements_bucket_repository,
+    principal_account_repository,
+    subscription_repository,
+    usage_event_repository,
+    user_repository,
+)
 
 _ph = PasswordHasher()
 
@@ -23,12 +28,14 @@ class AccountService:
         usage_event_repo: usage_event_repository.UsageEventRepository,
         user_repo: user_repository.UserRepository,
         subscription_repo: subscription_repository.SubscriptionRepository,
+        entitlements_bucket_repo: entitlements_bucket_repository.EntitlementsBucketRepository,
     ):
         self.principal_account_repo = principal_account_repo
         self.billing_account_repo = billing_account_repo
         self.usage_event_repo = usage_event_repo
         self.subscription_repo = subscription_repo
         self.user_repo = user_repo
+        self.entitlements_bucket_repo = entitlements_bucket_repo
 
     async def sign_up(
         self, user_request: user_repository.CreateUserRequest
@@ -50,6 +57,7 @@ class AccountService:
             principal_account_id=principal_account.id,
         )
         subscription = await self._create_subscription(billing_account.id)
+        await self._create_entitlements_bucket(billing_account.id)
         logger.bind(billing_account=billing_account.model_dump(mode="json")).info(
             "Created billing account"
         )
@@ -93,5 +101,22 @@ class AccountService:
             subscription_repository.CreateSubscriptionRequest(
                 billing_account_id=billing_account_id,
                 tier=SubscriptionTier.FREE,
+            )
+        )
+
+    async def _create_entitlements_bucket(
+        self, billing_account_id: str
+    ) -> EntitlementsBucket:
+        period_start, period_end = catalog.month_bounds()
+        return await self.entitlements_bucket_repo.create_entitlements_bucket(
+            CreateEntitlementsBucketRequest(
+                name="Default Entitlements Bucket",
+                billing_account_id=billing_account_id,
+                network_traffic_allowance=catalog.FREE.included_bytes,
+                connection_slot_limit=catalog.FREE.connection_slots,
+                grace_policy_bytes=catalog.FREE.grace_bytes,
+                period_start=period_start,
+                period_end=period_end,
+                stripe_managed_period=False,
             )
         )

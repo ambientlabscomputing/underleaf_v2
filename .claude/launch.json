@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "edge/orchestrator_ui", "run", "dev"],
       "port": 5183
+    },
+    {
+      "name": "account_ui",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "cloud/account_ui", "run", "dev"],
+      "port": 5181
     }
   ]
 }

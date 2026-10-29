@@ -2,10 +2,9 @@
 """Client and server classes corresponding to protobuf-defined services."""
 
 import grpc
-import warnings
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 from . import conn_worker_pb2 as conn__worker__pb2
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 GRPC_GENERATED_VERSION = "1.81.1"
 GRPC_VERSION = grpc.__version__

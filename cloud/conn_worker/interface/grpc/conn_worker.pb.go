@@ -7,13 +7,12 @@
 package grpc
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -324,16 +323,21 @@ func (x *NewStreamRequest) GetPort() int32 {
 }
 
 type Stream struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ConnectionId  string                 `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
-	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Endpoint      string                 `protobuf:"bytes,6,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Port          int32                  `protobuf:"varint,7,opt,name=port,proto3" json:"port,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	ClosedAt      string                 `protobuf:"bytes,9,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ConnectionId string                 `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
+	Type         string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	State        string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	Status       string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Endpoint     string                 `protobuf:"bytes,6,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Port         int32                  `protobuf:"varint,7,opt,name=port,proto3" json:"port,omitempty"`
+	CreatedAt    string                 `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ClosedAt     string                 `protobuf:"bytes,9,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	// Cumulative bytes transferred through this stream's tunnel connection,
+	// counted at the gateway bridge. Monotonically increasing while the
+	// stream is active; frozen once state=closed.
+	BytesIn       int64 `protobuf:"varint,10,opt,name=bytes_in,json=bytesIn,proto3" json:"bytes_in,omitempty"`
+	BytesOut      int64 `protobuf:"varint,11,opt,name=bytes_out,json=bytesOut,proto3" json:"bytes_out,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -429,6 +433,20 @@ func (x *Stream) GetClosedAt() string {
 		return x.ClosedAt
 	}
 	return ""
+}
+
+func (x *Stream) GetBytesIn() int64 {
+	if x != nil {
+		return x.BytesIn
+	}
+	return 0
+}
+
+func (x *Stream) GetBytesOut() int64 {
+	if x != nil {
+		return x.BytesOut
+	}
+	return 0
 }
 
 type GetStreamRequest struct {
@@ -597,7 +615,7 @@ const file_conn_worker_proto_rawDesc = "" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1a\n" +
 	"\bendpoint\x18\x03 \x01(\tR\bendpoint\x12\x12\n" +
-	"\x04port\x18\x04 \x01(\x05R\x04port\"\xeb\x01\n" +
+	"\x04port\x18\x04 \x01(\x05R\x04port\"\xa3\x02\n" +
 	"\x06Stream\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rconnection_id\x18\x02 \x01(\tR\fconnectionId\x12\x12\n" +
@@ -608,7 +626,10 @@ const file_conn_worker_proto_rawDesc = "" +
 	"\x04port\x18\a \x01(\x05R\x04port\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\b \x01(\tR\tcreatedAt\x12\x1b\n" +
-	"\tclosed_at\x18\t \x01(\tR\bclosedAt\"\"\n" +
+	"\tclosed_at\x18\t \x01(\tR\bclosedAt\x12\x19\n" +
+	"\bbytes_in\x18\n" +
+	" \x01(\x03R\abytesIn\x12\x1b\n" +
+	"\tbytes_out\x18\v \x01(\x03R\bbytesOut\"\"\n" +
 	"\x10GetStreamRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"1\n" +
 	"\x12CloseStreamRequest\x12\x1b\n" +

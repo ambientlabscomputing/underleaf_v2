@@ -1,33 +1,74 @@
+from datetime import UTC, datetime
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
 from cloud_api.models.api import (
-    UsageEvent,
     CreateUsageEventRequest,
     QueryUsageEventRequest,
+    UsageEvent,
 )
 from cloud_api.models.sql import SQLUsageEvent
 from cloud_api.repository.base_repository import BaseRepository
-from sqlalchemy import select
-from datetime import datetime, timezone
 
 
 class UsageEventRepository(BaseRepository):
     async def create_usage_event(self, req: CreateUsageEventRequest) -> UsageEvent:
+        event, _ = await self.create_usage_event_idempotent(req)
+        return event
+
+    async def create_usage_event_idempotent(
+        self, req: CreateUsageEventRequest
+    ) -> tuple[UsageEvent, bool]:
+        """Create a usage event, idempotent on `idempotency_key`.
+
+        Returns (event, created). A retried call with the same key returns
+        the original row with created=False, so callers can make the work
+        that follows (e.g. charging an allowance) happen exactly once.
+        """
         async with self.get_session() as session:
             new_event = SQLUsageEvent(
                 billing_account_id=req.billing_account_id,
                 event_type=req.event_type,
                 usage_unit=req.usage_unit,
                 usage_amount=req.usage_amount,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                stream_id=req.stream_id,
+                period_start=req.period_start,
+                period_end=req.period_end,
+                idempotency_key=req.idempotency_key,
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
             session.add(new_event)
-            await session.commit()
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                existing = await self.get_usage_event_by_idempotency_key(
+                    req.idempotency_key
+                )
+                if existing is not None:
+                    return existing, False
+                raise
             await session.refresh(new_event)
-            return UsageEvent.model_validate(new_event)
+            return UsageEvent.model_validate(new_event), True
 
     async def get_usage_event(self, usage_event_id: str) -> UsageEvent | None:
         async with self.get_session() as session:
             event = await session.get(SQLUsageEvent, usage_event_id)
+            if event is None:
+                return None
+            return UsageEvent.model_validate(event)
+
+    async def get_usage_event_by_idempotency_key(
+        self, idempotency_key: str
+    ) -> UsageEvent | None:
+        async with self.get_session() as session:
+            query = select(SQLUsageEvent).filter(
+                SQLUsageEvent.idempotency_key == idempotency_key
+            )
+            result = await session.scalars(query)
+            event = result.first()
             if event is None:
                 return None
             return UsageEvent.model_validate(event)
@@ -43,6 +84,8 @@ class UsageEventRepository(BaseRepository):
                 query = query.filter(SQLUsageEvent.event_type == req.event_type)
             if req.usage_unit is not None:
                 query = query.filter(SQLUsageEvent.usage_unit == req.usage_unit)
+            if req.stream_id is not None:
+                query = query.filter(SQLUsageEvent.stream_id == req.stream_id)
             result = await session.scalars(query)
             events = result.all()
             return [UsageEvent.model_validate(event) for event in events]

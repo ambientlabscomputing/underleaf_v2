@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
-from epyxid import XID
+from datetime import UTC, datetime
 from enum import StrEnum
-from datetime import datetime, timezone
+
+from epyxid import XID
+from pydantic import BaseModel, Field
 
 
 class IDPrefix(StrEnum):
@@ -19,10 +20,16 @@ class IDPrefix(StrEnum):
     CREDIT_EVENT = "credit"
     SUBSCRIPTION = "subscription"
     CANDIDATE = "candidate"
+    PLAN = "plan"
+    PLAN_PRICE = "price"
+    INVOICE = "invoice"
+    WEBHOOK_EVENT = "webhook"
+    ALERT = "alert"
+    TOP_UP = "topup"
 
 
 def generate_id(prefix: IDPrefix) -> str:
-    return f"{prefix.value}_{str(XID())}"
+    return f"{prefix.value}_{XID()!s}"
 
 
 class Base(BaseModel):
@@ -31,10 +38,10 @@ class Base(BaseModel):
 
     id: str = Field(..., description="Unique identifier for the model instance")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp when the instance was created",
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp when the instance was last updated",
     )

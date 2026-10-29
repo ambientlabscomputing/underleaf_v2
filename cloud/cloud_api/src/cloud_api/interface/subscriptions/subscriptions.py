@@ -12,6 +12,7 @@ from cloud_api.models.api import (
 from cloud_api.service.subscription_service import (
     SubscriptionNotFoundError,
     SubscriptionService,
+    SubscriptionTierManagedByStripeError,
 )
 from cloud_api.service_manager import get_subscription_service
 
@@ -86,6 +87,14 @@ async def patch_subscription(
     except SubscriptionNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+    except SubscriptionTierManagedByStripeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This subscription's tier is managed by Stripe; change it via "
+                "Stripe Checkout or the customer portal instead"
+            ),
         )
 
 

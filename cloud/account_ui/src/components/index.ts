@@ -8,7 +8,9 @@ export { AppDialog, ConfirmDialog, AppTextField, AppMenuItem } from './AppDialog
 export type { AppDialogProps, ConfirmDialogProps } from './AppDialogs';export {
   Box, Button, IconButton, Typography, Tooltip, Paper, Alert,
   CircularProgress, Link, Chip, Select, InputLabel, FormControl,
+  Card, CardContent, CardActions, LinearProgress, Switch, FormControlLabel,
   AddIcon, EditIcon, DeleteIcon, LogoutIcon,
   AccountBalanceIcon, StorageIcon, TuneIcon, LinkIcon, SubscriptionsIcon,
+  CreditCardIcon, ReceiptIcon, CheckCircleIcon, DataUsageIcon,
 } from './AppPrimitives';
 export type { SelectChangeEvent } from './AppPrimitives';

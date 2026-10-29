@@ -165,5 +165,7 @@ func streamToProto(stream *types.Stream) *Stream {
 		Port:         port,
 		CreatedAt:    stream.CreatedAt,
 		ClosedAt:     closedAt,
+		BytesIn:      stream.BytesIn,
+		BytesOut:     stream.BytesOut,
 	}
 }

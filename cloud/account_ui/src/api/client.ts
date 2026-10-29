@@ -40,7 +40,7 @@ async function attemptRefresh(): Promise<void> {
   const refresh = getRefreshToken();
   if (!refresh) throw new ApiError(401, 'No refresh token');
 
-  const res = await fetch(`${BASE_URL.replace('/api/v2', '')}/oauth/token`, {
+  const res = await fetch(`${BASE_URL}/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refresh }),

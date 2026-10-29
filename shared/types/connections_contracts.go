@@ -1,5 +1,9 @@
 package types
 
+import "time"
+
+func nowRFC3339() string { return time.Now().UTC().Format(time.RFC3339) }
+
 type CreateConnectionRequest struct {
 	NodeID string `json:"node_id"`
 	Name   string `json:"name"`
@@ -7,11 +11,12 @@ type CreateConnectionRequest struct {
 
 func (t *CreateConnectionRequest) ToConnection() *Connection {
 	return &Connection{
-		ID:     GenerateID(ConnectionIDPrefix),
-		NodeID: ForeignKey(t.NodeID),
-		Name:   t.Name,
-		State:  ConnectionStateProvisioned,
-		Status: StatusSucceeded,
+		ID:        GenerateID(ConnectionIDPrefix),
+		NodeID:    ForeignKey(t.NodeID),
+		Name:      t.Name,
+		State:     ConnectionStateProvisioned,
+		Status:    StatusSucceeded,
+		CreatedAt: nowRFC3339(),
 	}
 }
 
@@ -29,6 +34,7 @@ func (t *NewStreamRequest) ToStream() *Stream {
 		State:        StreamStateActive,
 		Status:       StatusSucceeded,
 		Port:         t.Port,
+		CreatedAt:    nowRFC3339(),
 	}
 }
 

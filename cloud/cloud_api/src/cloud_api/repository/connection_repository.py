@@ -1,13 +1,14 @@
+from datetime import UTC, datetime
+
+from sqlalchemy import delete, func, insert, select, update
+
 from cloud_api.models.api import (
     Connection,
-    CreateConnectionRequest,
-    QueryConnectionRequest,
     PatchConnectionRequest,
+    QueryConnectionRequest,
 )
-from cloud_api.models.sql import SQLConnection, SQLCluster, SQLNode
+from cloud_api.models.sql import SQLCluster, SQLConnection, SQLNode
 from cloud_api.repository.base_repository import BaseRepository
-from sqlalchemy import select, update, insert, delete
-from datetime import datetime, timezone
 
 
 class ConnectionRepository(BaseRepository):
@@ -17,8 +18,8 @@ class ConnectionRepository(BaseRepository):
                 id=conn.id,
                 name=conn.name,
                 node_id=conn.node_id,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
                 closed_at=conn.closed_at,
                 state=conn.state,
                 status=conn.status,
@@ -35,6 +36,27 @@ class ConnectionRepository(BaseRepository):
                 return None
             return Connection.model_validate(connection)
 
+    async def get_principal_account_id(self, connection_id: str) -> str | None:
+        """The tenant that owns a connection (connection -> node -> cluster)."""
+        async with self.get_session() as session:
+            return await session.scalar(
+                select(SQLCluster.principal_account_id)
+                .select_from(SQLConnection)
+                .join(SQLNode, SQLConnection.node_id == SQLNode.id)
+                .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
+                .where(SQLConnection.id == connection_id)
+            )
+
+    async def get_node_principal_account_id(self, node_id: str) -> str | None:
+        """The tenant that owns a node (node -> cluster)."""
+        async with self.get_session() as session:
+            return await session.scalar(
+                select(SQLCluster.principal_account_id)
+                .select_from(SQLNode)
+                .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
+                .where(SQLNode.id == node_id)
+            )
+
     async def query_connections(self, req: QueryConnectionRequest) -> list[Connection]:
         async with self.get_session() as session:
             query = (
@@ -46,13 +68,11 @@ class ConnectionRepository(BaseRepository):
                 query = query.filter(
                     SQLCluster.principal_account_id == req.principal_account_id
                 )
-            query = query.filter(
-                **req.model_dump(
-                    exclude_unset=True,
-                    exclude_none=True,
-                    exclude={"principal_account_id"},
-                )
+            filters = req.model_dump(
+                exclude_none=True, exclude={"principal_account_id"}
             )
+            for field, value in filters.items():
+                query = query.where(getattr(SQLConnection, field) == value)
             result = await session.scalars(query)
             connections = result.all()
             return [Connection.model_validate(connection) for connection in connections]
@@ -64,10 +84,10 @@ class ConnectionRepository(BaseRepository):
             update_stmt = (
                 update(SQLConnection)
                 .where(SQLConnection.id == connection_id)
-                .values(updated_at=datetime.now(timezone.utc))
+                .values(updated_at=datetime.now(UTC))
             )
-            if req.name is not None:
-                update_stmt = update_stmt.values(name=req.name)
+            for field, value in req.model_dump(exclude_none=True).items():
+                update_stmt = update_stmt.values(**{field: value})
             result = await session.execute(update_stmt)
             if result.rowcount == 0:
                 return None
@@ -84,6 +104,43 @@ class ConnectionRepository(BaseRepository):
             await session.commit()
             return True
 
+    async def count_open_for_principal(self, principal_account_id: str) -> int:
+        """Connections not yet closed across all of a tenant's clusters --
+        the ground truth connection slots are reconciled against."""
+        async with self.get_session() as session:
+            result = await session.execute(
+                select(func.count(SQLConnection.id))
+                .join(SQLNode, SQLConnection.node_id == SQLNode.id)
+                .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
+                .where(SQLCluster.principal_account_id == principal_account_id)
+                .where(SQLConnection.state != "closed")
+            )
+            return int(result.scalar_one())
+
+    async def list_open_ids(self, created_before: datetime) -> list[str]:
+        async with self.get_session() as session:
+            result = await session.scalars(
+                select(SQLConnection.id)
+                .where(SQLConnection.state != "closed")
+                .where(SQLConnection.created_at < created_before)
+            )
+            return [str(i) for i in result.all()]
+
+    async def mark_closed(self, connection_ids: list[str]) -> None:
+        """Close connections conn_worker no longer knows about (terminated
+        or dropped): conn_worker deletes their record, so they simply stop
+        appearing in ListConnections."""
+        if not connection_ids:
+            return
+        now = datetime.now(UTC)
+        async with self.get_session() as session:
+            await session.execute(
+                update(SQLConnection)
+                .where(SQLConnection.id.in_(connection_ids))
+                .values(state="closed", closed_at=now, updated_at=now)
+            )
+            await session.commit()
+
     async def search_conn_ids(self, search_ids: list[str]) -> list[str]:
         async with self.get_session() as session:
             query = select(SQLConnection.id).where(SQLConnection.id.in_(search_ids))
@@ -91,12 +148,7 @@ class ConnectionRepository(BaseRepository):
             return [str(id) for id in result.all()]
 
     async def batch_create(self, connections: list[Connection]) -> None:
-        batch = [
-            conn.model_dump(
-                mode="json",
-            )
-            for conn in connections
-        ]
+        batch = [conn.model_dump() for conn in connections]
         async with self.get_session() as session:
             await session.execute(insert(SQLConnection), batch)
             await session.commit()
@@ -117,12 +169,8 @@ class ConnectionRepository(BaseRepository):
             batch = [
                 {
                     "id": conn_id,
-                    **change.model_dump(
-                        mode="json",
-                        exclude_unset=True,
-                        exclude_none=True,
-                    ),
-                    "updated_at": datetime.now(timezone.utc),
+                    **change.model_dump(exclude_unset=True, exclude_none=True),
+                    "updated_at": datetime.now(UTC),
                 }
                 for conn_id, change in changes.items()
             ]

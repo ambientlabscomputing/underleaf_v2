@@ -9,3 +9,6 @@
 **/*.pem
 **/*.log
 **/.venv
+
+# local secrets (Stripe sandbox keys etc.)
+.env

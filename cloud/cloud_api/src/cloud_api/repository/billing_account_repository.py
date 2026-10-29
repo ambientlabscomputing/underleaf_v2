@@ -1,13 +1,20 @@
+from datetime import UTC, datetime
+
+from sqlalchemy import select, update
+
 from cloud_api.models.api import (
     BillingAccount,
     CreateBillingAccountRequest,
+    InternalPatchBillingAccountRequest,
     QueryBillingAccountRequest,
-    PatchBillingAccountRequest,
 )
-from cloud_api.models.sql import SQLBillingAccount
+from cloud_api.models.sql import (
+    SQLBillingAccount,
+    SQLCluster,
+    SQLNode,
+    SQLPrincipalAccount,
+)
 from cloud_api.repository.base_repository import BaseRepository
-from sqlalchemy import select, update
-from datetime import datetime, timezone
 
 
 class BillingAccountRepository(BaseRepository):
@@ -18,8 +25,8 @@ class BillingAccountRepository(BaseRepository):
             new_account = SQLBillingAccount(
                 name=req.name,
                 principal_account_id=req.principal_account_id,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
             session.add(new_account)
             await session.commit()
@@ -50,17 +57,64 @@ class BillingAccountRepository(BaseRepository):
             accounts = result.all()
             return [BillingAccount.model_validate(account) for account in accounts]
 
+    async def get_billing_account_by_node_id(
+        self, node_id: str
+    ) -> BillingAccount | None:
+        """Resolve node -> cluster -> principal_account -> billing_account
+        in one query. Used by connection/stream enforcement and usage
+        charging, which only ever have a node_id on hand."""
+        async with self.get_session() as session:
+            query = (
+                select(SQLBillingAccount)
+                .join(
+                    SQLPrincipalAccount,
+                    SQLBillingAccount.principal_account_id == SQLPrincipalAccount.id,
+                )
+                .join(
+                    SQLCluster,
+                    SQLCluster.principal_account_id == SQLPrincipalAccount.id,
+                )
+                .join(SQLNode, SQLNode.cluster_id == SQLCluster.id)
+                .filter(SQLNode.id == node_id)
+            )
+            result = await session.scalars(query)
+            account = result.first()
+            if account is None:
+                return None
+            return BillingAccount.model_validate(account)
+
+    async def get_billing_account_by_stripe_customer_id(
+        self, stripe_customer_id: str
+    ) -> BillingAccount | None:
+        async with self.get_session() as session:
+            query = select(SQLBillingAccount).filter(
+                SQLBillingAccount.stripe_customer_id == stripe_customer_id
+            )
+            result = await session.scalars(query)
+            account = result.first()
+            if account is None:
+                return None
+            return BillingAccount.model_validate(account)
+
     async def patch_billing_account(
-        self, billing_account_id: str, req: PatchBillingAccountRequest
+        self, billing_account_id: str, req: InternalPatchBillingAccountRequest
     ) -> BillingAccount | None:
         async with self.get_session() as session:
             update_stmt = (
                 update(SQLBillingAccount)
                 .where(SQLBillingAccount.id == billing_account_id)
-                .values(updated_at=datetime.now(timezone.utc))
+                .values(updated_at=datetime.now(UTC))
             )
             if req.name is not None:
                 update_stmt = update_stmt.values(name=req.name)
+            if req.auto_top_up_enabled is not None:
+                update_stmt = update_stmt.values(
+                    auto_top_up_enabled=req.auto_top_up_enabled
+                )
+            if req.monthly_top_up_cap_cents is not None:
+                update_stmt = update_stmt.values(
+                    monthly_top_up_cap_cents=req.monthly_top_up_cap_cents
+                )
             if req.stripe_customer_id is not None:
                 update_stmt = update_stmt.values(
                     stripe_customer_id=req.stripe_customer_id

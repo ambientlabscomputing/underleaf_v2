@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AccountBalanceIcon, StorageIcon, TuneIcon, LinkIcon, SubscriptionsIcon,
+  CreditCardIcon, ReceiptIcon, DataUsageIcon,
 } from '../components';
 import type { NavItem } from '../components';
 
@@ -20,5 +21,8 @@ export function useNavItems(): NavItem[] {
     { label: 'Streams',          icon: <TuneIcon fontSize="small" />,            onClick: () => navigate('/streams'),           selected: location.pathname === '/streams' },
     { label: 'Connections',      icon: <LinkIcon fontSize="small" />,            onClick: () => navigate('/connections'),       selected: location.pathname === '/connections' },
     { label: 'Subscriptions',    icon: <SubscriptionsIcon fontSize="small" />,   onClick: () => navigate('/subscriptions'),     selected: location.pathname === '/subscriptions' },
+    { label: 'Usage',            icon: <DataUsageIcon fontSize="small" />,       onClick: () => navigate('/usage'),             selected: location.pathname === '/usage' },
+    { label: 'Plans',            icon: <CreditCardIcon fontSize="small" />,      onClick: () => navigate('/plans'),             selected: location.pathname === '/plans' },
+    { label: 'Invoices',         icon: <ReceiptIcon fontSize="small" />,         onClick: () => navigate('/invoices'),          selected: location.pathname === '/invoices' },
   ];
 }

@@ -6,3 +6,7 @@ oauth:
     private_key_path: /var/lib/underleaf/certs/private_key.pem
 conn_worker:
     grpc_target: conn_worker:50102
+stripe:
+    # Stripe Checkout returns here: the UI as served by the compose stack's nginx.
+    success_url: https://localhost/plans?checkout=success
+    cancel_url: https://localhost/plans?checkout=cancelled
