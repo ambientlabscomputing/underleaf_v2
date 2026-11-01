@@ -1,0 +1,49 @@
+---
+import { SITE } from '../site';
+
+const year = new Date().getFullYear();
+---
+
+<footer>
+	<div class="container row">
+		<a href="/" class="logo">Underleaf</a>
+		<p>© {year} Underleaf. Local-first infrastructure.</p>
+		<nav aria-label="Footer">
+			<a href={SITE.docsUrl}>Docs</a>
+			<a href={SITE.blogUrl}>Blog</a>
+			<a href={SITE.accountUrl}>Account</a>
+		</nav>
+	</div>
+</footer>
+
+<style>
+	footer {
+		border-top: 1px solid var(--border);
+		padding: 40px 0;
+		color: var(--muted);
+		font-size: 14px;
+	}
+
+	.row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
+	}
+
+	.logo {
+		color: var(--heading);
+		font-weight: 600;
+		font-size: 18px;
+	}
+
+	nav {
+		display: flex;
+		gap: 20px;
+	}
+
+	nav a:hover {
+		color: var(--heading);
+	}
+</style>

@@ -1,0 +1,196 @@
+---
+import { SITE } from '../site';
+
+const manifest = `version: "1"
+name: my-app
+slug: my-app
+services:
+  - name: web
+    build:
+      context: "."
+    ports: ["8080:8080"]
+    expose:
+      port: 8080
+    volumes: ["app_data:/data"]
+volumes:
+  - name: app_data`;
+---
+
+<section class="hero">
+	<div class="container">
+		<div class="intro">
+			<h1>Deploy from a git repo.<br />Run it on your own hardware.</h1>
+			<p class="lede">
+				Underleaf turns a manifest in your repository into running services on your machines. The
+				orchestrator lives with your cluster, so it keeps working without the cloud.
+			</p>
+			<p class="tagline">
+				Local-first. No paywalled core. <span>Pay only for the gateway traffic you use.</span>
+			</p>
+			<div class="actions">
+				<a class="btn btn-primary" href={`${SITE.accountUrl}/signup`}>Get Started</a>
+				<a class="btn" href={SITE.docsUrl}>Read the Docs</a>
+			</div>
+		</div>
+
+		<div class="panel card">
+			<p class="eyebrow">How it looks</p>
+
+			<div class="step">
+				<p class="step-label">Step 1: Describe</p>
+				<div class="code">
+					<div class="code-head"><span>.underleaf/deploy.yaml</span></div>
+					<pre><code>{manifest}</code></pre>
+				</div>
+			</div>
+
+			<div class="step">
+				<p class="step-label">Step 2: Deploy</p>
+				<div class="code">
+					<div class="code-head">
+						<span>bash</span>
+						<button type="button" class="copy" data-copy={SITE.deployCommand}>Copy</button>
+					</div>
+					<pre><code>{SITE.deployCommand}</code></pre>
+				</div>
+			</div>
+
+			<p class="result">→ Your containers are reconciled to match the repo, on your hardware</p>
+		</div>
+	</div>
+</section>
+
+<script>
+	document.querySelectorAll<HTMLButtonElement>('button[data-copy]').forEach((btn) => {
+		btn.addEventListener('click', async () => {
+			try {
+				await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+				btn.textContent = 'Copied';
+			} catch {
+				btn.textContent = 'Press ⌘C';
+			}
+			setTimeout(() => (btn.textContent = 'Copy'), 1800);
+		});
+	});
+</script>
+
+<style>
+	.hero {
+		position: relative;
+		padding: 88px 0 72px;
+		background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(34, 197, 94, 0.09), transparent 70%);
+	}
+
+	.intro {
+		text-align: center;
+		max-width: 760px;
+		margin: 0 auto 56px;
+	}
+
+	h1 {
+		font-size: clamp(30px, 5vw, 46px);
+		letter-spacing: -0.02em;
+	}
+
+	.lede {
+		margin-top: 20px;
+		font-size: 18px;
+		color: var(--muted);
+	}
+
+	.tagline {
+		margin-top: 18px;
+		font-size: 14px;
+		color: var(--heading);
+	}
+
+	.tagline span {
+		display: block;
+		color: var(--muted);
+		margin-top: 2px;
+	}
+
+	.actions {
+		display: flex;
+		justify-content: center;
+		gap: 14px;
+		margin-top: 32px;
+		flex-wrap: wrap;
+	}
+
+	.panel {
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 28px;
+	}
+
+	.step {
+		margin-top: 22px;
+	}
+
+	.step-label {
+		font-size: 12px;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin-bottom: 8px;
+	}
+
+	.code {
+		background: rgba(8, 10, 14, 0.8);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		overflow: hidden;
+	}
+
+	.code-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 8px 14px;
+		border-bottom: 1px solid var(--border);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: var(--muted);
+		font-family: var(--font-mono);
+	}
+
+	pre {
+		margin: 0;
+		padding: 16px;
+		overflow-x: auto;
+		font-size: 13px;
+		line-height: 1.7;
+		color: var(--heading);
+	}
+
+	.copy {
+		font: inherit;
+		font-size: 12px;
+		color: var(--muted);
+		background: rgba(30, 36, 42, 0.6);
+		border: 1px solid var(--border-strong);
+		border-radius: 4px;
+		padding: 3px 10px;
+		cursor: pointer;
+	}
+
+	.copy:hover {
+		color: var(--heading);
+	}
+
+	.result {
+		margin-top: 22px;
+		font-size: 14px;
+		color: var(--accent);
+	}
+
+	@media (max-width: 640px) {
+		.hero {
+			padding-top: 56px;
+		}
+		.panel {
+			padding: 20px;
+		}
+	}
+</style>

@@ -1,0 +1,66 @@
+---
+import { SITE } from '../site';
+---
+
+<header class="site-header">
+	<div class="bar">
+		<a href="/" class="logo">Under<span>leaf</span></a>
+		<nav aria-label="Primary">
+			<a class="btn nav-link" href={SITE.docsUrl}>Documentation</a>
+			<a class="btn nav-link" href={SITE.blogUrl}>Blog</a>
+			<a class="btn btn-sm" href={`${SITE.accountUrl}/login`}>Sign In</a>
+			<a class="btn btn-primary" href={`${SITE.accountUrl}/signup`}>Sign Up</a>
+		</nav>
+	</div>
+</header>
+
+<style>
+	.site-header {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		background: var(--header-bg);
+		border-bottom: 1px solid var(--border);
+		backdrop-filter: blur(8px);
+	}
+
+	.bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 20px 40px;
+	}
+
+	.logo {
+		font-size: 22px;
+		font-weight: 600;
+		color: var(--heading);
+		letter-spacing: -0.01em;
+	}
+
+	.logo span {
+		color: var(--text);
+		font-weight: 500;
+	}
+
+	nav {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+
+	.btn-sm {
+		padding: 7px 16px;
+		font-size: 14px;
+		background: transparent;
+	}
+
+	@media (max-width: 760px) {
+		.bar {
+			padding: 14px 20px;
+		}
+		.nav-link {
+			display: none;
+		}
+	}
+</style>

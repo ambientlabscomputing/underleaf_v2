@@ -1,0 +1,39 @@
+---
+import { SITE } from '../site';
+---
+
+<section class="section cta">
+	<div class="container">
+		<h2>Point it at a repo and see what happens</h2>
+		<p>Create an account, then deploy your first app from git.</p>
+		<div class="actions">
+			<a class="btn btn-primary" href={`${SITE.accountUrl}/signup`}>Get Started</a>
+			<a class="btn" href={SITE.docsUrl}>Read the Docs</a>
+		</div>
+	</div>
+</section>
+
+<style>
+	.cta {
+		text-align: center;
+		border-top: 1px solid var(--border);
+		background: radial-gradient(ellipse 50% 60% at 50% 100%, rgba(34, 197, 94, 0.07), transparent 70%);
+	}
+
+	h2 {
+		font-size: clamp(26px, 4vw, 34px);
+	}
+
+	p {
+		margin-top: 12px;
+		color: var(--muted);
+	}
+
+	.actions {
+		display: flex;
+		justify-content: center;
+		gap: 14px;
+		margin-top: 32px;
+		flex-wrap: wrap;
+	}
+</style>
