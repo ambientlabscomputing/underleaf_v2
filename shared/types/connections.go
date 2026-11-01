@@ -19,6 +19,7 @@ const (
 type ConnectionState string
 
 const (
+	ConnectionStatePending     ConnectionState = "pending"
 	ConnectionStateProvisioned ConnectionState = "provisioned"
 	ConnectionStateRunning     ConnectionState = "running"
 	ConnectionStateClosed      ConnectionState = "closed"
@@ -32,6 +33,9 @@ type Connection struct {
 	Status    Status          `json:"status"`
 	CreatedAt string          `json:"created_at"`
 	ClosedAt  *string         `json:"closed_at,omitempty"`
+	// StatusDetail explains a pending connection ("waiting for a worker to
+	// start") or why it failed. Empty once provisioned.
+	StatusDetail string `json:"status_detail,omitempty"`
 }
 
 func (c *Connection) ToJSON() []byte {

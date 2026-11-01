@@ -74,6 +74,19 @@ async def get_access_claims(
     return AccessTokenClaims(**claims.model_dump())
 
 
+async def require_admin(
+    claims: AccessTokenClaims = Depends(get_access_claims),
+) -> AccessTokenClaims:
+    """Operators only: the caller's principal account must be listed in
+    `admin.principal_account_ids`. Everyone else gets 404, not 403, so the
+    admin surface can't be discovered by probing."""
+    from cloud_api import app_config
+
+    if not app_config or claims.azp not in app_config.admin.principal_account_ids:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    return claims
+
+
 @lru_cache
 def get_auth_lib(user_repo: UserRepository):
     return AuthLib(user_repo=user_repo)

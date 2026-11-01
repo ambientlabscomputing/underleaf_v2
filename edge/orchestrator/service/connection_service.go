@@ -70,7 +70,17 @@ func (s *ConnectionService) NewStream(ctx context.Context, nodeID, type_ string,
 		return nil, err
 	}
 	logger = logger.With("connection_id", conn.ID)
-	logger.Info("connection created, creating new stream")
+	// The cloud queues the connection while it boots a connection worker, so
+	// it may still be pending (HTTP 202). Streams can only open once it isn't.
+	if conn.State == types.ConnectionStatePending {
+		logger.Info("connection queued, waiting for a connection worker", "detail", conn.StatusDetail)
+		conn, err = s.waitConnectionReady(ctx, conn.ID, connectionReadyTimeout)
+		if err != nil {
+			logger.Error("connection did not become ready", "error", err)
+			return nil, err
+		}
+	}
+	logger.Info("connection ready, creating new stream")
 	stream, err := s.cloudClient.NewStream(ctx, types.NewStreamRequest{
 		ConnectionID: conn.ID,
 		Type:         types.StreamType(type_),
@@ -129,6 +139,42 @@ func (s *ConnectionService) ListStreams(ctx context.Context) ([]*agentpb.StreamS
 		return nil, err
 	}
 	return streamStates, nil
+}
+
+// connectionReadyTimeout bounds how long a stream request waits for the cloud
+// to boot a connection worker (a cold VM takes a couple of minutes).
+const connectionReadyTimeout = 150 * time.Second
+
+// waitConnectionReady polls the cloud until the connection leaves "pending".
+// A pending connection that failed, or one that was closed meanwhile, is an
+// error carrying the cloud's explanation.
+func (s *ConnectionService) waitConnectionReady(ctx context.Context, connectionID string, timeout time.Duration) (*types.Connection, error) {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+			return nil, fmt.Errorf("timeout reached while waiting for connection %s to be provisioned", connectionID)
+		case <-ticker.C:
+			conn, err := s.cloudClient.GetConnection(ctx, connectionID)
+			if err != nil {
+				return nil, err
+			}
+			switch {
+			case conn.State == types.ConnectionStateClosed:
+				return nil, fmt.Errorf("connection %s was closed before it was provisioned", connectionID)
+			case conn.State != types.ConnectionStatePending:
+				return conn, nil
+			case conn.Status == types.StatusFailed:
+				return nil, fmt.Errorf("connection %s could not be provisioned: %s", connectionID, conn.StatusDetail)
+			}
+		}
+	}
 }
 
 func (s *ConnectionService) pollStreamState(ctx context.Context, streamID string, timeout time.Duration) (*agentpb.StreamState, error) {

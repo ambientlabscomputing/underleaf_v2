@@ -8,6 +8,7 @@ from cloud_api import logger
 from cloud_api.lib.conn_worker_client.conn_worker_client import ConnWorkerClient
 from cloud_api.models.api import (
     BillingAccount,
+    ConnectionState,
     ListStreamResponse,
     NewStreamRequest,
     PatchStreamRequest,
@@ -33,6 +34,14 @@ class StreamNotFoundError(Exception):
 
 class StreamStateError(Exception):
     """The operation isn't valid for the stream's current state."""
+
+
+class ConnectionNotReadyError(Exception):
+    """The connection is still waiting for a worker; streams can't open yet."""
+
+    def __init__(self, connection_id: str) -> None:
+        super().__init__(f"Connection '{connection_id}' is not provisioned yet")
+        self.connection_id = connection_id
 
 
 class InsufficientNetworkTrafficBalanceError(Exception):
@@ -79,6 +88,9 @@ class StreamService:
         )
 
     async def create_stream(self, req: NewStreamRequest) -> Stream:
+        connection = await self.conn_repo.get_connection(req.connection_id)
+        if connection is not None and connection.state == ConnectionState.PENDING:
+            raise ConnectionNotReadyError(req.connection_id)
         account = await self._billing_account_for_connection(req.connection_id)
         # Traffic can't be pre-charged, so this gates *new* streams only;
         # already-open ones are stopped by the usage sync when the allowance
@@ -220,6 +232,9 @@ class StreamService:
     # -- Worker <-> local state sync -----------------------------------------
 
     async def wait_for_sync(self) -> None:
+        if not await self.conn_worker_client.available():
+            logger.debug("Stream sync skipped: no conn_worker available")
+            return
         await self._sync_streams()
         await self.sync_usage_from_conn_worker()
 

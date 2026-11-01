@@ -22,6 +22,9 @@ class TerminateConnResponse(BaseModel):
 
 
 class ConnectionState(StrEnum):
+    # Recorded and queued, waiting for a conn_worker VM. With status:
+    # in_progress = still waiting, failed = gave up (slot already released).
+    PENDING = "pending"
     PROVISIONED = "provisioned"
     RUNNING = "running"
     CLOSED = "closed"
@@ -43,6 +46,11 @@ class Connection(Base):
     )
     status: Status = Field(
         default=Status.IN_PROGRESS, description="Current status of the connection"
+    )
+    status_detail: str | None = Field(
+        default=None,
+        description="Human-readable progress or failure reason while pending "
+        "(e.g. 'waiting for a worker to start')",
     )
 
 

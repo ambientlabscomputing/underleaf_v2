@@ -11,10 +11,12 @@ from cloud_api.models.api import (
     Stream,
 )
 from cloud_api.service.stream_service import (
+    ConnectionNotReadyError,
     InsufficientNetworkTrafficBalanceError,
     StreamNotFoundError,
     StreamService,
 )
+from cloud_api.service.worker_service import WorkerUnavailableError
 from cloud_api.service_manager import get_stream_service
 
 router = APIRouter(prefix="/streams", tags=["Streams"])
@@ -53,6 +55,16 @@ async def create_stream(
         )
     try:
         return await stream_service.create_stream(req)
+    except ConnectionNotReadyError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Connection is still being provisioned; retry once it is no longer pending.",
+        )
+    except WorkerUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No connection worker is running right now.",
+        )
     except InsufficientNetworkTrafficBalanceError:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,

@@ -34,7 +34,7 @@ class FakeConnWorkerStub:
 
     async def CreateConnection(self, req):
         conn = pb2.Connection(
-            id=self._id("conn"),
+            id=req.id or self._id("conn"),
             node_id=req.node_id,
             name=req.name,
             state="provisioned",

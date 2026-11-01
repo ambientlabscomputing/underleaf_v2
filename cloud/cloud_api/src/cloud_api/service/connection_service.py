@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from itertools import batched
 
@@ -6,6 +7,7 @@ from async_lru import alru_cache
 
 from cloud_api import logger
 from cloud_api.lib.conn_worker_client.conn_worker_client import ConnWorkerClient
+from cloud_api.lib.events import EventBus
 from cloud_api.models.api import (
     BillingAccount,
     Connection,
@@ -14,6 +16,7 @@ from cloud_api.models.api import (
     ListConnectionResponse,
     PatchConnectionRequest,
     QueryConnectionRequest,
+    Status,
 )
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.connection_repository import ConnectionRepository
@@ -21,6 +24,7 @@ from cloud_api.service.entitlements_bucket_service import (
     EntitlementsBucketService,
     EntitlementsExceededError,
 )
+from cloud_api.service.task_service import TaskService, connection_topic
 
 
 class ConnectionNotFoundError(Exception):
@@ -40,7 +44,14 @@ class ConnectionService:
         conn_client: ConnWorkerClient,
         billing_account_repo: BillingAccountRepository,
         entitlements_bucket_service: EntitlementsBucketService,
+        task_service: TaskService | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
+        # With a task_service, connections are created asynchronously: recorded
+        # as PENDING and queued until a worker VM is up. Without one (a static
+        # conn_worker) they are created on the spot.
+        self.task_service = task_service
+        self.event_bus = event_bus
         self.conn_repo = conn_repo
         self.conn_client = conn_client
         self.billing_account_repo = billing_account_repo
@@ -91,6 +102,8 @@ class ConnectionService:
         if account is not None:
             await self._reserve_slot(account)
         try:
+            if self.task_service is not None:
+                return await self._queue_connection(req)
             connection = await self.conn_client.new_connection(
                 node_id=req.node_id, name=req.name
             )
@@ -104,6 +117,70 @@ class ConnectionService:
             raise
         logger.bind(connection_id=connection.id).info("Connection created")
         return connection
+
+    async def _queue_connection(self, req: CreateConnectionRequest) -> Connection:
+        """Record the connection as PENDING and queue its creation. The slot
+        reserved by the caller is held until it is provisioned, fails or is
+        terminated."""
+        assert self.task_service is not None
+        connection = await self.conn_repo.create_connection(
+            Connection(
+                name=req.name,
+                node_id=req.node_id,
+                state=ConnectionState.PENDING,
+                status=Status.IN_PROGRESS,
+                status_detail="queued",
+            )
+        )
+        try:
+            await self.task_service.enqueue_create_connection(connection)
+        except Exception:
+            # Never leave a PENDING row nothing will ever process.
+            await self.conn_repo.delete_connection(connection.id)
+            raise
+        logger.bind(connection_id=connection.id).info("Connection queued")
+        return connection
+
+    async def watch_connection(
+        self,
+        connection_id: str,
+        poll_seconds: float = 2.0,
+        heartbeat_seconds: float = 15.0,
+    ) -> AsyncIterator[Connection | None]:
+        """Yield the connection whenever its state, status or detail changes,
+        until it is no longer waiting on a worker. Yields None as a keep-alive
+        while idle. Events wake it early; the DB is re-read every
+        `poll_seconds` regardless, so a missed event only costs latency."""
+        loop = asyncio.get_running_loop()
+        bus = self.event_bus
+        sub = bus.subscription(connection_topic(connection_id)) if bus else None
+        try:
+            last: tuple | None = None
+            last_beat = loop.time()
+            while True:
+                connection = await self.conn_repo.get_connection(connection_id)
+                if connection is None:
+                    return
+                key = (connection.state, connection.status, connection.status_detail)
+                if key != last:
+                    last = key
+                    last_beat = loop.time()
+                    yield connection
+                if (
+                    connection.state != ConnectionState.PENDING
+                    or connection.status == Status.FAILED
+                ):
+                    return
+                if loop.time() - last_beat >= heartbeat_seconds:
+                    last_beat = loop.time()
+                    yield None
+                if sub is not None:
+                    await sub.get(timeout=poll_seconds)
+                else:
+                    await asyncio.sleep(poll_seconds)
+        finally:
+            if sub is not None:
+                sub.close()
 
     async def get_connections(
         self, req: QueryConnectionRequest
@@ -136,6 +213,8 @@ class ConnectionService:
             raise ConnectionStateError(
                 f"Connection '{connection_id}' is already closed."
             )
+        if connection.state == ConnectionState.PENDING:
+            return await self._terminate_pending(connection)
         terminate_resp = await self.conn_client.terminate_connection(connection_id)
         if terminate_resp.status != "succeeded":
             raise ConnectionStateError(
@@ -153,11 +232,38 @@ class ConnectionService:
         await self.sync_connections()
         return connection
 
+    async def _terminate_pending(self, connection: Connection) -> Connection:
+        """Cancel a connection that never reached a worker."""
+        if self.task_service is not None:
+            await self.task_service.cancel_for_connection(
+                connection.id, "terminated by user"
+            )
+        prior = await self.conn_repo.close_pending(connection.id)
+        if prior is None:
+            # Provisioned (or closed) between our read and the update; the
+            # normal path handles whatever it is now.
+            return await self.terminate_connection(connection.id)
+        if prior == Status.IN_PROGRESS:  # a failed one already gave its slot back
+            account = await self._billing_account_for_node(connection.node_id)
+            if account is not None:
+                await self.entitlements_bucket_service.release_connection_slot(
+                    account.id
+                )
+        logger.bind(connection_id=connection.id).info("Pending connection cancelled")
+        closed = await self.conn_repo.get_connection(connection.id)
+        if closed is None:
+            raise ConnectionNotFoundError(connection.id)
+        return closed
+
     async def delete_connection(self, connection_id: str) -> None:
         connection = await self.conn_repo.get_connection(connection_id)
         if connection is None:
             raise ConnectionNotFoundError(connection_id)
-        if connection.state != ConnectionState.CLOSED:
+        failed_pending = (
+            connection.state == ConnectionState.PENDING
+            and connection.status == Status.FAILED
+        )
+        if connection.state != ConnectionState.CLOSED and not failed_pending:
             raise ConnectionStateError(
                 f"Connection '{connection_id}' is not closed. Cannot delete an active connection."
             )
@@ -184,6 +290,11 @@ class ConnectionService:
 
     @alru_cache(maxsize=1, ttl=5)
     async def _sync_connections(self) -> None:
+        if not await self.conn_client.available():
+            # No worker VM right now. Listing nothing would read as "every
+            # connection is gone", so leave the local view untouched.
+            logger.debug("Sync skipped: no conn_worker available")
+            return
         # Taken *before* listing: anything created locally after this instant
         # can't be in the snapshot, so must not be mistaken for "gone".
         snapshot_at = datetime.now(UTC)
