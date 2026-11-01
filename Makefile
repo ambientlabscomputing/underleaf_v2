@@ -22,20 +22,25 @@ run-edge:
 stop-edge:
 	cd edge && make stop
 
+## run-cloud: Run the cloud services
 run-cloud:
 	cd cloud && make run &
 
+## stop-cloud: Stop the cloud services
 stop-cloud:
 	cd cloud && make stop
 
 _run: run-cloud run-edge
 
+## clear-logs: Clear the edge logs
 clear-logs:
 	rm -f edge/underleaf.log
 
+## run: Stop services, clear logs, and run the stack
 run: stop clear-logs
 	make _run 2>&1 | tee underleaf.log
 
+## stop: Stop all services and clean up
 stop: stop-cloud stop-edge
 	-overmind kill -s cloud/.overmind.sock 2>/dev/null || true
 	-overmind kill -s edge/.overmind.sock  2>/dev/null || true
@@ -44,6 +49,7 @@ stop: stop-cloud stop-edge
 	-pkill conn-worker 2>/dev/null || true
 	-./scripts/kill_by_port.sh 8080 2>/dev/null || true
 
+## clean: Remove Docker containers for cloud-api-db and redis
 clean:
 	-docker rm -f cloud-api-db redis 2>/dev/null || true
 
@@ -68,10 +74,12 @@ stripe-trigger:
 stripe-smoke:
 	./scripts/stripe_smoke.sh
 
+## cloud-docker-build: Build Docker images for cloud services
 cloud-docker-build:
 	docker build . -t ghcr.io/ambientlabscomputing/underleaf/cloud_api:latest -f cloud/docker/cloud_api/Dockerfile
 	docker build . -t ghcr.io/ambientlabscomputing/underleaf/conn_worker:latest -f cloud/docker/conn_worker/Dockerfile
 
+## cloud-ui-build: Build the cloud UI with the correct API path
 # Same-origin API path so the bundle works behind nginx on any hostname
 # (nginx proxies /api/v2/cloud/ to cloud_api, which isn't published to the host).
 cloud-ui-build:
