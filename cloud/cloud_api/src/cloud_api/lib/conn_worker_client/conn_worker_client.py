@@ -1,6 +1,3 @@
-import asyncio
-
-import grpc
 import grpc.aio
 from google.protobuf import empty_pb2
 
@@ -29,49 +26,21 @@ class ConnWorkerClient:
     """Thin gRPC client. Every method returns cloud_api domain models, never
     raw protobuf messages (see mapping.py)."""
 
-    def __init__(self, target: str, credentials: grpc.ChannelCredentials | None = None):
+    def __init__(self, target: str):
         self._target = target
-        self._credentials = credentials  # None = plaintext (local dev / compose)
         self._channel: grpc.aio.Channel | None = None
         self._stub: ConnectionWorkerStub | None = None
-
-    @property
-    def target(self) -> str:
-        return self._target
 
     def _get_stub(self) -> ConnectionWorkerStub:
         """Lazily create the channel and stub on first use (must be inside an async context)."""
         if self._channel is None:
-            self._channel = (
-                grpc.aio.secure_channel(self._target, self._credentials)
-                if self._credentials is not None
-                else grpc.aio.insecure_channel(self._target)
-            )
+            self._channel = grpc.aio.insecure_channel(self._target)
             self._stub = ConnectionWorkerStub(self._channel)
         return self._stub  # type: ignore[return-value]
 
-    async def ping(self, timeout: float = 5.0) -> bool:
-        """True once the channel is connected (TLS handshake included)."""
-        self._get_stub()
-        assert self._channel is not None
-        try:
-            await asyncio.wait_for(self._channel.channel_ready(), timeout)
-            return True
-        except (TimeoutError, grpc.aio.AioRpcError):
-            return False
-
-    async def available(self) -> bool:
-        """A statically configured worker is always assumed to be there; the
-        on-demand client (service/dynamic_conn_worker_client) overrides this."""
-        return True
-
-    async def new_connection(
-        self, node_id: str, name: str, id: str | None = None
-    ) -> Connection:
-        """`id` makes the worker keep the caller's identity for the connection
-        (and makes a retry of the same call idempotent)."""
+    async def new_connection(self, node_id: str, name: str) -> Connection:
         msg = await self._get_stub().CreateConnection(
-            CreateConnectionRequest(node_id=node_id, name=name, id=id or "")
+            CreateConnectionRequest(node_id=node_id, name=name)
         )
         return connection_from_proto(msg)
 

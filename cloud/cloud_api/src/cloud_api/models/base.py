@@ -26,9 +26,6 @@ class IDPrefix(StrEnum):
     WEBHOOK_EVENT = "webhook"
     ALERT = "alert"
     TOP_UP = "topup"
-    WORKER = "worker"
-    WORKER_TASK = "wtask"
-    WORKER_EVENT = "wevent"
 
 
 def generate_id(prefix: IDPrefix) -> str:

@@ -136,12 +136,6 @@ class ConnWorkerConfig(BaseModel):
         default="localhost:50102",
         description="gRPC target address for the connection worker service",
     )
-    dynamic: bool = Field(
-        default=False,
-        description="Provision conn_worker VMs on demand (connections are queued "
-        "and created once a worker is up) instead of using the static "
-        "grpc_target",
-    )
 
 
 class StripeConfig(BaseModel):
@@ -174,170 +168,6 @@ class BillingConfig(BaseModel):
         default=30,
         description="How often traffic is metered; also the worst-case overshoot window "
         "before a hard stop (the grace allowance is sized to absorb it)",
-    )
-
-
-class DigitalOceanConfig(BaseModel):
-    token: str = Field(
-        default="",
-        description="DigitalOcean API token (prefer UNDERLEAF_DO_TOKEN)",
-    )
-    region: str = Field(default="nyc3")
-    image: str = Field(default="ubuntu-24-04-x64")
-    ssh_key_ids: list[str] = Field(
-        default_factory=list,
-        description="SSH key ids/fingerprints to install (only needed for debugging)",
-    )
-
-
-class AdminConfig(BaseModel):
-    principal_account_ids: list[str] = Field(
-        default_factory=list,
-        description="Principal accounts whose access tokens may use /admin/*. "
-        "Empty (the default) disables the admin API entirely.",
-    )
-
-
-class CloudflareConfig(BaseModel):
-    api_token: str = Field(
-        default="",
-        description="Cloudflare token with Zone:DNS:Edit on the zone "
-        "(prefer UNDERLEAF_CLOUDFLARE_TOKEN)",
-    )
-    zone_id: str = Field(
-        default="", description="Zone that holds the worker's DNS names"
-    )
-
-
-class WorkerDefaults(BaseModel):
-    cpu: int = Field(
-        default=2,
-        description="Default number of CPU cores for a worker",
-    )
-    mem_gb: int = Field(
-        default=4,
-        description="Default amount of memory (in GB) for a worker",
-    )
-    storage_gb: int = Field(
-        default=20,
-        description="Default amount of storage (in GB) for a worker",
-    )
-    provider: str = Field(
-        default="digital_ocean",
-        description="Default cloud provider for worker VMs",
-    )
-    image: str = Field(
-        default="",
-        description="Container image of conn_worker the VM pulls and runs "
-        "(e.g. ghcr.io/<org>/underleaf-conn-worker:<tag>). Required to provision.",
-    )
-    environment: str = Field(
-        default="prod",
-        description="Tag value separating environments sharing one cloud account; "
-        "the orphan reaper only touches VMs tagged with its own",
-    )
-    provisioning_enabled: bool = Field(
-        default=True,
-        description="Kill switch: when false no new worker VMs are created "
-        "(existing ones keep being managed and torn down)",
-    )
-    reconciler_enabled: bool = Field(
-        default=True,
-        description="Run the background loop that advances, health-checks and "
-        "reaps worker VMs",
-    )
-    task_poll_seconds: float = Field(
-        default=5.0,
-        description="How often the task runner re-checks queued work when no "
-        "wake-up event arrives",
-    )
-    task_timeout_seconds: int = Field(
-        default=900,
-        description="A queued connection that still has no worker after this "
-        "long is failed and its slot released",
-    )
-    task_max_attempts: int = Field(
-        default=5, description="Attempts to create a connection on a ready worker"
-    )
-    task_retry_backoff_seconds: int = Field(
-        default=5, description="Base of the exponential backoff between attempts"
-    )
-    reconcile_interval_seconds: int = Field(
-        default=10, description="Seconds between worker reconciler ticks"
-    )
-    boot_timeout_seconds: int = Field(
-        default=600,
-        description="Max time a worker may spend waiting for its VM to boot and "
-        "bootstrap before it is torn down and retried",
-    )
-    idle_grace_seconds: int = Field(
-        default=600,
-        description="How long a worker may sit with no open connections before "
-        "it is drained",
-    )
-    drain_seconds: int = Field(
-        default=30,
-        description="Time a worker spends DRAINING (a new request cancels the "
-        "drain) before its VM is deleted",
-    )
-    unhealthy_grace_seconds: int = Field(
-        default=120,
-        description="How long an AVAILABLE worker may be unreachable before it "
-        "is declared failed and replaced",
-    )
-    max_vm_lifetime_hours: int = Field(
-        default=72,
-        description="Cost backstop: a VM older than this is drained even if busy "
-        "(0 disables)",
-    )
-    max_provision_attempts: int = Field(
-        default=3, description="Attempts at one step before the worker is given up on"
-    )
-    breaker_threshold: int = Field(
-        default=3,
-        description="Circuit breaker: failed workers within the window that "
-        "stop new provisioning",
-    )
-    breaker_window_seconds: int = Field(default=900)
-    orphan_min_age_seconds: int = Field(
-        default=300,
-        description="A tagged VM with no live worker is only reaped once this old",
-    )
-    api_public_url: str = Field(
-        default="",
-        description="Public base URL of this API as the VM sees it, e.g. "
-        "https://underleafapp.com/api/v2/cloud. The VM calls back here.",
-    )
-    api_egress_ip: str = Field(
-        default="",
-        description="Public IP the API reaches workers from. When set, the VM "
-        "firewall only admits gRPC from it",
-    )
-    gateway_domain: str = Field(
-        default="underleafapp.com",
-        description="Gateway domain written into the worker's conn_worker config",
-    )
-    tunnel_hostname: str = Field(
-        default="",
-        description="Stable DNS name agents dial; added to the worker's TLS cert SANs",
-    )
-    hourly_cost_usd: float = Field(
-        default=0.0,
-        description="What one worker VM costs per hour (look it up for your "
-        "size/provider). Used only for the /admin/cost estimate; 0 = unknown.",
-    )
-    dns_names: list[str] = Field(
-        default_factory=list,
-        description="A records kept pointed at the ready worker, e.g. "
-        '["*.gw.underleafapp.com"]; tunnel_hostname is always included. '
-        "Needs cloudflare.api_token and zone_id.",
-    )
-    cloudflare: CloudflareConfig = Field(default_factory=CloudflareConfig)
-    grpc_tls_port: int = Field(
-        default=50443, description="Public mTLS port fronting the worker's gRPC"
-    )
-    digital_ocean: "DigitalOceanConfig" = Field(
-        default_factory=lambda: DigitalOceanConfig()
     )
 
 
@@ -376,13 +206,6 @@ class AppConfig(BaseModel):
         default_factory=BillingConfig,
         description="Usage metering / enforcement settings",
     )
-    worker_defaults: WorkerDefaults = Field(
-        default_factory=WorkerDefaults,
-        description="Default configuration for workers",
-    )
-    admin: AdminConfig = Field(
-        default_factory=AdminConfig, description="Operator (admin API) access"
-    )
 
 
 app_config: AppConfig | None = None
@@ -403,14 +226,6 @@ def load_config() -> AppConfig:
         app_config = AppConfig(**{**app_config.model_dump(), **config_data})
     # Secrets come from the environment so they never have to be committed in
     # a config file; an env var wins over the file.
-    if os.getenv("UNDERLEAF_DO_TOKEN"):
-        app_config.worker_defaults.digital_ocean.token = os.environ[
-            "UNDERLEAF_DO_TOKEN"
-        ]
-    if os.getenv("UNDERLEAF_CLOUDFLARE_TOKEN"):
-        app_config.worker_defaults.cloudflare.api_token = os.environ[
-            "UNDERLEAF_CLOUDFLARE_TOKEN"
-        ]
     if os.getenv("UNDERLEAF_STRIPE_API_KEY"):
         app_config.stripe.api_key = os.environ["UNDERLEAF_STRIPE_API_KEY"]
     if os.getenv("UNDERLEAF_STRIPE_WEBHOOK_SECRET"):

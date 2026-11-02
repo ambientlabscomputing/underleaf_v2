@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, ClassVar
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, UniqueConstraint, text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -219,7 +219,6 @@ class SQLConnection(SQLBase):
     closed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    status_detail: Mapped[str | None] = mapped_column(nullable=True)
     streams: Mapped[list["SQLStream"]] = relationship(back_populates="connection")
 
 
@@ -432,100 +431,3 @@ class SQLClusterCandidate(SQLBase):
     last_polled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-
-
-class SQLWorker(SQLBase):
-    __tablename__ = "workers"
-    __table_args__ = (
-        # At most one live (not DELETED + SUCCEEDED) worker per type: the
-        # concurrency guard that stops N simultaneous requests from booting
-        # N VMs. A teardown still in progress holds the slot.
-        Index(
-            "uq_workers_one_live_per_type",
-            "worker_type",
-            unique=True,
-            postgresql_where=text("NOT (state = 'DELETED' AND status = 'succeeded')"),
-        ),
-        {"schema": "underleaf"},
-    )
-
-    id: Mapped[str] = mapped_column(
-        primary_key=True, default=lambda: generate_id(IDPrefix.WORKER)
-    )
-    worker_type: Mapped[str] = mapped_column()
-    state: Mapped[str] = mapped_column(default="REQUESTED")
-    status: Mapped[str] = mapped_column(default="in_progress")
-    error: Mapped[str | None] = mapped_column(nullable=True)
-    state_changed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    extra_data: Mapped[dict] = mapped_column(JSONB, default={}, server_default="{}")
-    config: Mapped[dict] = mapped_column(JSONB, default={}, server_default="{}")
-
-
-class SQLWorkerSetting(SQLBase):
-    """Operator overrides of a few WorkerDefaults (pause provisioning, idle
-    grace, ...). Key is the setting name; absence means "use the config file"."""
-
-    __tablename__ = "worker_settings"
-    __table_args__ = ({"schema": "underleaf"},)
-
-    id: Mapped[str] = mapped_column(primary_key=True)  # the setting's name
-    value: Mapped[dict] = mapped_column(JSONB, default={})
-
-
-class SQLWorkerTask(SQLBase):
-    """Durable queue row. Claimed with FOR UPDATE SKIP LOCKED + a lease."""
-
-    __tablename__ = "worker_tasks"
-    __table_args__ = (
-        # Queue scan: runnable tasks ordered by when they become runnable.
-        Index("ix_worker_tasks_state_run_after", "state", "run_after"),
-        {"schema": "underleaf"},
-    )
-
-    id: Mapped[str] = mapped_column(
-        primary_key=True, default=lambda: generate_id(IDPrefix.WORKER_TASK)
-    )
-    kind: Mapped[str]
-    state: Mapped[str] = mapped_column(default="queued")
-    payload: Mapped[dict] = mapped_column(JSONB, default={}, server_default="{}")
-    connection_id: Mapped[str | None] = mapped_column(nullable=True)
-    worker_id: Mapped[str | None] = mapped_column(nullable=True)
-    attempts: Mapped[int] = mapped_column(default=0, server_default="0")
-    max_attempts: Mapped[int] = mapped_column(default=5, server_default="5")
-    run_after: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    lease_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    error: Mapped[str | None] = mapped_column(nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-
-
-class SQLWorkerEvent(SQLBase):
-    """Append-only timeline for workers/tasks/connections (created_at is the
-    event time)."""
-
-    __tablename__ = "worker_events"
-    __table_args__ = (
-        Index("ix_worker_events_worker_id_created_at", "worker_id", "created_at"),
-        Index(
-            "ix_worker_events_connection_id_created_at", "connection_id", "created_at"
-        ),
-        {"schema": "underleaf"},
-    )
-
-    id: Mapped[str] = mapped_column(
-        primary_key=True, default=lambda: generate_id(IDPrefix.WORKER_EVENT)
-    )
-    worker_id: Mapped[str | None] = mapped_column(nullable=True)
-    task_id: Mapped[str | None] = mapped_column(nullable=True)
-    connection_id: Mapped[str | None] = mapped_column(nullable=True)
-    type: Mapped[str]
-    message: Mapped[str] = mapped_column(default="", server_default="")
-    data: Mapped[dict] = mapped_column(JSONB, default={}, server_default="{}")

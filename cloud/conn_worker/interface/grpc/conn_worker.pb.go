@@ -23,14 +23,9 @@ const (
 )
 
 type CreateConnectionRequest struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	NodeId string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// Optional. When set, conn_worker uses this id instead of minting one, so
-	// a caller that already recorded the connection (cloud_api queues it
-	// before a worker exists) keeps a single identity. Creating with an id
-	// that already exists overwrites it, which makes retries idempotent.
-	Id            string `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -75,13 +70,6 @@ func (x *CreateConnectionRequest) GetNodeId() string {
 func (x *CreateConnectionRequest) GetName() string {
 	if x != nil {
 		return x.Name
-	}
-	return ""
-}
-
-func (x *CreateConnectionRequest) GetId() string {
-	if x != nil {
-		return x.Id
 	}
 	return ""
 }
@@ -605,11 +593,10 @@ var File_conn_worker_proto protoreflect.FileDescriptor
 
 const file_conn_worker_proto_rawDesc = "" +
 	"\n" +
-	"\x11conn_worker.proto\x12\vconn_worker\x1a\x1bgoogle/protobuf/empty.proto\"V\n" +
+	"\x11conn_worker.proto\x12\vconn_worker\x1a\x1bgoogle/protobuf/empty.proto\"F\n" +
 	"\x17CreateConnectionRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x0e\n" +
-	"\x02id\x18\x03 \x01(\tR\x02id\"\xb3\x01\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xb3\x01\n" +
 	"\n" +
 	"Connection\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +

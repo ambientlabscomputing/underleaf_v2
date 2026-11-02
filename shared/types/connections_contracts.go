@@ -7,18 +7,11 @@ func nowRFC3339() string { return time.Now().UTC().Format(time.RFC3339) }
 type CreateConnectionRequest struct {
 	NodeID string `json:"node_id"`
 	Name   string `json:"name"`
-	// ID is set only by cloud_api when it created the connection record
-	// before the worker existed; empty means "mint one".
-	ID string `json:"id,omitempty"`
 }
 
 func (t *CreateConnectionRequest) ToConnection() *Connection {
-	id := t.ID
-	if id == "" {
-		id = GenerateID(ConnectionIDPrefix)
-	}
 	return &Connection{
-		ID:        id,
+		ID:        GenerateID(ConnectionIDPrefix),
 		NodeID:    ForeignKey(t.NodeID),
 		Name:      t.Name,
 		State:     ConnectionStateProvisioned,

@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from cloud_api import app_config
 from cloud_api.interface.accounts.accounts import router as accounts_router
-from cloud_api.interface.admin.admin import router as admin_router
 from cloud_api.interface.billing_accounts.billing_accounts import (
     router as billing_accounts_router,
 )
@@ -14,7 +13,6 @@ from cloud_api.interface.connections.connections import router as connections_ro
 from cloud_api.interface.deps import (
     x_subject_id_token_middleware_,
 )
-from cloud_api.interface.internal.workers import router as internal_workers_router
 from cloud_api.interface.oauth.oauth import router as oauth_router
 from cloud_api.interface.plan_prices.plan_prices import router as plan_prices_router
 from cloud_api.interface.plans.plans import router as plans_router
@@ -27,8 +25,7 @@ from cloud_api.interface.subscriptions.subscriptions import (
     router as subscriptions_router,
 )
 from cloud_api.service.usage_sync_loop import run_usage_sync_loop
-from cloud_api.service.worker_reconciler import run_worker_reconciler
-from cloud_api.service_manager import get_auth_service, get_task_service
+from cloud_api.service_manager import get_auth_service
 
 app = FastAPI()
 if not app_config:
@@ -72,40 +69,6 @@ async def stop_usage_sync_loop():
         _usage_sync_task.cancel()
 
 
-_worker_reconciler_task: asyncio.Task | None = None
-
-
-@app.on_event("startup")
-async def start_worker_reconciler():
-    global _worker_reconciler_task
-    if app_config.worker_defaults.reconciler_enabled:
-        _worker_reconciler_task = asyncio.create_task(
-            run_worker_reconciler(app_config.worker_defaults.reconcile_interval_seconds)
-        )
-
-
-@app.on_event("shutdown")
-async def stop_worker_reconciler():
-    if _worker_reconciler_task is not None:
-        _worker_reconciler_task.cancel()
-
-
-_task_runner_task: asyncio.Task | None = None
-
-
-@app.on_event("startup")
-async def start_task_runner():
-    global _task_runner_task
-    if app_config.conn_worker.dynamic:
-        _task_runner_task = asyncio.create_task(get_task_service().run_loop())
-
-
-@app.on_event("shutdown")
-async def stop_task_runner():
-    if _task_runner_task is not None:
-        _task_runner_task.cancel()
-
-
 router = APIRouter(prefix=app_config.api.base_path)
 router.include_router(accounts_router)
 router.include_router(clusters_router)
@@ -118,8 +81,6 @@ router.include_router(stream_router)
 router.include_router(registration_router)
 router.include_router(oauth_router)
 router.include_router(stripe_webhooks_router)
-router.include_router(internal_workers_router)
-router.include_router(admin_router)
 
 
 @router.get("/health")

@@ -7,11 +7,6 @@ option go_package = "github.com/ambientlabscomputing/underleaf_v2/cloud/conn_wor
 message CreateConnectionRequest {
     string node_id = 1;
     string name = 2;
-    // Optional. When set, conn_worker uses this id instead of minting one, so
-    // a caller that already recorded the connection (cloud_api queues it
-    // before a worker exists) keeps a single identity. Creating with an id
-    // that already exists overwrites it, which makes retries idempotent.
-    string id = 3;
 }
 
 message Connection {

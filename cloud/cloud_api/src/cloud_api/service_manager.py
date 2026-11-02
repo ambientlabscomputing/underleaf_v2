@@ -15,12 +15,8 @@ Usage in a router:
 
 from functools import lru_cache
 
-from cloud_api.config import WorkerDefaults
 from cloud_api.lib.auth_lib import AuthLib
 from cloud_api.lib.conn_worker_client import ConnWorkerClient
-from cloud_api.lib.dns import DNSManager, dns_manager_factory
-from cloud_api.lib.events import EventBus
-from cloud_api.lib.vm_manager import VMManager, VMProvider, vm_manager_factory
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.cluster_repository import ClusterRepository
 from cloud_api.repository.connection_repository import ConnectionRepository
@@ -43,16 +39,11 @@ from cloud_api.repository.top_up_repository import TopUpRepository
 from cloud_api.repository.usage_alert_repository import UsageAlertRepository
 from cloud_api.repository.usage_event_repository import UsageEventRepository
 from cloud_api.repository.user_repository import UserRepository
-from cloud_api.repository.worker_event_repository import WorkerEventRepository
-from cloud_api.repository.worker_repository import WorkerRepository
-from cloud_api.repository.worker_settings_repository import WorkerSettingsRepository
-from cloud_api.repository.worker_task_repository import WorkerTaskRepository
 from cloud_api.service.account_service import AccountService
 from cloud_api.service.auth_service import AuthService
 from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
 from cloud_api.service.connection_service import ConnectionService
-from cloud_api.service.dynamic_conn_worker_client import DynamicConnWorkerClient
 from cloud_api.service.entitlements_bucket_service import EntitlementsBucketService
 from cloud_api.service.invoice_service import InvoiceService
 from cloud_api.service.plan_service import PlanService
@@ -61,14 +52,10 @@ from cloud_api.service.stream_service import StreamService
 from cloud_api.service.stripe_checkout_service import StripeCheckoutService
 from cloud_api.service.stripe_webhook_service import StripeWebhookService
 from cloud_api.service.subscription_service import SubscriptionService
-from cloud_api.service.task_service import TaskService
 from cloud_api.service.top_up_service import TopUpService
 from cloud_api.service.usage_enforcement_service import UsageEnforcementService
 from cloud_api.service.usage_event_service import UsageEventService
 from cloud_api.service.usage_summary_service import UsageSummaryService
-from cloud_api.service.worker_report_service import WorkerReportService
-from cloud_api.service.worker_service import WorkerService
-from cloud_api.service.worker_settings_service import WorkerSettingsService
 
 # ---------------------------------------------------------------------------
 # Repository singletons
@@ -149,15 +136,11 @@ def get_auth_lib() -> AuthLib:
 
 
 @lru_cache
-def get_conn_worker_client() -> ConnWorkerClient | DynamicConnWorkerClient:
-    """The static conn_worker at `grpc_target`, or -- with
-    `conn_worker.dynamic` -- whichever on-demand worker VM is ready."""
+def get_conn_worker_client() -> ConnWorkerClient:
     from cloud_api import app_config
 
     if not app_config:
         raise RuntimeError("App config not loaded")
-    if app_config.conn_worker.dynamic:
-        return DynamicConnWorkerClient(get_worker_service())
     return ConnWorkerClient(target=app_config.conn_worker.grpc_target)
 
 
@@ -303,16 +286,11 @@ def get_stream_repo() -> StreamRepository:
 
 @lru_cache
 def get_connection_service() -> ConnectionService:
-    from cloud_api import app_config
-
-    dynamic = bool(app_config and app_config.conn_worker.dynamic)
     return ConnectionService(
         conn_repo=get_conn_repo(),
         conn_client=get_conn_worker_client(),
         billing_account_repo=get_billing_account_repo(),
         entitlements_bucket_service=get_entitlements_bucket_service(),
-        task_service=get_task_service() if dynamic else None,
-        event_bus=get_event_bus(),
     )
 
 
@@ -365,104 +343,6 @@ def get_registration_service() -> RegistrationService:
         registration_repo=get_registration_repo(),
         cluster_repo=get_cluster_repo(),
         cert_lib=get_cert_lib(),
-    )
-
-
-@lru_cache
-def get_event_bus() -> EventBus:
-    return EventBus()
-
-
-@lru_cache
-def get_vm_manager() -> VMManager:
-    from cloud_api import app_config
-
-    defaults = app_config.worker_defaults if app_config else WorkerDefaults()
-    return vm_manager_factory(VMProvider(defaults.provider), defaults)
-
-
-@lru_cache
-def get_dns_manager() -> DNSManager | None:
-    from cloud_api import app_config
-
-    return dns_manager_factory(
-        app_config.worker_defaults if app_config else WorkerDefaults()
-    )
-
-
-@lru_cache
-def get_worker_repo() -> WorkerRepository:
-    return WorkerRepository()
-
-
-@lru_cache
-def get_worker_event_repo() -> WorkerEventRepository:
-    return WorkerEventRepository()
-
-
-@lru_cache
-def get_worker_task_repo() -> WorkerTaskRepository:
-    return WorkerTaskRepository()
-
-
-@lru_cache
-def get_worker_service() -> WorkerService:
-    from cloud_api import app_config
-
-    return WorkerService(
-        worker_repository=get_worker_repo(),
-        event_repository=get_worker_event_repo(),
-        vm_manager=get_vm_manager(),
-        cert_lib=get_cert_lib(),
-        settings=app_config.worker_defaults if app_config else WorkerDefaults(),
-        event_bus=get_event_bus(),
-        # Queued connections keep a worker alive even with nothing open yet.
-        has_pending_work=get_worker_task_repo().has_active,
-        dns_manager=get_dns_manager(),
-    )
-
-
-@lru_cache
-def get_task_service() -> TaskService:
-    from cloud_api import app_config
-
-    return TaskService(
-        task_repo=get_worker_task_repo(),
-        conn_repo=get_conn_repo(),
-        billing_account_repo=get_billing_account_repo(),
-        entitlements_bucket_service=get_entitlements_bucket_service(),
-        worker_service=get_worker_service(),
-        event_repo=get_worker_event_repo(),
-        event_bus=get_event_bus(),
-        settings=app_config.worker_defaults if app_config else WorkerDefaults(),
-        refresh_settings=get_worker_settings_service().refresh,
-    )
-
-
-@lru_cache
-def get_worker_settings_repo() -> WorkerSettingsRepository:
-    return WorkerSettingsRepository()
-
-
-@lru_cache
-def get_worker_settings_service() -> WorkerSettingsService:
-    from cloud_api import app_config
-
-    return WorkerSettingsService(
-        repo=get_worker_settings_repo(),
-        settings=app_config.worker_defaults if app_config else WorkerDefaults(),
-    )
-
-
-@lru_cache
-def get_worker_report_service() -> WorkerReportService:
-    from cloud_api import app_config
-
-    return WorkerReportService(
-        worker_repo=get_worker_repo(),
-        event_repo=get_worker_event_repo(),
-        task_repo=get_worker_task_repo(),
-        settings=app_config.worker_defaults if app_config else WorkerDefaults(),
     )
 
 

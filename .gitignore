@@ -12,5 +12,4 @@
 
 # local secrets (Stripe sandbox keys etc.)
 .env
-.vscode
 tmp

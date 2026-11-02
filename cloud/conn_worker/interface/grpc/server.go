@@ -38,7 +38,6 @@ func (s *ConnWorkerGRPCServer) CreateConnection(ctx context.Context, req *Create
 	req_ := types.CreateConnectionRequest{
 		NodeID: req.NodeId,
 		Name:   req.Name,
-		ID:     req.Id,
 	}
 	conn, err := s.service.NewConnection(ctx, req_)
 	if err != nil {

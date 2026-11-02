@@ -1,13 +1,11 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, delete, func, insert, not_, select, update
+from sqlalchemy import delete, func, insert, select, update
 
 from cloud_api.models.api import (
     Connection,
-    ConnectionState,
     PatchConnectionRequest,
     QueryConnectionRequest,
-    Status,
 )
 from cloud_api.models.sql import SQLCluster, SQLConnection, SQLNode
 from cloud_api.repository.base_repository import BaseRepository
@@ -25,7 +23,6 @@ class ConnectionRepository(BaseRepository):
                 closed_at=conn.closed_at,
                 state=conn.state,
                 status=conn.status,
-                status_detail=conn.status_detail,
             )
             session.add(new_conn)
             await session.commit()
@@ -117,102 +114,17 @@ class ConnectionRepository(BaseRepository):
                 .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
                 .where(SQLCluster.principal_account_id == principal_account_id)
                 .where(SQLConnection.state != "closed")
-                # A pending connection that gave up already released its slot.
-                .where(
-                    not_(
-                        and_(
-                            SQLConnection.state == ConnectionState.PENDING.value,
-                            SQLConnection.status == Status.FAILED.value,
-                        )
-                    )
-                )
             )
             return int(result.scalar_one())
 
     async def list_open_ids(self, created_before: datetime) -> list[str]:
-        """Open connections conn_worker should know about. Pending ones are
-        excluded (they don't exist on a worker yet) and the cutoff is the last
-        *update*, not creation: a connection activated after the worker
-        snapshot was taken was created long before it, yet isn't in it."""
         async with self.get_session() as session:
             result = await session.scalars(
                 select(SQLConnection.id)
                 .where(SQLConnection.state != "closed")
-                .where(SQLConnection.state != ConnectionState.PENDING.value)
-                .where(SQLConnection.updated_at < created_before)
+                .where(SQLConnection.created_at < created_before)
             )
             return [str(i) for i in result.all()]
-
-    # -- Pending (queued for a worker) connections ---------------------------
-    # Each takes a row lock so the runner giving up, the runner activating and
-    # a user terminating can't both win; the caller learns which one did.
-
-    async def _lock_pending(self, session, connection_id: str) -> SQLConnection | None:
-        return await session.scalar(
-            select(SQLConnection)
-            .where(SQLConnection.id == connection_id)
-            .where(SQLConnection.state == ConnectionState.PENDING.value)
-            .with_for_update()
-        )
-
-    async def activate_pending(self, connection_id: str, created: Connection) -> bool:
-        """The worker now has the connection: adopt its state/status.
-        False if it was terminated or failed in the meantime."""
-        async with self.get_session() as session:
-            row = await self._lock_pending(session, connection_id)
-            if row is None or row.status != Status.IN_PROGRESS.value:
-                return False
-            row.state = created.state.value
-            row.status = created.status.value
-            row.status_detail = None
-            row.updated_at = datetime.now(UTC)
-            await session.commit()
-            return True
-
-    async def fail_pending(self, connection_id: str, detail: str) -> bool:
-        """Give up on a pending connection. True only for the caller that
-        moved it, who is then responsible for releasing the slot."""
-        async with self.get_session() as session:
-            row = await self._lock_pending(session, connection_id)
-            if row is None or row.status != Status.IN_PROGRESS.value:
-                return False
-            row.status = Status.FAILED.value
-            row.status_detail = detail
-            row.updated_at = datetime.now(UTC)
-            await session.commit()
-            return True
-
-    async def close_pending(self, connection_id: str) -> Status | None:
-        """Terminate a pending connection. Returns the status it had (so the
-        caller knows whether a slot is still held: only IN_PROGRESS holds
-        one), or None if it wasn't pending."""
-        async with self.get_session() as session:
-            row = await self._lock_pending(session, connection_id)
-            if row is None:
-                return None
-            prior = Status(row.status)
-            now = datetime.now(UTC)
-            row.state = ConnectionState.CLOSED.value
-            row.closed_at = now
-            row.status_detail = None
-            row.updated_at = now
-            await session.commit()
-            return prior
-
-    async def set_pending_detail(self, connection_id: str, detail: str) -> bool:
-        """Progress text; a no-op (no write) when unchanged so a waiting task
-        polling every few seconds doesn't churn the row."""
-        async with self.get_session() as session:
-            result = await session.execute(
-                update(SQLConnection)
-                .where(SQLConnection.id == connection_id)
-                .where(SQLConnection.state == ConnectionState.PENDING.value)
-                .where(SQLConnection.status == Status.IN_PROGRESS.value)
-                .where(SQLConnection.status_detail.is_distinct_from(detail))
-                .values(status_detail=detail, updated_at=datetime.now(UTC))
-            )
-            await session.commit()
-            return result.rowcount > 0
 
     async def mark_closed(self, connection_ids: list[str]) -> None:
         """Close connections conn_worker no longer knows about (terminated
