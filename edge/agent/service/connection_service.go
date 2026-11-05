@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,6 +29,12 @@ func NewConnectionService(config utils.Config, cc *conn_client.ConnClient) *Conn
 
 func (s *ConnectionService) Start() {
 	s.connClient.Start()
+	// Remote access: keep one cloud connection open so the cloud can open
+	// remote-access streams toward this agent even when no gateway stream
+	// exists. Off unless both the connection id and the target are configured.
+	if id := strings.TrimSpace(os.Getenv(utils.EnvRemoteConnectionID)); id != "" && strings.TrimSpace(os.Getenv(utils.EnvRemoteTarget)) != "" {
+		s.connClient.Connect(context.Background(), id)
+	}
 }
 
 func (s *ConnectionService) ConnectToCloud(ctx context.Context, connectionID string) {

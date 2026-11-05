@@ -108,14 +108,23 @@ func requestGuard() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "origin not allowed"})
 			return
 		}
-		switch c.Request.Method {
-		case http.MethodPost, http.MethodPut, http.MethodPatch:
-			mt, _, _ := mime.ParseMediaType(c.GetHeader("Content-Type"))
-			if mt != "application/json" {
-				c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be application/json"})
-				return
-			}
+		if !requireJSONBody(c) {
+			return
 		}
 		c.Next()
 	}
+}
+
+// requireJSONBody aborts requests whose body is not declared as JSON, and
+// reports whether the request may continue.
+func requireJSONBody(c *gin.Context) bool {
+	switch c.Request.Method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch:
+		mt, _, _ := mime.ParseMediaType(c.GetHeader("Content-Type"))
+		if mt != "application/json" {
+			c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be application/json"})
+			return false
+		}
+	}
+	return true
 }

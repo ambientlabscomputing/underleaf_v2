@@ -14,9 +14,12 @@
 package main
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	agentcli "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/cli"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/cmd/ufctl/remoteaccess"
 	orchestratorcli "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli"
 )
 
@@ -34,8 +37,11 @@ func init() {
 	orchestratorcli.AddCommands(rootCmd)
 	agentcli.AddCommands(agentCmd)
 	rootCmd.AddCommand(agentCmd)
+	remoteaccess.AddCommands(rootCmd) // login, logout, connect (RFD 5 step 7b)
 }
 
 func main() {
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

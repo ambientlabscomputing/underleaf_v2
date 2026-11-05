@@ -63,7 +63,13 @@ func (s *OrchestratorRESTServer) StreamContainerLogs(c *gin.Context) {
 	dockerID := c.Param("dockerId")
 	sinceMs := parseInt64Query(c, "since_ms", 0)
 
-	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	upgrader := wsUpgrader
+	if isRemote(c) {
+		// Behind the cloud the browser's Origin is the cloud's, not ours; the
+		// request was already authenticated by its signed assertion.
+		upgrader.CheckOrigin = func(*http.Request) bool { return true }
+	}
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		// Upgrade writes its own error response.
 		return

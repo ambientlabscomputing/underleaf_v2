@@ -76,3 +76,18 @@ func TestCheckStreamPortHonoursExtraPortsEnv(t *testing.T) {
 		}
 	}
 }
+
+func TestRemoteListenerPortsAreDenied(t *testing.T) {
+	t.Setenv(EnvRemoteAddr, "127.0.0.1:50999")
+	t.Setenv(EnvRemoteTarget, "localhost:50888")
+	for _, p := range []int{DefaultRemotePort.Int(), 50999, 50888} {
+		if err := CheckStreamPort(p); err == nil {
+			t.Errorf("port %d (remote listener) must not be publishable as a stream", p)
+		}
+	}
+	t.Setenv(EnvRemoteAddr, "")
+	t.Setenv(EnvRemoteTarget, "")
+	if err := CheckStreamPort(50999); err != nil {
+		t.Errorf("unrelated port denied: %v", err)
+	}
+}
