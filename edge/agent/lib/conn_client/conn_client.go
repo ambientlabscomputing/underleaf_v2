@@ -99,6 +99,14 @@ func (cc *ConnClient) ListStreams() []StreamState {
 func (cc *ConnClient) NewGatewayStream(ctx context.Context, streamID string, streamType types.StreamType, localPort int) (*LiveStream, error) {
 	logger := utils.LoggerFromContext(ctx).With("stream_id", streamID, "stream_type", streamType, "local_port", localPort)
 
+	// Authoritative control-plane check, at the point the local port is dialed:
+	// loopback is only a trust boundary if nothing forwards to it, so a stream
+	// must never reach the Orchestrator/agent APIs, whatever created it.
+	if err := utils.CheckStreamPort(localPort); err != nil {
+		logger.Warn("refusing to forward stream to control-plane port", "error", err)
+		return nil, err
+	}
+
 	cc.mu.Lock()
 	if cc.connection == nil {
 		cc.mu.Unlock()

@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/lib/conn_client"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
@@ -51,6 +54,11 @@ type NewStreamRequest struct {
 }
 
 func (s *ConnectionService) NewStream(ctx context.Context, req NewStreamRequest) error {
+	// Fail fast, before dialing the cloud. NewGatewayStream enforces the same
+	// check again where the local port is actually dialed.
+	if err := utils.CheckStreamPort(req.Port); err != nil {
+		return status.Error(codes.PermissionDenied, err.Error())
+	}
 	s.ConnectToCloud(ctx, req.ConnectionID)
 	switch req.Type {
 	case "gateway":

@@ -7,7 +7,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 | Step | Title | State | Owner | Branch / PR | Needs | Updated |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Network isolation | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
-| 2 | Stream port denylist | not started | none | none | none | none |
+| 2 | Stream port denylist | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
 | 3 | One-origin UI + API | not started | none | none | none | none |
 | 4 | Cluster CA, listener, `nodes add`, join | not started | none | none | none | none |
 | 5 | Agent link | not started | none | none | 4 | none |
@@ -103,15 +103,32 @@ Environment notes for all agents:
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] Creating a stream to a control-plane port is rejected at creation (test)
-- [ ] Same port is rejected again at forward time in the agent (test)
-- [ ] Common checks green; README Security model updated
+- [x] Creating a stream to a control-plane port is rejected at creation (test)
+- [x] Same port is rejected again at forward time in the agent (test)
+- [x] Common checks green; README Security model updated
 
 ### Log
 
+#### 2026-11-04 · agent-A · control-plane port denylist at creation and at forward time
+- Did: [shared/utils/controlports.go](../shared/utils/controlports.go) (new, the single definition): `ControlPlanePorts()` / `CheckStreamPort(port)`. Denied: Orchestrator REST `9090` and gRPC `50100`, agent REST `9091` and gRPC `50101`, the odd named constants `50101`/`50103` from `config.go`, Docker API `2375`/`2376`, the **configured** REST ports read from `GetConfig(Orchestrator|Agent).Http.Port` (so `UNDERLEAF_CONFIG` overrides are honoured), plus `UNDERLEAF_EXTRA_CONTROL_PORTS` (new, for non-default published ports), and any port outside 1..65535. Enforcement points: (1) Orchestrator [`ConnectionService.NewStream`](../edge/orchestrator/service/connection_service.go) rejects with gRPC `InvalidArgument` *before* creating the cloud connection/stream; (2) agent [`ConnectionService.NewStream`](../edge/agent/service/connection_service.go) fails fast with `PermissionDenied`; (3) agent [`ConnClient.NewGatewayStream`](../edge/agent/lib/conn_client/conn_client.go), the only place a local port is dialed for forwarding, checks first, before any lock/dial. Also: when the agent refuses after the cloud stream was already created (e.g. the Orchestrator's config differs), the Orchestrator now closes the cloud-side stream and terminates the connection best-effort instead of leaving a public stream pointing at nothing. Also fixed a CLI bug: `orcli streams new --port` was declared a string flag but read with `GetInt`, so the port was always 0 ([new.go](../edge/orchestrator/interface/cli/commands/streams/new.go): `IntP`). README Security model: new "Stream port denylist" row.
+- Verified:
+  - `go test ./shared/utils ./edge/orchestrator/service ./edge/agent/... -count=1` -> all ok. Tests: defaults denied and wrap `ErrControlPlanePort`; ordinary ports (22, 80, 443, 3000, 5432, 8080, 5678, 65535) allowed; invalid ports (0, -1, 65536, 1<<20) refused; a `UNDERLEAF_CONFIG` yaml with `http.port` set to a non-default value is denied while its neighbour stays allowed; extra-ports env (with junk entries ignored). Orchestrator creation test uses nil cloud/agent clients, so any code path past the check would panic: ports 9090/9091/50100/50101/50103/2375/15090(extra)/0/-1/70000 all return `InvalidArgument`, no stream. Agent forward tests use a real local TCP listener on a denied port (via the extra list, and via config) and assert **zero connections ever reach it**; a negative control shows an ordinary port passes the denylist (and fails later only for lack of a cloud connection).
+  - Mutation check: neutralising the check at each of the three sites in turn makes the corresponding tests fail (forward: `TestForwardRefusesControlPlanePorts`, `TestForwardNeverDialsDeniedPort`; orchestrator and agent service: nil-pointer panic from reaching the clients). Files restored; `git diff` shows only the intended change.
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./...` pass; `gofmt -l edge shared cloud` empty.
+- Next: step 3.
+- Blocked: none
+
 ### Decisions and deviations
 
+- **One definition, two enforcement processes.** The Orchestrator only knows its own config; the denylist therefore unions both configs' REST ports in every process (over-denying one extra port is harmless) and offers `UNDERLEAF_EXTRA_CONTROL_PORTS` for the case it cannot know (non-default host ports where the Orchestrator container is published, e.g. `install.sh` with custom ports). The agent check is the authoritative one.
+- **Docker API ports (2375/2376) are in the set** though the RFD lists only Orchestrator/agent ports: they are equally root-equivalent. Cheap to remove if undesired.
+- **Real constants vs. config.go**: `config.go` names `OrchestratorGRPCPort=50101` and `AgentGRPCPort=50103`, but the listeners actually bind 50100 and 50101 (hardcoded in the two `server.go` files). Left alone (those files are Track B's); both the real values and the named ones are denied, and new constants `OrchestratorPublicGRPCPort`/`AgentPublicGRPCPort` document the real ones.
+- The cloud-side stream request is not validated for the port (cloud is Track C's area).
+
 ### Open issues
+
+- Not run end to end: creating a real stream needs the cloud stack (`cloud_api`, `conn_worker`) and a registered cluster; verified with unit tests that drive the real check functions and a real TCP listener, not through `orcli streams new` against a live cloud.
+- A Docker-published port that maps the control plane to an arbitrary host port can only be denied if listed in `UNDERLEAF_EXTRA_CONTROL_PORTS`; nothing detects it automatically.
 
 ## Step 3: One-origin UI + API
 
