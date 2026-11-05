@@ -78,6 +78,17 @@ var routeScopes = map[string]routeAccess{
 	"POST /deployments": {kind: routeScoped, scope: service.ScopeDeploy},
 }
 
+// accessFor returns what a matched route requires, looking it up in
+// routeScopes. The local and the remote listener share this one table; a route
+// that is not in it requires admin (fail closed).
+func accessFor(method, fullPath, base string) routeAccess {
+	rel := strings.TrimPrefix(fullPath, base)
+	if a, known := routeScopes[method+" "+rel]; known {
+		return a
+	}
+	return routeAccess{kind: routeScoped, scope: service.ScopeAdmin}
+}
+
 // tokenVerifier authenticates bearer tokens (the token service in production).
 type tokenVerifier interface {
 	Authenticate(ctx context.Context, presented string) (*service.TokenPrincipal, error)
@@ -126,11 +137,7 @@ func (s *OrchestratorRESTServer) authMiddleware(basePath string) gin.HandlerFunc
 			c.Next()
 			return
 		}
-		rel := strings.TrimPrefix(full, base)
-		access, known := routeScopes[c.Request.Method+" "+rel]
-		if !known {
-			access = routeAccess{kind: routeScoped, scope: service.ScopeAdmin}
-		}
+		access := accessFor(c.Request.Method, full, base)
 		if access.kind == routePublic {
 			c.Next()
 			return

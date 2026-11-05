@@ -214,6 +214,9 @@ func (cc *ConnClient) establish(ctx context.Context, connectionID string) (*Live
 	cc.connection = liveConn
 	cc.mu.Unlock()
 
+	// Accept remote-access streams the cloud opens on this connection.
+	go ServeRemoteStreams(ctx, yam, cc.remoteTargetAddr)
+
 	logger.Info("connection established successfully")
 	return liveConn, nil
 }

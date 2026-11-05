@@ -50,6 +50,8 @@ func Run() {
 	// Initialize and start the REST server
 	restServer := rest.OrchestratorRESTServer{Service: svc}
 	go restServer.Serve()
+	// Remote access (assertion-gated listener); a no-op unless UNDERLEAF_REMOTE_ADDR is set.
+	startRemoteAccess(context.Background(), &restServer, config)
 
 	// Initialize and start the gRPC public server (agent communication)
 	grpcPublicServer := grpc_public_server.OrchestratorGRPCPublicServer{Service: svc}

@@ -99,3 +99,22 @@ var (
 	ErrAudience     = errors.New("assertion: wrong audience")
 	ErrScope        = errors.New("assertion: missing required scope")
 )
+
+// Transport contract between the cloud and a cluster (RFD 5 step 7b).
+const (
+	// HeaderName is the HTTP request header in which the cloud attaches an
+	// assertion to a request it forwards to a cluster's remote listener. It is
+	// deliberately not "Authorization": that header carries local API tokens,
+	// and the two credentials must never be confused. The cloud sets it on
+	// every forwarded request (one fresh assertion, one jti, per request) and
+	// must strip any value the end client supplied.
+	HeaderName = "X-Underleaf-Assertion"
+
+	// StreamPreamble is the first line the cloud writes on a stream it opens
+	// toward a cluster's agent over the outbound tunnel to say "this stream
+	// carries remote-access HTTP for the Orchestrator's remote listener". The
+	// agent accepts a cloud-opened stream only if it begins with exactly these
+	// bytes, and then connects it to the one configured remote listener
+	// address, never to a port named by the stream.
+	StreamPreamble = "UNDERLEAF-REMOTE/1\n"
+)

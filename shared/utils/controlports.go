@@ -66,6 +66,9 @@ func ControlPlanePorts() map[int]string {
 	if p := GetConfig(AgentConfig).Http.Port.Int(); p > 0 {
 		ports[p] = "agent REST API (configured)"
 	}
+	for p, what := range remotePorts() {
+		ports[p] = what
+	}
 	for _, f := range strings.Split(os.Getenv(EnvExtraControlPorts), ",") {
 		if f = strings.TrimSpace(f); f == "" {
 			continue

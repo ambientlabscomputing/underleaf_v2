@@ -26,6 +26,11 @@ type OrchestratorRESTServer struct {
 	logSrc logSource
 	// tokenSrc overrides bearer-token verification (tests); nil means Service.Tokens().
 	tokenSrc tokenVerifier
+	// Remote authenticates cloud-signed assertions for the remote listener
+	// (step 7b). It is only consulted by the remote router; the local router
+	// never reads it. nil disables the remote listener.
+	Remote remoteAuthenticator
+
 	// ticketSrc holds WebSocket tickets; created on first use.
 	ticketSrc  *ticketStore
 	ticketOnce sync.Once
@@ -38,12 +43,32 @@ const envUIDir = "UNDERLEAF_UI_DIR"
 // and, if uiDir is set, the UI. Every request, including static assets and
 // WebSocket upgrades, goes through requestGuard.
 func (s *OrchestratorRESTServer) newRouter(basePath, uiDir string) *gin.Engine {
+	return s.buildRouter(basePath, uiDir, listenerLocal)
+}
+
+// listenerKind says which listener a router serves. The two never share a
+// middleware chain: the local one has no assertion support at all and the
+// remote one has no unauthenticated path.
+type listenerKind int
+
+const (
+	listenerLocal listenerKind = iota
+	listenerRemote
+)
+
+func (s *OrchestratorRESTServer) buildRouter(basePath, uiDir string, kind listenerKind) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{Formatter: redactingLogFormatter}), gin.Recovery())
 
 	router.Use(securityHeaders())
-	router.Use(requestGuard())
-	router.Use(s.authMiddleware(basePath))
+	if kind == listenerRemote {
+		router.Use(remoteGuard())
+		router.Use(s.remoteAuthMiddleware(basePath))
+	} else {
+		router.Use(rejectRemoteCredentials())
+		router.Use(requestGuard())
+		router.Use(s.authMiddleware(basePath))
+	}
 	// No CORS middleware: the UI is served from this origin (or, in dev,
 	// proxied through the Vite server), so browsers never make cross-origin
 	// requests to the API. Cross-origin callers are rejected by requestGuard.

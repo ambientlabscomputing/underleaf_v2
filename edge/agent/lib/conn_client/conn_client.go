@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
@@ -22,6 +24,10 @@ type ConnClient struct {
 	aliveChan  chan struct{}   // channel to signal that the agent is alive and should keep the connection open
 	ctx        context.Context // long-lived context owned by ConnClient, cancelled on shutdown
 	cancel     context.CancelFunc
+
+	// remoteTarget is where cloud-opened remote-access streams are spliced to
+	// (see remote.go). Guarded by mu. Empty refuses them.
+	remoteTarget string
 }
 
 func NewConnClient(cfg utils.Config, aliveChan chan struct{}) (*ConnClient, error) {
@@ -37,6 +43,8 @@ func NewConnClient(cfg utils.Config, aliveChan chan struct{}) (*ConnClient, erro
 		aliveChan: aliveChan,
 		ctx:       ctx,
 		cancel:    cancel,
+
+		remoteTarget: strings.TrimSpace(os.Getenv(utils.EnvRemoteTarget)),
 	}, nil
 }
 
