@@ -113,7 +113,7 @@ export function PageShell({ title = 'Orchestrator', navItems = [], actions, chil
                 <ListItemIcon sx={{ justifyContent: 'center', minWidth: open ? 36 : 'auto' }}>
                   {item.icon}
                 </ListItemIcon>
-                {open && <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }} />}
+                {open && <ListItemText primary={item.label} slotProps={{ primary: { variant: 'body2', sx: { fontWeight: 500 } } }} />}
               </ListItemButton>
             </Tooltip>
           ))}

@@ -32,6 +32,7 @@ func (s *OrchestratorGRPCPrivateServer) Serve() {
 	grpcServer := grpc.NewServer()
 	RegisterOrchestratorPrivateServer(grpcServer, s)
 	RegisterClusterPrivateServer(grpcServer, &clusterPrivate{Service: s.Service})
+	RegisterOrchestratorTokensServer(grpcServer, &TokensServer{Tokens: s.Service.Tokens()})
 
 	fmt.Printf("gRPC private server listening on unix://%s\n", unixSocketPath)
 	if err := grpcServer.Serve(lis); err != nil {

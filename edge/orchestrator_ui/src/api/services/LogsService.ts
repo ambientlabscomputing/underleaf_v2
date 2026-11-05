@@ -24,13 +24,18 @@ export const logsService = {
   },
 };
 
-// Build a WebSocket URL from the REST BASE_URL.
+// Build a WebSocket URL from the REST base URL (same origin by default).
 const wsBase = (() => {
-  const base = import.meta.env.VITE_API_URL ?? 'http://localhost:9090/api/v2';
-  return base.replace(/^http/, 'ws');
+  const url = new URL(import.meta.env.VITE_API_URL ?? '/api/v1', window.location.href);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString().replace(/\/$/, '');
 })();
 
-export function openLogStream(dockerId: string, sinceMs?: number): WebSocket {
-  const qs = sinceMs ? `?since_ms=${sinceMs}` : '';
-  return new WebSocket(`${wsBase}/containers/${dockerId}/logs/stream${qs}`);
+// Browsers cannot set headers on a WebSocket, so the stream is opened with a
+// short-lived, single-use ticket obtained over the normal API.
+export async function openLogStream(dockerId: string, sinceMs?: number): Promise<WebSocket> {
+  const { ticket } = await apiClient.post<{ ticket: string; expires_in: number }>('/ws-tickets', {});
+  const qs = new URLSearchParams({ ticket });
+  if (sinceMs) qs.set('since_ms', String(sinceMs));
+  return new WebSocket(`${wsBase}/containers/${dockerId}/logs/stream?${qs.toString()}`);
 }

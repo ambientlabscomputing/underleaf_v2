@@ -23,6 +23,7 @@ var agentSocketPath = sharedutils.AgentSocketPath()
 type DependencyManager struct {
 	OrchestratorPrivateClient grpc_private.OrchestratorPrivateClient
 	ClusterPrivateClient      grpc_private.ClusterPrivateClient
+	OrchestratorTokensClient  grpc_private.OrchestratorTokensClient
 	privateConn               *grpc.ClientConn
 }
 
@@ -46,6 +47,7 @@ func DependencyManagerBuilder(deps ...string) *DependencyManager {
 			dm.privateConn = conn
 			dm.OrchestratorPrivateClient = grpc_private.NewOrchestratorPrivateClient(conn)
 			dm.ClusterPrivateClient = grpc_private.NewClusterPrivateClient(conn)
+			dm.OrchestratorTokensClient = grpc_private.NewOrchestratorTokensClient(conn)
 		}
 	}
 	return dm

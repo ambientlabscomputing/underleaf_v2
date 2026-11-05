@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
@@ -22,6 +24,10 @@ type ConnClient struct {
 	aliveChan  chan struct{}   // channel to signal that the agent is alive and should keep the connection open
 	ctx        context.Context // long-lived context owned by ConnClient, cancelled on shutdown
 	cancel     context.CancelFunc
+
+	// remoteTarget is where cloud-opened remote-access streams are spliced to
+	// (see remote.go). Guarded by mu. Empty refuses them.
+	remoteTarget string
 }
 
 func NewConnClient(cfg utils.Config, aliveChan chan struct{}) (*ConnClient, error) {
@@ -37,6 +43,8 @@ func NewConnClient(cfg utils.Config, aliveChan chan struct{}) (*ConnClient, erro
 		aliveChan: aliveChan,
 		ctx:       ctx,
 		cancel:    cancel,
+
+		remoteTarget: strings.TrimSpace(os.Getenv(utils.EnvRemoteTarget)),
 	}, nil
 }
 
@@ -98,6 +106,14 @@ func (cc *ConnClient) ListStreams() []StreamState {
 // Dials local port and copies data between the local port and the stream. Returns a LiveStream object that can be used to interact with the stream.
 func (cc *ConnClient) NewGatewayStream(ctx context.Context, streamID string, streamType types.StreamType, localPort int) (*LiveStream, error) {
 	logger := utils.LoggerFromContext(ctx).With("stream_id", streamID, "stream_type", streamType, "local_port", localPort)
+
+	// Authoritative control-plane check, at the point the local port is dialed:
+	// loopback is only a trust boundary if nothing forwards to it, so a stream
+	// must never reach the Orchestrator/agent APIs, whatever created it.
+	if err := utils.CheckStreamPort(localPort); err != nil {
+		logger.Warn("refusing to forward stream to control-plane port", "error", err)
+		return nil, err
+	}
 
 	cc.mu.Lock()
 	if cc.connection == nil {

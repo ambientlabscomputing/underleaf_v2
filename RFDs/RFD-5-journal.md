@@ -6,14 +6,14 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 
 | Step | Title | State | Owner | Branch / PR | Needs | Updated |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Network isolation | not started | none | none | none | none |
-| 2 | Stream port denylist | not started | none | none | none | none |
-| 3 | One-origin UI + API | not started | none | none | none | none |
+| 1 | Network isolation | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
+| 2 | Stream port denylist | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
+| 3 | One-origin UI + API | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
 | 4 | Cluster CA, listener, `nodes add`, join | in review | agent-B | rfd-5/track-b | none | 2026-11-04 |
 | 5 | Agent link | in review | agent-B | rfd-5/track-b | 4 | 2026-11-04 |
-| 6 | Scoped API tokens | not started | none | none | 3 | none |
-| 7a | Cloud: split signing key, publish key set | not started | none | none | none | none |
-| 7b | Edge: assertions, remote listener, `ufctl connect` | not started | none | none | 3, 6, 7a | none |
+| 6 | Scoped API tokens | in review | agent-A | rfd-5/track-a | 3 | 2026-11-04 |
+| 7a | Cloud: split signing key, publish key set | in review | agent-C | rfd-5/track-c | none | 2026-11-04 |
+| 7b | Edge: assertions, remote listener, `ufctl connect` | in review | agent-C | rfd-5/track-c | 3, 6, 7a | 2026-11-04 |
 | 8 | Retire stopgaps | in progress | agent-B | rfd-5/track-b | 5 | 2026-11-04 |
 
 States: not started · in progress · blocked · in review · done
@@ -42,47 +42,132 @@ Environment notes for all agents:
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] Exposure reproduced from a workload container (`:9090`, `:50100` reachable) BEFORE the fix, output pasted
-- [ ] After fix: from a workload, Orchestrator `:9090` and `:50100` unreachable (output pasted)
-- [ ] After fix: host agent still reaches the Orchestrator via the loopback-published port
-- [ ] Negative-path tests; build/vet/test/gofmt green; README Security model updated; single-node install needs no new manual steps
+- [x] Exposure reproduced from a workload container (`:9090`, `:50100` reachable) BEFORE the fix, output pasted
+- [ ] After fix: from a workload, Orchestrator `:9090` and `:50100` unreachable (output pasted) **PARTIAL: `:9090` and DNS blocked, published `:50100`/`:80` still reachable on Docker 29.5.3; see log and Open issues**
+- [x] After fix: host agent still reaches the Orchestrator via the loopback-published port
+- [x] Negative-path tests; build/vet/test/gofmt green; README Security model updated; single-node install needs no new manual steps (install.sh does it; verified as the extracted block only)
 
 ### Log
 
+#### 2026-11-04 · agent-A · reproduce the exposure (BEFORE)
+- Did: built the Orchestrator image locally from the baseline tree in a scratch context outside the repo (`CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o ctx/bin/orch-server-linux-arm64 ./orchestrator/cmd/server`, then `docker build -t rfd5-a-orch:before -f docker/Dockerfile ctx`). Note: the Dockerfile's `npm run build` (`tsc -b && vite build`) **fails at baseline** with two TypeScript errors (`PageShell.tsx:116` `primaryTypographyProps`, `theme.ts:102` `containedPrimary`, both MUI 9 typings), so the scratch Dockerfile used `npx vite build` instead (see Open issues). Ran it the way install.sh does: `docker run -d -p 127.0.0.1:15090:80 -p 127.0.0.1:15100:50100 --name rfd5-a-orch-before rfd5-a-orch:before` (default bridge). Inside, `netstat` shows `0.0.0.0:80` (nginx, static UI only), `:::9090` (Orchestrator REST), `:::50100` (agent gRPC). Then a stand-in workload: `docker run -d --name rfd5-a-workload-before alpine:3.20 sleep 600` (default bridge, which is exactly where the agent's `ContainerCreate` puts workloads today), with a throwaway Go gRPC probe copied in.
+- Verified (from the workload container, orchestrator at 172.17.0.2, workload at 172.17.0.3):
+  ```
+  REST :9090  wget --header 'Host: localhost' http://172.17.0.2:9090/api/v1/health -> {"status":"OK"}
+              .../api/v1/nodes -> {"results":null,"count":0,"total":0,...}
+              POST .../api/v1/deployments {"source":"gh:x/y"} -> HTTP 400 (reached the handler; guards passed)
+  gRPC :50100 /probe 172.17.0.2:50100 -> grpc GetNodes OK: 0 node(s), total=0
+                                          grpc Ping: responder:"orchestrator" ... <nil>
+  ```
+  So both `:9090` and `:50100` are reachable from a workload, and the Host guard does not help (the attacker sets `Host: localhost`). Host-side baseline: `127.0.0.1:15100` gRPC OK, `127.0.0.1:15090` -> nginx 200.
+- Also found (baseline, not caused by this work): in the Docker install only `:80` (nginx, static files) is published (as host `:9090`); the Orchestrator REST `:9090` inside the container is **not** published. `curl http://127.0.0.1:15090/api/v1/health` returns the SPA `index.html` (200, text/html) because nginx's `try_files` falls back to it. The UI's API base is `http://localhost:9090/api/v1`, so the installed UI cannot reach the API. Step 3 removes this by construction.
+- Next: implement the network split in the agent and install.sh.
+- Blocked: none
+
+#### 2026-11-04 · agent-A · network isolation implemented, AFTER evidence
+- Did: [edge/agent/service/workload_network.go](../edge/agent/service/workload_network.go) (new): the agent creates (idempotently, bridge driver, labelled) a user-defined network `underleaf-workloads` (`UNDERLEAF_WORKLOAD_NETWORK` overrides; `bridge`, `host`, `none`, `default`, `container:*` and the Orchestrator's `underleaf-control` are refused) and `CreateContainer` in [docker_service.go](../edge/agent/service/docker_service.go) now sets `HostConfig.NetworkMode` to it via `workloadHostConfig`. An existing network of that name that is not a bridge is refused. `install.sh` ([diff](../edge/orchestrator_ui/public/tools/install.sh)) creates network `underleaf-control` and runs the Orchestrator container on it; for an existing install it moves the container off the default bridge in place (connect, disconnect `bridge`, `docker restart`; data preserved). `make docker-run` likewise. Also gofmt-fixed `docker_service.go` (the known baseline issue: one const alignment line). README Security model: new "Network isolation" row including the limit below.
+- Verified:
+  - Unit tests, [workload_network_test.go](../edge/agent/service/workload_network_test.go), all against a fake Docker network API: creates a non-internal bridge when absent; reuses an existing bridge (no recreate); refuses host/null/overlay/macvlan drivers; surfaces inspect and create errors; tolerates a creation race; rejects `bridge`/`host`/`none`/`default`/control-network/`container:x` names (and never touches Docker for them); success cached, failure not cached; `workloadHostConfig` is never default/bridge/host and keeps tmpfs/restart/binds. `go test ./edge/agent/service` -> ok.
+  - Real Docker (opt-in): `UNDERLEAF_DOCKER_INTEGRATION=1 UNDERLEAF_WORKLOAD_NETWORK=rfd5-a-workloads go test -run Integration -v ./edge/agent/service` -> PASS: the container created by `DockerService.CreateContainer` is on exactly one network, `rfd5-a-workloads`, not `bridge`; the network is a labelled bridge.
+  - install.sh block, executed for real (the `ORCH_NETWORK=`..`fi` block of the actual file, extracted and retargeted to `rfd5-a-*` names and ports 15191/15101): fresh run created `rfd5-a-control` and the container on it with `127.0.0.1:15191->80, 127.0.0.1:15101->50100`. Existing-install path: a legacy container started the old way on `bridge` was moved with the block -> networks `rfd5-a-control` only, host gRPC probe OK, UI 200, container file marker preserved. (Found on the way: without the `docker restart`, the moved container's published ports stop working; the restart is in the script.)
+  - **After, from a workload on `rfd5-a-workloads` (172.25.0.2) to the Orchestrator on `rfd5-a-control` (172.24.0.2):**
+    ```
+    REST :9090 by IP        -> wget: download timed out            (BLOCKED)
+    by name rfd5-a-orch     -> wget: bad address                   (BLOCKED, no cross-network DNS)
+    nc :9090                -> Operation timed out                 (BLOCKED)
+    nc :80                  -> 172.24.0.2:80 open                  (REACHABLE: published port)
+    nc :50100 / gRPC probe  -> open / "grpc GetNodes OK: 0 node(s)" (REACHABLE: published port)
+    from a container ON rfd5-a-control, REST :9090 -> {"status":"OK"}  (orchestrator itself is healthy)
+    ```
+    Host path (what the agent uses): `probe-darwin 127.0.0.1:15101` -> `grpc GetNodes OK`; `curl 127.0.0.1:15191/` -> 200.
+  - **The isolation is only partial.** Docker 29.5.3 (Desktop, arm64) lets a container on another bridge reach a *published* port through the container's IP, and `host.docker.internal:<published port>` also reaches host-loopback-published ports (verified with a source-address echo server: `nc -z host.docker.internal 15300` from the workload succeeded). Source-IP guards cannot help: all three paths (host, other-network workload, host.docker.internal) arrive at the container with source = the bridge gateway (172.24.0.1), because Docker masquerades the cross-bridge hop. Network options `enable_icc=false` and `gateway_mode_ipv4=nat` were tried; neither blocks it. See Decisions/Open issues and Cross-cutting.
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./...` all pass; `gofmt -l edge shared` empty.
+- Next: step 2.
+- Blocked: none
+
 ### Decisions and deviations
 
+- **Network names**: `underleaf-control` (Orchestrator, created by install.sh/make) and `underleaf-workloads` (workloads, created by the agent on first deploy; override with `UNDERLEAF_WORKLOAD_NETWORK`, which also lets tests use scratch names). The agent owns the workload network because only it knows when a workload is created, and so install.sh has nothing to do for the worker side.
+- **Existing installs**: install.sh moves a running `underleaf` container in place instead of failing on the name clash as it did before. Already-deployed workloads stay on the default bridge until their next (re)deploy, because `CreateContainer` force-removes and recreates; no automatic migration of running workloads. Deliberate: avoids restarting user services during an install.
+- **Deviation (needs human decision, see Cross-cutting): the RFD's premise "separate user-defined networks are isolated from each other" does not hold for published ports on the Docker used here.** Unpublished ports (REST `:9090` today) and DNS are isolated; published ones are not. Because the single-node design publishes `:50100` (and after step 3 the single UI/API port) on host loopback for the host agent and browser, the workload can still reach them. The RFD fix as written is implemented and is a real improvement (it closes everything unpublished and removes name resolution) but does not satisfy "`:50100` unreachable from a workload". Not papered over: the acceptance box is left unticked.
+
 ### Open issues
+
+- Published-port reachability from workloads (above). Candidate fixes for the human: (a) accept it and rely on the app-level controls (Host/Origin guards do not stop a deliberate in-container attacker); (b) give the local gRPC listener a credential even on the local path, e.g. step 4's mTLS applied to the single-node agent (contradicts the "local listener: None" row of the RFD); (c) host firewall rule outside Docker (needs root, platform-specific); (d) stop publishing gRPC through Docker and use a unix socket bind mount (works on Linux, unreliable on Docker Desktop). Not verified on a Linux Docker Engine: only Docker Desktop 29.5.3 (arm64) was available, where `host.docker.internal` additionally reaches loopback-published ports.
+- Baseline defect: `npm run build` in the UI fails on two MUI 9 type errors, so `make docker-build`/`docker build -f edge/docker/Dockerfile` cannot produce an image from a clean checkout. Not fixed in step 1 (step 3 must produce a UI build, see there).
+- The single-node install path was exercised only as the extracted docker block of install.sh, not the whole script (binaries/launchd parts need the real machine).
+- Linux/amd64 and a real worker host were not tested.
 
 ## Step 2: Stream port denylist
 
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] Creating a stream to a control-plane port is rejected at creation (test)
-- [ ] Same port is rejected again at forward time in the agent (test)
-- [ ] Common checks green; README Security model updated
+- [x] Creating a stream to a control-plane port is rejected at creation (test)
+- [x] Same port is rejected again at forward time in the agent (test)
+- [x] Common checks green; README Security model updated
 
 ### Log
 
+#### 2026-11-04 · agent-A · control-plane port denylist at creation and at forward time
+- Did: [shared/utils/controlports.go](../shared/utils/controlports.go) (new, the single definition): `ControlPlanePorts()` / `CheckStreamPort(port)`. Denied: Orchestrator REST `9090` and gRPC `50100`, agent REST `9091` and gRPC `50101`, the odd named constants `50101`/`50103` from `config.go`, Docker API `2375`/`2376`, the **configured** REST ports read from `GetConfig(Orchestrator|Agent).Http.Port` (so `UNDERLEAF_CONFIG` overrides are honoured), plus `UNDERLEAF_EXTRA_CONTROL_PORTS` (new, for non-default published ports), and any port outside 1..65535. Enforcement points: (1) Orchestrator [`ConnectionService.NewStream`](../edge/orchestrator/service/connection_service.go) rejects with gRPC `InvalidArgument` *before* creating the cloud connection/stream; (2) agent [`ConnectionService.NewStream`](../edge/agent/service/connection_service.go) fails fast with `PermissionDenied`; (3) agent [`ConnClient.NewGatewayStream`](../edge/agent/lib/conn_client/conn_client.go), the only place a local port is dialed for forwarding, checks first, before any lock/dial. Also: when the agent refuses after the cloud stream was already created (e.g. the Orchestrator's config differs), the Orchestrator now closes the cloud-side stream and terminates the connection best-effort instead of leaving a public stream pointing at nothing. Also fixed a CLI bug: `orcli streams new --port` was declared a string flag but read with `GetInt`, so the port was always 0 ([new.go](../edge/orchestrator/interface/cli/commands/streams/new.go): `IntP`). README Security model: new "Stream port denylist" row.
+- Verified:
+  - `go test ./shared/utils ./edge/orchestrator/service ./edge/agent/... -count=1` -> all ok. Tests: defaults denied and wrap `ErrControlPlanePort`; ordinary ports (22, 80, 443, 3000, 5432, 8080, 5678, 65535) allowed; invalid ports (0, -1, 65536, 1<<20) refused; a `UNDERLEAF_CONFIG` yaml with `http.port` set to a non-default value is denied while its neighbour stays allowed; extra-ports env (with junk entries ignored). Orchestrator creation test uses nil cloud/agent clients, so any code path past the check would panic: ports 9090/9091/50100/50101/50103/2375/15090(extra)/0/-1/70000 all return `InvalidArgument`, no stream. Agent forward tests use a real local TCP listener on a denied port (via the extra list, and via config) and assert **zero connections ever reach it**; a negative control shows an ordinary port passes the denylist (and fails later only for lack of a cloud connection).
+  - Mutation check: neutralising the check at each of the three sites in turn makes the corresponding tests fail (forward: `TestForwardRefusesControlPlanePorts`, `TestForwardNeverDialsDeniedPort`; orchestrator and agent service: nil-pointer panic from reaching the clients). Files restored; `git diff` shows only the intended change.
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./...` pass; `gofmt -l edge shared cloud` empty.
+- Next: step 3.
+- Blocked: none
+
 ### Decisions and deviations
 
+- **One definition, two enforcement processes.** The Orchestrator only knows its own config; the denylist therefore unions both configs' REST ports in every process (over-denying one extra port is harmless) and offers `UNDERLEAF_EXTRA_CONTROL_PORTS` for the case it cannot know (non-default host ports where the Orchestrator container is published, e.g. `install.sh` with custom ports). The agent check is the authoritative one.
+- **Docker API ports (2375/2376) are in the set** though the RFD lists only Orchestrator/agent ports: they are equally root-equivalent. Cheap to remove if undesired.
+- **Real constants vs. config.go**: `config.go` names `OrchestratorGRPCPort=50101` and `AgentGRPCPort=50103`, but the listeners actually bind 50100 and 50101 (hardcoded in the two `server.go` files). Left alone (those files are Track B's); both the real values and the named ones are denied, and new constants `OrchestratorPublicGRPCPort`/`AgentPublicGRPCPort` document the real ones.
+- The cloud-side stream request is not validated for the port (cloud is Track C's area).
+
 ### Open issues
+
+- Not run end to end: creating a real stream needs the cloud stack (`cloud_api`, `conn_worker`) and a registered cluster; verified with unit tests that drive the real check functions and a real TCP listener, not through `orcli streams new` against a live cloud.
+- A Docker-published port that maps the control plane to an arbitrary host port can only be denied if listed in `UNDERLEAF_EXTRA_CONTROL_PORTS`; nothing detects it automatically.
 
 ## Step 3: One-origin UI + API
 
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] UI loads from the Orchestrator's single origin with no CORS configuration (evidence)
-- [ ] Log WebSockets work over that origin (evidence)
-- [ ] Dev-server workflow still works, or its replacement is documented
-- [ ] Common checks green; install.sh / Dockerfile / README updated
+- [x] UI loads from the Orchestrator's single origin with no CORS configuration (evidence)
+- [x] Log WebSockets work over that origin (evidence)
+- [x] Dev-server workflow still works, or its replacement is documented
+- [x] Common checks green; install.sh / Dockerfile / README updated
 
 ### Log
 
+#### 2026-11-04 · agent-A · UI and API from one listener
+- Did: Orchestrator REST server now serves the built UI from the API's own listener ([server.go](../edge/orchestrator/interface/rest/server.go) `newRouter`, [ui.go](../edge/orchestrator/interface/rest/ui.go)): `UNDERLEAF_UI_DIR` (set by the Docker image) points at the build; any non-API GET/HEAD gets the file or the SPA `index.html`; unknown `/api/v1/*` paths get a JSON 404 not the SPA; dotfiles never served; lookups confined by `http.Dir`; `index.html` is `no-cache`, `assets/*` `immutable`. **CORS removed** (`gin-contrib/cors` dropped from the router, `go.mod`/`go.sum` tidied: only that dependency left). Guards **not weakened**: Host/Origin/Content-Type run first on every request including assets and WebSocket upgrades. The Origin policy gained one rule, `sameOrigin` ([security.go](../edge/orchestrator/interface/rest/security.go)): an Origin is accepted if its authority equals the request's `Host` *and* that Host is itself loopback-allowed, so the UI works on whatever port it is published on with no configuration; it is also what the WebSocket upgrader now uses (`originPermitted`). Added `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`, `nosniff` (a no-login UI that can deploy workloads must not be frameable). A `logSource` seam lets tests run the real WebSocket route without an agent.
+  Dockerfile: **nginx removed** ([Dockerfile](../edge/docker/Dockerfile) now `alpine:3.20` + `ca-certificates` running only `orch-server`; `docker/nginx.conf` and `docker/run-all.sh` deleted; image 93 MB -> 41 MB). Container serves UI + API on `:9090`, gRPC `:50100`. `install.sh` and `make docker-run` publish `127.0.0.1:${HTTP_PORT}:9090` (was `:80`). UI: API base is relative (`/api/v1`), the log WebSocket URL is derived from `window.location` (this also fixes it pointing at `/api/v2`, which the server never served); `vite.config.ts` proxies `/api` with `ws: true` to `ORCHESTRATOR_URL` (default `http://127.0.0.1:9090`). Fixed the two baseline TypeScript errors that made `npm run build` (hence the image build) fail ([PageShell.tsx](../edge/orchestrator_ui/src/components/PageShell.tsx), [theme.ts](../edge/orchestrator_ui/src/components/theme/theme.ts), MUI 9 API changes). READMEs updated (root, orchestrator Security model, UI).
+- Verified:
+  - `go test ./edge/orchestrator/interface/rest -count=1 -v`: 12 tests pass, new ones: `TestUIAndAPIShareOneOrigin` (UI, SPA fallback, asset caching, API and API-404 on one host:port), `TestNoCORSHeadersAreEverSent` (no `Access-Control-*` for any origin; foreign preflight -> 403), `TestUIAssetsAreBehindTheSameGuards` (rebound Host -> 403 on `/`, assets and API; foreign Origin -> 403 on UI; form POST -> 415 even same-origin; same-origin JSON POST reaches the handler (400); other-port origin -> 403; POST to a UI path -> 405), `TestUIDoesNotServeFilesOutsideItsRoot` (`/.env`, `/../secret.txt`, encoded variants never leak; security headers present), `TestLogWebSocketWorksOnTheUIOrigin` (real gorilla client: upgrade with same-origin, no-Origin and dev-origin; receives both lines), `TestLogWebSocketStillRejectsForeignOriginsAndHosts` (foreign origin, other port, rebound Host x3 -> HTTP 403), `TestSameOrigin` (13 cases incl. ipv6, opaque `null`, path, scheme). Pre-existing guard tests untouched and passing. Mutation check: making `originPermitted` ignore `sameOrigin` fails `TestUIAssetsAreBehindTheSameGuards` and `TestLogWebSocketWorksOnTheUIOrigin`.
+  - Real image, real browser: `docker build -f docker/Dockerfile` (context = scratch copy, `bin/orch-server-linux-arm64` cross-built) succeeds with the real `npm run build` (tsc + vite). Started via the install.sh docker block (`rfd5-a-*` names, host `127.0.0.1:15291`). `curl`: `/` 200 `text/html`, `Cache-Control: no-cache`, `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`; `/api/v1/health` 200 `{"status":"OK"}`; `/containers` (SPA route) 200 html; 0 `Access-Control-*` headers; foreign `Origin` -> 403, `Host: evil.example` -> 403; `ps` shows no nginx, `netstat`: only `:9090` and `:50100`. In the browser pane at `http://127.0.0.1:15291/`: the UI rendered ("No nodes registered yet", i.e. the nodes call succeeded), network log shows only same-origin requests (`/`, `/assets/index-*.js`, `/assets/index-*.css`, `/api/v1/nodes`, `/api/v1/health`, all 200), no console errors, and `new WebSocket('ws://127.0.0.1:15291/api/v1/containers/abc/logs/stream')` from the page upgrades and delivers a message (the relay's JSON error, since no agent was running).
+  - Dev-server workflow: `ORCHESTRATOR_URL=http://127.0.0.1:15291 npx vite` and the browser at `http://localhost:5183/`: page renders; `fetch('/api/v1/nodes')` 200, `POST /api/v1/deployments {}` 400 (reached the handler through the guards), and a WebSocket through the Vite proxy opens and delivers a message. So `make ui-run`/`make run` keep working with no CORS and no `VITE_API_URL`.
+  - After the move, a stand-in workload on another network can reach `http://<orchestrator-ip>:9090/api/v1/health` (it is now a published port); see Open issues. `wget https://github.com` from the container works (CA certs present).
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./...` pass; `gofmt -l` empty; `npx tsc -b` 0 errors.
+- Next: step 6.
+- Blocked: none
+
 ### Decisions and deviations
 
+- **nginx removed, not reduced.** One listener is the point (a tunnel exposes one port); keeping nginx as a reverse proxy would add a second process and a second set of headers for nothing. The final image stage is plain alpine.
+- **UI directory by env, not `go:embed`.** Embedding needs the UI built before `go build`, which would break `go build ./...` on a clean checkout and the CI binary matrix (which builds `orch-server` without Node). A runtime directory (`UNDERLEAF_UI_DIR`) keeps the Go build independent; the host `orch-server` from `make run` serves API only and the UI comes from Vite.
+- **No CORS at all** rather than a tighter CORS: with a proxy in dev and same-origin in prod there is no legitimate cross-origin caller. `VITE_API_URL` (direct-to-API dev) now requires `UNDERLEAF_ALLOWED_ORIGINS`.
+- **Same-origin rule instead of listing the published port.** `install.sh` allows any `HTTP_PORT`, so a static Origin allowlist cannot cover the UI's own origin; comparing Origin to the already-validated Host is exact and cannot admit a foreign page. This is the only change to the guards, and it only adds the server's own origin.
+- **Upgrade path for existing installs**: an old container keeps its old image (and `:80`-published UI that could never reach the API); `install.sh` prints how to switch. Not automated because the orchestrator's state (db, certs) lives in the container filesystem and recreating loses it.
+- **UI errors fixed outside "step scope"**: the two TypeScript errors were baseline blockers for building the image; minimal MUI 9 migrations, no behaviour change. `eslint` still reports 8 pre-existing `no-restricted-imports` errors in `pages/` (untouched).
+
 ### Open issues
+
+- **Published port = reachable by workloads (compounds step 1's open issue).** Before step 3 the REST port (`:9090` in the container) was *not* published, so a workload could not reach it; now UI and API share the published port, so a workload on another network can reach the REST API through the Orchestrator's container IP (verified above), subject only to the Host/Origin/Content-Type guards, which an attacker controls. Same underlying cause and same candidate fixes as step 1; it needs a human decision before the single-node Docker install can be called isolated. Token scopes (step 6) do not help on the no-login UI path.
+- The Docker install still keeps the orchestrator's state (db, certs) in the container filesystem (no volume), and `orcli` on the host cannot reach the container's unix socket; both pre-existing, untouched.
+- Not verified: the full `install.sh` (only its docker block), Linux, amd64 image, the `ufctl connect` use of this origin (step 7b).
 
 ## Step 4: Cluster CA, listener, `nodes add`, join
 
@@ -226,50 +311,188 @@ All of these are clarifications of an under-specified RFD, not reversals of a se
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] Tokens created, listed, revoked over the socket (test)
-- [ ] Each scope (read|deploy|admin) enforced by a test, including negative cases
-- [ ] Database holds no plaintext token (test/inspection)
-- [ ] WebSocket tickets are single-use (test)
-- [ ] Common checks green; README Security model updated
+- [x] Tokens created, listed, revoked over the socket (test)
+- [x] Each scope (read|deploy|admin) enforced by a test, including negative cases
+- [x] Database holds no plaintext token (test/inspection)
+- [x] WebSocket tickets are single-use (test)
+- [x] Common checks green; README Security model updated
 
 ### Log
 
+#### 2026-11-04 · agent-A · scoped API tokens, route scopes, WebSocket tickets
+- Did:
+  - **Storage**: migration [`0008_api_tokens`](../edge/orchestrator/repository/migrations/0008_api_tokens.go) (`api_tokens`: id, name, scope with a CHECK constraint, `token_hash`, created/expires/revoked/last_used) and [`api_token_repository.go`](../edge/orchestrator/repository/api_token_repository.go) (exposed as `Repository.APITokens()`, a method, so `repository.go` is untouched).
+  - **Service** [`token_service.go`](../edge/orchestrator/service/token_service.go): token = `ulat_<12 hex id>_<64 hex secret>` (256 random bits); only SHA-256(secret) stored; secret returned once; constant-time hash compare; every failure wraps `ErrInvalidToken` (reason internal, the HTTP layer says only "401"); mandatory expiry 1 min..365 d; hierarchical scopes `admin > deploy > read`; `last_used_at` updated at most once a minute. `AppService.Tokens()` is a method on the existing struct (no field added).
+  - **Mint over the socket**: new gRPC service `OrchestratorTokens` in its own proto ([orchestrator_tokens.proto](../edge/orchestrator/interface/grpc_private/orchestrator_tokens.proto), generated files are new, the existing generated files are byte-identical after `go generate`), implemented in [tokens.go](../edge/orchestrator/interface/grpc_private/tokens.go), registered on the private unix-socket server with one line in `server.go`. CLI: [`orcli tokens create|ls|revoke`](../edge/orchestrator/interface/cli/commands/tokens/tokens.go) (`--scope read|deploy|admin`, `--ttl 30d`, units s/m/h/d/w, `--name`), mounted via `AddCommands` so `ufctl` gets it too. There is deliberately no REST route to create, list or revoke tokens.
+  - **Enforcement** [auth.go](../edge/orchestrator/interface/rest/auth.go), after the unchanged guards: the whole route -> scope map is the `routeScopes` table (`/health` public; every `GET` and `POST /ws-tickets` = read; `POST /deployments` = deploy; **unlisted routes = admin**, and a test fails if any registered route is unlisted or any entry is stale). Precedence on a request: WebSocket `?ticket=` (WS routes only) > `Authorization: Bearer` > local principal. A bad ticket or bad token is always 401, never a fall-through. `403 {"error":"insufficient scope","required":"<scope>"}` on scope failure.
+  - **WebSocket tickets**: `POST /api/v1/ws-tickets` (read) -> `{"ticket":"ulwt_...","expires_in":30}`; in-memory, 256 random bits, 30 s, single use (consumed on first redeem, under a mutex), carries the minter's scope, cap 1024 outstanding, and `ticket=` is redacted from the access log. UI: [client.ts](../edge/orchestrator_ui/src/api/client.ts) no longer sends the hard-coded `Authorization: Bearer TOKEN` (which would now be a 401), and [LogsService.ts](../edge/orchestrator_ui/src/api/services/LogsService.ts) / [datastore/logs.ts](../edge/orchestrator_ui/src/datastore/logs.ts) fetch a ticket before opening the socket (with a generation counter so a late ticket does not leak a socket).
+  - README Security model: rows for API tokens, local path vs tokens, WebSocket tickets. RFD: caveat paragraph added under "Local trust" (step 1 finding).
+- Verified (all in this worktree; `go test ./... -count=1` passes in every package):
+  - [`token_service_test.go`](../edge/orchestrator/service/token_service_test.go), real migrated sqlite: create/authenticate for each scope; **no plaintext**: the stored hash equals sha256(secret) and differs from it, no column of any row contains the secret or full token, and neither `orch.db`, `-wal` nor `-shm` contains the secret bytes; 16 rejection cases (empty, prefix only, no/wrong prefix, `Bearer ` inside, wrong secret, unknown id, another id's secret, truncated, extra char, uppercase hex, the stored hash used as the secret, whitespace, newline, SQL-ish); expiry (1 s before ok, exactly at expiry rejected, long after rejected, status `expired`); revoke (revoked rejected, sibling token unaffected, idempotent keeping the first time, unknown id -> `ErrAPITokenNotFound`); create validation (unknown/empty scope, ttl 0/negative/30 s/too long, long name, control chars, max ttl allowed); `Scope.Allows` matrix incl. unknown scopes; last-used throttling.
+  - [`auth_test.go`](../edge/orchestrator/interface/rest/auth_test.go), the real router with a real token service: `TestScopesEnforcedPerRoute` (3 scopes x read route / deploy route / ticket route: each allowed or `403` naming the required scope; read cannot deploy, deploy can), `TestEveryRegisteredRouteHasAnExplicitScope`, `TestUnmappedRouteRequiresAdmin` (read 403, deploy 403, admin 200), `TestBadTokensAreRejectedNotDemotedToLocal` (wrong secret, revoked, garbage, empty bearer, Basic scheme, no scheme, two tokens: all 401 + `WWW-Authenticate`; valid then expired after the clock passes; lowercase `bearer` accepted), `TestRevokedTokenStopsWorkingImmediately`, `TestLocalPathUnchangedByDefaultAndStrictModeClosesIt` (no header works by default; with `UNDERLEAF_REQUIRE_TOKEN=1` 401 everywhere except `/health`), `TestGuardsRunBeforeAuthentication` (a valid admin token does not bypass Host/Origin/Content-Type: 403/403/415), tickets: `TestWebSocketTicketIsSingleUse` (first use upgrades and streams, replay -> 401), `...Rejections` (garbage, a bearer token used as a ticket), `...Expires` (injected clock: TTL-1s ok, TTL+1s 401), `...OnlyWorkOnWebSocketRoutes` (a ticket on a REST route is not a credential and is not burned by the attempt), `TestStrictModeTicketsNeedAToken`, `TestTicketStoreUnit` (unique, scope carried, single redeem, **50 concurrent redeemers -> exactly 1 winner**, cap of 1024 and expiry frees room), `TestTicketsNeverAppearInAccessLogs`.
+  - [`tokens_test.go`](../edge/orchestrator/interface/grpc_private/tokens_test.go): a real gRPC server on a real `ListenUnixPrivate` socket (mode checked `0600`, owner checked): create -> token authenticates -> list shows it, never the secret (proto bytes searched), last use recorded -> revoke -> no longer authenticates, list shows `revoked`; negative: unknown/empty scope, ttl missing/negative/too short/too long, a ttl that **wraps mod 2^64 to exactly one hour** (`3600 + 2^55` s), long name, revoke unknown (`NotFound`) and revoke without id; nothing is created by failed requests. This test found a real bug in my first version (`time.Duration(secs)*time.Second` overflow let the wrapping value through); fixed by bounding the seconds first, and confirmed the test fails without the bound.
+  - Mutation checks: disabling the scope check, not consuming tickets, ignoring ticket expiry, letting a bad token fall through to local, and ignoring strict mode each fail 1-3 named tests; restored.
+  - Real image + real client: image built with the real Dockerfile, run via the install.sh block (`rfd5-a-*`, host `127.0.0.1:15391`), `orcli` cross-built and run inside the container over its unix socket. `orcli tokens create --scope read|deploy|admin` ok; `--scope root` -> InvalidArgument, `--ttl 400d` -> "ttl must be between 1m0s and 8760h0m0s", `--ttl banana` -> CLI error. From the host: no header -> 200; read `GET /containers` 200; read `POST /deployments` -> **403** `{"error":"insufficient scope","required":"deploy"}`; deploy and admin `POST /deployments` -> 400 (authorized, handler rejected the bogus source); wrong secret / garbage -> 401; after `orcli tokens revoke <id>` the read token -> 401 and `ls` shows `revoked`; revoking an unknown id -> NotFound. Database copied out of the container: `sqlite3` shows only ids, scopes and 16-char hash prefixes, `grep -c <admin secret>` on the db file = 0, and exactly 1 row has `token_hash = sha256(admin secret)`. Strict container (`UNDERLEAF_REQUIRE_TOKEN=1`): no token `GET /containers` 401, `/health` 200, UI shell 200, `POST /ws-tickets` 401; read token `GET /containers` 200 and `POST /ws-tickets` 200. Browser: the UI's own log page issued `POST /api/v1/ws-tickets` -> 200 before opening its WebSocket; by hand in the page: fresh ticket upgrades once, the same ticket again -> closed 1006, `ulwt_garbage` -> closed 1006; the built JS contains no `"TOKEN"` literal.
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./...` pass; `gofmt -l edge shared cloud` empty; `npx tsc -b` 0 errors; `go mod tidy` is a no-op.
+- Next: final report. Coordinator to merge.
+- Blocked: none
+
 ### Decisions and deviations
 
+- **How the unauthenticated loopback path and tokens coexist (the decision the brief asked to record).** Order: ticket (WS routes only), then `Authorization: Bearer`, then the *local principal*. No credential = the local operator/UI = admin-equivalent, exactly as RFD "Local trust" and "Principals" say (the UI has no login). A credential that is present but bad is 401 and never degrades to local. Consequence, stated plainly: **on a default install a scoped token restricts nothing for a caller who just omits the header**; scopes bite where anonymous access is not available: strict mode (`UNDERLEAF_REQUIRE_TOKEN=1`, an addition of mine, off by default so the single-node UX is unchanged) and the remote listener (7b). Strict mode is also the only mitigation available today for the published-port exposure (steps 1 and 3), at the price that the UI cannot be used (no token entry in the UI yet).
+- **Scopes are hierarchical**: `deploy` includes `read`, `admin` includes both (a deploy token needs to poll `GET /deployments/:id`). `read` = every GET plus minting a WS ticket; `deploy` = `POST /deployments`; `admin` = everything else, **including any route nobody has classified** (fail closed) and, in the future, nodes and anything token-related. The RFD says admin includes "token management & nodes": there are no such REST routes today (tokens are managed over the socket only, per the RFD; the `nodes` CLI is Track B), so `admin` currently differs from `deploy` only for unlisted routes.
+- **Mandatory expiry (1 min..365 d)**, no "never expires" token. RFD example uses 30d; default is 30d. A year is my cap, easy to raise.
+- **Token format `ulat_<id>_<secret>`** with a public id so tokens can be listed/revoked without exposing anything, and hex so the `_` separator is unambiguous. SHA-256 (not bcrypt/argon2): the secret is 256 random bits, nothing to brute-force, and verification is on every request.
+- **Tickets are not re-checked against revocation** at redemption: a revoked token's already-minted tickets live at most 30 s and only open log streams (read scope).
+- **Separate proto/gRPC service for tokens** instead of new RPCs on `OrchestratorPrivate`, to keep the generated files Track B will also regenerate out of the merge. Same socket, same trust.
+- **Migration id `0008_api_tokens`** (var `migrationAPITokens`). Track B's migrations will also want an `0008_*`/`0009_*`; ids are strings applied in file-name order and the table sets are disjoint, so both can coexist, but see Handoffs for the ordering caveat.
+- **UI**: removed the hard-coded `Bearer TOKEN` header (it would have turned every UI call into a 401 the moment a request carries an invalid token) and moved log streaming to tickets. No token-entry UI.
+
 ### Open issues
+
+- Tokens do not restrict a caller who omits the header on a default install (above). If the human wants tokens to matter locally, the options are strict mode by default (breaks the UI until it can hold a token) or a UI login; both reopen RFD decision 1, so not done.
+- Not verified: the `ufctl` build of the `tokens` command (it is mounted through the shared `AddCommands`, and `go build ./...` including `ufctl` passes, but `ufctl tokens ...` was not run); Linux; the token path through a real tunnel (step 7b); behaviour under many concurrent requests (the last-used write is a single `UPDATE`, throttled to once a minute per token, but there is no load test); amd64.
+- Observed, pre-existing, not fixed: the UI's container-logs page renders the relay's `{"error": ...}` frame (sent when the agent is unreachable) as a log line and crashes with `RangeError: Invalid time value`; seen here only because the test Orchestrator had no agent. `eslint` reports 8 `no-restricted-imports` errors in `src/pages/`.
+- The orchestrator's database and certs live in the container filesystem (no volume): recreating the container loses tokens along with everything else. Pre-existing, now also affects tokens.
 
 ## Step 7a: Cloud: split signing key, publish key set
 
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] Cloud signs assertions with a key distinct from the CA key (test)
-- [ ] Key set with key IDs (`kid`) is published
-- [ ] Rotation with overlap works (test)
-- [ ] Open question 'Channel for fetching the assertion key set' checked against the cloud nginx config and recorded
+- [x] Cloud signs assertions with a key distinct from the CA key (test)
+- [x] Key set with key IDs (`kid`) is published
+- [x] Rotation with overlap works (test)
+- [x] Open question 'Channel for fetching the assertion key set' checked against the cloud nginx config and recorded
 
 ### Log
 
+#### 2026-11-04 18:30 · agent-C · setup
+- Did: the assigned worktree no longer existed when the coordinator authorized `git checkout -b rfd-5/track-c 0868881`, so I created a fresh worktree `.claude/worktrees/rfd5-track-c` with `git worktree add .claude/worktrees/rfd5-track-c -b rfd-5/track-c 0868881` (see Deviations). Row 7a set to `in progress` in commit d2157a9.
+- Verified: `git log --oneline | head -3` → `0868881 RFD-5: add implementation journal with baseline`, `782f917 Security pass (#2)`, `b5468ee adding .vscode`. Python baseline `pytest -q` (cloud_api, main checkout's venv, `PYTHONPATH=src`) → `103 passed, 42 skipped` (the 42 are the DB integration tests; no Postgres here).
+- Next: implement.
+- Blocked: none
+
+#### 2026-11-04 18:55 · agent-C · assertion issuer, shared verifier, key set endpoint
+- Did:
+  - New Go package [shared/assertion](../shared/assertion) (stdlib only): claims, strict key-set parser, `Verify`, a small `Signer` for tests.
+  - Python issuer [assertion_lib.py](../cloud/cloud_api/src/cloud_api/lib/assertion_lib.py) (Ed25519/EdDSA, kid = RFC 7638 thumbprint, file-backed key store, rotation, overlap), [assertion_service.py](../cloud/cloud_api/src/cloud_api/service/assertion_service.py) (`issue_for_cluster`, ownership check), endpoint [interface/assertion/assertion.py](../cloud/cloud_api/src/cloud_api/interface/assertion/assertion.py) (`GET /api/v2/cloud/assertion-keys`), [rotate_assertion_key.py](../cloud/cloud_api/src/cloud_api/scripts/rotate_assertion_key.py), config `assertion:` ([config.py](../cloud/cloud_api/src/cloud_api/config.py)), singletons in `service_manager.py`, eager creation at startup in `router.py`.
+  - Deployment: `docker-compose.yaml` gives cloud_api its own `assertion_keys` volume (not under `./certs`, which nginx mounts), `configs/local/cloud_api.yaml` points at it. README of cloud_api and a ROADMAP note updated.
+  - Tests: [shared/assertion/assertion_test.go](../shared/assertion/assertion_test.go), [interop_test.go](../shared/assertion/interop_test.go) (+ `testdata/`), [test_assertion_lib.py](../cloud/cloud_api/tests/lib/test_assertion_lib.py), [test_assertion_service.py](../cloud/cloud_api/tests/service/test_assertion_service.py), [test_assertion_keys.py](../cloud/cloud_api/tests/interface/test_assertion_keys.py).
+- Verified:
+  - `go test -count=1 -cover ./shared/assertion` → `ok ... coverage: 95.5% of statements`. Named proofs: `TestRotationWithOverlap` (old+new verify during overlap; old key → `ErrKeyExpired` at its `not_after`, → `ErrUnknownKey` after `Prune`; new key unaffected), `TestAlgorithmConfusion` (alg none/None with and without signature, HS256/384/512 keyed with the public key, EdDSA with wrong `typ`, `crit`), `TestRS256TokenFromCAStyleKeyIsNotAnAssertion` (RSA-signed token carrying a real kid → `ErrAlgorithm`), `TestClaimChecks` (expired, wrong audience, missing scope, wrong issuer, future iat, lifetime too long, missing jti/sub/exp), `TestMalformed` (12 malformed shapes), `TestWrongAlgForKeyInKeySet`, `TestKidWithWrongKeyMaterialFailsSignature`, `TestTamperedPayloadFailsSignature`.
+  - `PYTHONPATH=src pytest -q` (cloud_api) → `140 passed, 42 skipped` (103 before; 37 new). Named proofs: `test_assertion_key_is_distinct_from_ca_key` (Ed25519 vs the CA's RSA key; kid, public key bytes and key files differ), `test_ca_signed_token_does_not_verify_as_assertion` (RS256 CA-key token, and one forged with a copied assertion kid and `typ`, both rejected by an independent PyJWT-based verifier), `test_assertion_does_not_validate_as_oauth_token` (assertion → `AuthLib.validate_token` raises `InvalidTokenError`), `test_key_set_is_served_unauthenticated_with_kids` (httpx `TestClient`, no auth, `Cache-Control: public, max-age=300`, only public fields), `test_rotation_with_overlap`, automatic and `--compromised` rotation, rotation by another process picked up, key files 0600 / dir 0700, no `.json` carries private material.
+  - Cross-language, both directions: `TestInteropWithPythonIssuer` (Go verifies a token issued by the Python `AssertionLib` from the Python-published JWKS; `testdata/python_issued.json`) and `test_this_issuers_verifier_logic_accepts_what_go_signs` (`testdata/go_issued.json`, deterministic fixed-seed throwaway key; `TestGoIssuedVectorIsCurrent` fails if the file is stale).
+  - Live end to end (scratch config in the session scratchpad, uvicorn on 127.0.0.1:35080, no Docker): `curl -si .../api/v2/cloud/assertion-keys` → `HTTP/1.1 200 OK`, `cache-control: public, max-age=300`, one OKP/Ed25519 key with `kid`, `not_before`, `not_after`; `ls -la` of the key dir → `-rw-------` `<kid>.pem`/`.json`, dir `drwx------`. A token minted by the Python lib from that key dir verified in Go (`ParseKeySet` + `Verify`) against the served set (`sub=acct_e2e`). Then `python -m cloud_api.scripts.rotate_assertion_key` while the server kept running: the next `curl` showed 2 keys (old with `not_after` = now + 168h, new with +97 days), and the same token still verified against the 2-key set. The temporary Go test used for this was deleted.
+  - Channel experiment: generated the real bootstrap CA via `AuthLib.__bootstrap_certs`, served it with `openssl s_server -cert ca.pem -key key.pem`, connected with a Go client whose `RootCAs` held only that cert: `ServerName="localhost"` → `x509: certificate is not valid for any names, but wanted to match localhost`; `ServerName=""` (IP) → `doesn't contain any IP SANs`; with `InsecureSkipVerify` + `VerifyConnection` doing chain-only `Verify` → `OK 200`. `openssl x509 -noout -subject -ext basicConstraints,subjectAltName` on that cert → `CN=Underleaf OAuth Root CA`, `CA:TRUE`, no SAN.
+  - `go build ./...` rc 0; `go build -tags devmode ./...` rc 0; `go vet ./...` rc 0; `go test -count=1 ./...` all `ok` (incl. `shared/assertion`); `gofmt -l $(git ls-files '*.go')` → only the pre-existing `edge/agent/service/docker_service.go`; `gofmt -l shared/assertion` clean; `ruff format` + `ruff check` clean on every new/changed Python file (ruff reports 8 pre-existing errors in other files, untouched). `docker compose -f docker-compose.yaml config -q` → no output (valid).
+- Next: coordinator merge; step 7b consumes `shared/assertion` (see Handoffs).
+- Blocked: none
+
 ### Decisions and deviations
 
+- **Algorithm: Ed25519 / JWS `EdDSA`.** Why: small keys and signatures, deterministic signing, no parameter choices to get wrong (no RSA padding, no ECDSA nonce), standard library support in Go (`crypto/ed25519`) so `shared/assertion` has no third-party dependency, and `cryptography` + PyJWT support it on the issuer side. `kid` = RFC 7638 thumbprint, so a kid is bound to its key. The header `typ` is `underleaf-assertion+jwt`, checked by the verifier, so no other JWT the cloud signs can be mistaken for an assertion even if keys were ever shared by mistake.
+- **Issuer is Python, verifier is Go.** The brief asked for a package under `shared/` usable by cloud and edge; cloud_api is Python and owns the secrets and the HTTP endpoint, so the issuer lives in cloud_api and `shared/assertion` holds the claim types, key-set parsing, `Verify`, and a Go `Signer` (used for tests and as a second implementation for the interop vectors). Interop is enforced by committed vectors in both directions.
+- **Claims:** `iss` (`underleaf-cloud`), `sub` (account id), `aud` (cluster id, a single string), `scopes` (array of `read`/`deploy`/`admin`, matching RFD step 6), `iat`, `exp`, `jti`. `Verify` requires sub/jti/iat/exp, caps `exp-iat` at 5 minutes (default; issuer TTL 60 s, max 300), 5 s leeway, exact scope match (implication between scopes is the caller's policy).
+- **Rotation model.** Each key has `not_before` (creation) and `not_after`; the signer uses the newest key. Rotation (automatic after 90 days on next use, or `rotate_assertion_key`) creates the new key first, then caps older keys' `not_after` at now + overlap (168 h default; immediately with `--compromised`). Keys are published until `not_after`, deleted from disk after. A running server notices an out-of-process rotation through the key directory's mtime. The new key is signing and published from the same instant: verifiers that have not refreshed meet an unknown `kid` and use the RFD's bounded refetch (7b). I did not add a "publish before use" delay; recorded as an option under Open issues.
+- **Key storage.** On disk in `assertion.keys_dir`, private key as `<kid>.pem` (PKCS#8, 0600; covered by the existing `**/*.pem` ignore) and public metadata as `<kid>.json`, i.e. the same mechanism the CA key uses (file in a mounted dir), but a separate directory and, in compose, a separate volume that nginx does not mount. Nothing is committed.
+- **CA key / OAuth JWT key split: NOT done in this step.** Explicitly: only the new dedicated assertion key was implemented. Reasons: (1) the RFD's requirement is that the assertion key not be the CA/JWT key, which the new key satisfies; (2) splitting the JWT key out of the CA key would invalidate every outstanding access and refresh token (30-day refresh tokens, device sessions) at deploy, a user-visible change that needs a human decision on rollout; (3) it would not remove the CA key from the exposed surface: nginx itself uses the CA cert and key as its TLS server cert/key (`nginx.conf` lines 87-88, 135-136, 175-176) and as the client-CA, so the CA key stays in the nginx process regardless. That is the same finding as the channel question, and the real fix (a CA-issued server leaf, CA key kept only in cloud_api, plus edge-side hostname handling) spans nginx and edge client code outside this step. Registered clusters are unaffected by 7a (the CA and their certs are untouched). Recorded under Open issues and the human questions.
+- **Channel question answered** (full text now in [RFD-5.md Open questions](RFD-5.md#open-questions)): nginx presents the CA cert itself, so chain-to-`ca_chain.pem` holds trivially but hostname verification fails for lack of a SAN; recommendation is a CA-issued server leaf and a dedicated pinned listener for the key set, with chain-only `VerifyConnection` only as a local-dev interim.
+- **No minting endpoint.** The brief put the attach path in 7b, so `AssertionService.issue_for_cluster` is an internal call and a test asserts that `GET /assertion-keys` is the only assertion route. Whoever wires 7b must decide the authorization for the call site (the service already refuses clusters the account does not own, with one error for missing and foreign clusters).
+- **RFD amended** (Open questions: channel; Remote access: one sentence on the key split status).
+- **Process deviation:** see Cross-cutting, the worktree had to be recreated.
+
 ### Open issues
+
+- **Existing CA key and OAuth JWT key are still the same key** (and nginx's TLS key). Not split here; reasons above. For the human: decide on the forced re-login and on the nginx server-leaf change; ROADMAP carries the pointer.
+- **Fetch channel not implemented**: needs a CA-issued nginx server leaf, a pinned listener/route, and edge client code (7b and the cloud track). Until then 7b can only pin via chain-only verification.
+- **Single-process key store.** Keys live on local disk of one cloud_api process; several replicas would each generate their own and publish different sets. Needs shared storage or a DB table before cloud_api is scaled out.
+- **No "publish before use" delay** for newly rotated keys (see Decisions); relies on 7b's unknown-kid refetch. Easy to add (activate a key N minutes after publishing) if the human wants fewer refetches.
+- **Not exercised in the Docker stack.** I validated with a live uvicorn process and compose-file syntax only; I did not build the cloud_api image or run the full compose stack (nginx, Postgres). The named volume's first-run permissions (container runs as root) are untested.
+- **Edge cases not covered by tests**: coarse directory-mtime granularity on exotic filesystems (rotation by another process is detected via mtime), concurrent rotation by two processes, clock rollback.
 
 ## Step 7b: Edge: assertions, remote listener, `ufctl connect`
 
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] Rejected: wrong audience, expired, replayed `jti`, missing scope, unknown `kid`, no key at all (tests)
-- [ ] Loopback listener rejects assertions; remote listener rejects anything without one (tests)
-- [ ] Cached key set survives a cloud outage (test)
-- [ ] Unknown-`kid` refetch bounded to once per minute (test)
-- [ ] Common checks green; README Security model updated
+- [x] Rejected: wrong audience, expired, replayed `jti`, missing scope, unknown `kid`, no key at all (tests)
+- [x] Loopback listener rejects assertions; remote listener rejects anything without one (tests)
+- [x] Cached key set survives a cloud outage (test)
+- [x] Unknown-`kid` refetch bounded to once per minute (test)
+- [x] Common checks green; README Security model updated
+
+Scope note: this is the **edge half**. The cloud half (forwarding endpoint, minting call site, conn_worker opening streams, device-key login endpoints) does not exist; see Open issues for exactly what is missing. The ufctl commands and the agent stream handler are tested against fakes of it.
 
 ### Log
 
+#### 2026-11-04 19:20 · agent-C · setup
+- Did: `git merge rfd-5/integration` into `rfd-5/track-c` (clean, no conflicts; brought in Track A's steps 1,2,3,6 and my 7a). Read RFD Remote access / `ufctl connect` / Authorization / 7b proof, steps 1, 3, 6 journals, `auth.go` (`routeScopes`), `server.go`, `security.go`, `ui.go`, `conn_client`, `conn_worker` (`connection_manager.go`, `gateway_server.go`). Row 7b set to `in progress` (owner agent-C).
+- Findings that shaped the design: (1) the tunnel today is an agent-dialed yamux client session; **only the agent opens streams** (`NewGatewayStream`, each bound to a local port the agent picked) and conn_worker only `Accept`s them (`connection_manager.go` `HandleStream`); it never opens a stream toward the agent. (2) A connection exists only once a gateway stream is created (`ConnectionService.NewStream` -> `Connect(connectionID)`); the agent has exactly one connection. (3) On the Orchestrator the cluster id is not in config; it is the CN of the cloud-issued cluster certificate (`generateKeyAndCSR(clusterID)`), which is also what the cloud uses as the subject id.
+- Verified: `git log --oneline | head -3` -> `182fe21 Merge RFD-5 steps 1,2,3,6 (Track A hardening)` on top of `8587f16 Merge RFD-5 step 7a`.
+- Next: implement.
+- Blocked: none
+
+#### 2026-11-04 20:40 · agent-C · edge verifier, remote listener, tunnel stream handler, ufctl
+- Did:
+  - [shared/assertion/claims.go](../shared/assertion/claims.go): `HeaderName` (`X-Underleaf-Assertion`) and `StreamPreamble` (`UNDERLEAF-REMOTE/1\n`), the cloud/edge transport contract.
+  - New package [edge/orchestrator/remote](../edge/orchestrator/remote): `KeyCache` (fetch, persist, periodic refresh, bounded on-demand refetch), `ReplayCache`, `Verifier`, `ClusterIDFromCertDir` / `ClusterIDProvider`.
+  - [shared/clients/pinned.go](../shared/clients/pinned.go) (`PinnedTLSConfig`, `NewPinnedHTTPClient`) and [assertion_keys.go](../shared/clients/assertion_keys.go) (`CloudClient.FetchAssertionKeys`, `NewPinnedCloudClient`).
+  - Orchestrator REST: [remote.go](../edge/orchestrator/interface/rest/remote.go) (remote chain, `RemoteHandler`, `ServeRemote`, `rejectRemoteCredentials` on the local chain); `server.go` (`buildRouter` with a listener kind), `auth.go` (`accessFor`, the one route-table lookup both listeners use), `security.go` (`requireJSONBody` extracted), `logs.go` (WebSocket Origin check relaxed per request on the remote chain only). Wiring in [cmd/server/remote.go](../edge/orchestrator/cmd/server/remote.go) + one line in `main.go`.
+  - Agent: [conn_client/remote.go](../edge/agent/lib/conn_client/remote.go) (`ServeRemoteStreams`), hooks in `conn_client.go`, `utils.go`, `service/connection_service.go`. Stream denylist: [shared/utils/remoteaccess.go](../shared/utils/remoteaccess.go) + 3 lines in `controlports.go`.
+  - ufctl: package [edge/cmd/ufctl/remoteaccess](../edge/cmd/ufctl/remoteaccess) (`login`, `logout`, `connect`) mounted in `ufctl/main.go` (also: `ufctl` now exits non-zero when a command fails; it always exited 0 before).
+  - README Security model: five rows added in [edge/orchestrator/README.md](../edge/orchestrator/README.md) (and a blank line that split the table in two removed).
+- Verified (all `-count=1`; the named tests are the proof for each acceptance line):
+  - **Rejections** (remote listener, real router + real `remote.Verifier`): `TestRemoteRejectsInvalidAssertions` (wrong audience, expired, unknown kid, no scope, unknown scope, wrong issuer, over-long lifetime, tampered; response bodies do not leak the reason), `TestRemoteRejectsReplayedAssertion`, `TestRemoteFailsClosedWithNoKeyEver`, `TestRemoteScopesUseTheSameRouteTable` (read-scoped assertion -> `POST /deployments` 403; deploy-scoped passes authorization), plus verifier-level `TestRejections`, `TestReplayedJTIRejected`, `TestFailClosedWithNoKeyEver`, `TestFailClosedWhenClusterIdUnknown`, `TestEffectiveScopeIsTheHighestRecognised`.
+  - **Remote rejects anything without an assertion**: `TestRemoteRejectsAnythingWithoutAValidAssertion` (6 credential shapes x 6 paths incl. `/api/v1/health`, `/`, unknown paths, plus a POST; a valid *API token* in `Authorization` and `X-Subject-Id` / `X-Forwarded-For` do not help -> 401), `TestRemoteIgnoresLocalCredentialsAndTickets`, `TestRemoteWebSocketNeedsAnAssertionOnTheUpgrade`, `TestRemoteNotConfiguredIs503NotOpen`.
+  - **Loopback never accepts them**: `TestLoopbackListenerRejectsAssertionsAndForwardedIdentity` (valid/garbage/empty assertion, `X-Subject-Id`, lowercase header, on 4 paths incl. `POST /ws-tickets` -> 403; an assertion used as a bearer token is not accepted either), `TestLoopbackListenerRejectsAssertionsInStrictModeToo`, `TestListenersDoNotShareAuthenticationPaths`, `TestMisdirectedRemoteTrafficFailsClosedOnTheLocalListener` (agent target wrongly pointing at the local listener: the tunnelled request gets 403).
+  - **Cached key set survives a cloud outage**: `TestCachedKeySetSurvivesCloudOutageAndRestart` (verify with the cloud down; failed refresh keeps the keys; restart the cache from the persisted file with the cloud still down, file mode 0600), `TestOldKeyKeptUntilItsStatedExpiryThenDropped` (expiry enforced from the clock even with no cloud, and for keys reloaded from disk), `TestCloudWithdrawingAKeyDropsItImmediately`, `TestBadOrEmptyCloudAnswersKeepThePreviousSet`, `TestCorruptCacheFileFailsClosed`, `TestRunRetriesUntilTheFirstFetchSucceeds`.
+  - **Bounded refetch (fake clock)**: `TestUnknownKidRefetchBoundedToOncePerMinute` (50 forged tokens -> exactly 1 fetch; +59 s -> still 1; +61 s -> 2), `TestFailedRefetchAlsoCountsTowardTheBound` (10 forged tokens with the cloud down -> 1 fetch), `TestUnknownKidTriggersOneRefetchAndPicksUpRotatedKey` (a rotated-in key verifies after exactly one refetch; the old key keeps working without any).
+  - **Agent/tunnel**: `TestAgentSplicesCloudOpenedStreamToTheConfiguredTargetOnly`, `TestAgentRefusesStreamsWithoutThePreamble` (plain HTTP, wrong version, incomplete preamble, gateway-style stream id: all closed, the remote listener is never contacted), `TestAgentCannotBeSteeredToAnotherPort` (a destination named inside the stream is never dialed), `TestAgentRefusesEverythingWhenRemoteAccessIsNotConfigured`, `TestAgentClosesStreamWhenTheRemoteListenerIsDown`, `TestRemoteListenerPortsAreDenied` (gateway streams cannot target the remote ports), and the whole chain `TestRemoteRequestsThroughTheAgentTunnel` (cloud-opened yamux stream -> `ServeRemoteStreams` -> remote router: UI and API 200 with an assertion; 401 with none, with `X-Subject-Id`, on replay; 403 for a read-scoped deploy).
+  - **Pinned fetch channel**: `TestPinned_CAPresentedAsServerCertNoSAN` (the standard client fails with `doesn't contain any IP SANs`, the pinned client accepts the pinned CA presented as server cert: today's nginx), `TestPinned_RejectsEverythingNotChainingToThePinnedCA`, `TestPinned_CAIssuedLeafIsHostVerified` (a leaf with a SAN for another host is rejected; for the dialed IP accepted; this also caught and fixed a real bug in my first version, where `ConnectionState.ServerName` is empty for IP hosts and would have skipped the host check), `TestPinned_ClientAuthCertCannotPoseAsServer`, `TestPinned_ExpiredServerCertRejected`, `TestFetchAssertionKeys` (plain http only to loopback).
+  - **ufctl**: `TestStoreIsOwnerOnly` (dir 0700, file 0600, no stray temp files), `TestLoadRefusesLooseOrBrokenFiles`, `TestLoginDeviceFlow` (pending, slow_down adds 5 s, success; the key is never printed), `TestLoginFailuresStoreNothing` (denied/expired/error), `TestLoginRefusesInsecureCloudURLs`, `TestProxyForwardsToTheClusterRemotePathWithOnlyTheDeviceKey`, `TestProxyRefusesForeignHostsOriginsAndPaths` (rebinding, foreign/other-port/https Origin, `Sec-Fetch-Site`, `..`, `%2f`, `%2e`: none reach the cloud), `TestProxyCarriesWebSocketUpgrades`, `TestConnectListensOnLoopbackOnlyAndStops`, `TestConnectValidatesItsInputs`, and the full chain with a fake cloud `TestOwnerReachesTheOrchestratorThroughTheWholeChain` (login credentials -> `Connect` -> fake cloud (device key -> owner check -> per-request assertion -> tunnel) -> agent -> remote listener; scope travels end to end; a non-owner device key gets 404 and an unknown one 401).
+  - **Wiring** (`edge/orchestrator/cmd/server`): `TestRemoteAccessIsOffByDefault` (no verifier, no fetch, no listener), `TestRemoteAccessWiring` (pinned client, key fetch from `/assertion-keys`, cluster id from the cluster cert CN, persisted `assertion_keys.json`, real remote listener).
+  - **Against the real cloud_api** (a throwaway test, deleted afterwards; real uvicorn cloud_api on 127.0.0.1:35080 with its `AssertionLib` keys; edge wiring on 127.0.0.1:35110; tokens minted by the Python `AssertionLib`): aud=`cluster_live` -> 200, same token again -> 401 (replay), a second token -> 200, aud=`cluster_OTHER` -> 401, no assertion -> 401, key set persisted (420 bytes). I did **not** start a real `orch-server`: one was already running on this machine on `:9090`/`:50100` (not mine), so I exercised the same wiring function in-process instead.
+  - Common checks: `go build ./...` rc 0; `go build -tags devmode ./...` rc 0; `go vet ./...` rc 0; `go test -count=1 ./...` all `ok`; `go test -race` on every package I touched passes; `gofmt -l` over all tracked and new `.go` files -> empty; cloud_api `pytest -q` -> `140 passed, 42 skipped` (unchanged by 7b). Coverage: `edge/orchestrator/remote` 93.1%, `shared/assertion` 95.5%, `ufctl/remoteaccess` 72.8%, `rest` 74.6%.
+- Next: coordinator merge; cloud half (Open issues) and install/Docker wiring.
+- Blocked: none
+
+#### 2026-11-04 21:00 · agent-C · correction to the setup entry
+- Did: the setup entry above says row 7b was set to `in progress` before the work; that is not true of the commit history. I changed the row only in the final commit (straight to `in review`), so no `in progress` state was ever committed on this branch. Recorded here instead of editing the earlier entry.
+- Verified: `git log --oneline -- RFDs/RFD-5-journal.md` on `rfd-5/track-c` shows no 7b-only row change before the step 7b commit.
+- Next: none
+- Blocked: none
+
 ### Decisions and deviations
 
+- **Transport of the assertion: `X-Underleaf-Assertion` header, not `Authorization`.** `Authorization: Bearer` already means a local API token (step 6); keeping them separate means a token can never be mistaken for an assertion or vice versa, and the local listener can reject the assertion header outright. One assertion (one jti) per forwarded request, so a browser session is many assertions; the cloud must strip any client-supplied value.
+- **Remote listener: off unless `UNDERLEAF_REMOTE_ADDR=host:port`.** Not bound, no key fetching, no verifier otherwise (test). Bind policy is the existing `utils.CheckBind` (non-loopback needs the same opt-in as the REST listener). I considered a stricter private rule; reusing the one policy keeps a single thing for step 8 to retire, but it means **step 8 must also cover this listener** when it removes `UNDERLEAF_INSECURE_ALLOW_REMOTE`. Intended deployment: bind loopback and let the agent's tunnel forward to it, so it is not a network-exposed port. In the Docker single-node install the Orchestrator binds all interfaces in the container, so the port must be published on `127.0.0.1` for the host agent to reach it; **install.sh was not touched** (other tracks own it). Handoff below.
+- **Tunnel direction (the "no confusion" mechanism).** Gateway streams are agent-opened and bound to a local port the agent chose. Remote streams are **cloud-opened** (yamux server -> client) on the agent's existing outbound connection and start with `UNDERLEAF-REMOTE/1\n`. The agent splices a cloud-opened stream only if it has exactly that preamble, only to the single configured `UNDERLEAF_REMOTE_TARGET`, never to a destination named by the stream; with no target configured it closes them all. The remote ports are also on the gateway stream denylist, and the remote listener refuses anything without an assertion. Confusion fails closed at four independent points, each tested.
+- **Effective scope = the highest recognised scope in the assertion**, mapped onto the existing hierarchical `service.Scope`; unrecognised names are ignored (never widen) and none recognised is a rejection. `routeScopes` is reused through one function (`accessFor`), not copied; unlisted routes need admin on both listeners. For unmatched paths (static UI, 404s) any valid assertion suffices, mirroring the local rule that UI assets are not secret.
+- **Host/Origin guards are not applied on the remote listener** (the browser's Host/Origin there are the cloud's). CSRF protection for Cockpit sessions is therefore the cloud's responsibility before it signs for a request (Open issues). The JSON Content-Type rule is kept. The log WebSocket's Origin check is relaxed on the remote chain only.
+- **Authenticate everything, `/health` and static files included.** Stricter than the local table (where `/health` is public) because there is no unauthenticated path on this listener at all.
+- **Key set fetch**: the recommended channel could be implemented only as the interim (pinned to `ca_chain.pem`, chain verified, host name verified whenever the server certificate has names; no-SAN certificates, i.e. today's nginx, accepted on the chain alone). Plain `http` is accepted only for loopback hosts (local dev cloud). Fetch cadence: at process start, then hourly, every minute while failing; this covers "fetched at registration" within a minute without hooking `RegistrationService` (a file other tracks may be editing). A successful fetch **replaces** the cache (so an early-withdrawn key is dropped immediately); an empty, invalid or all-expired answer is rejected and the previous set kept.
+- **Replay cache**: in memory, bounded (100k), fails closed when full, entries live until `exp` + leeway, inserted only after full verification. Restart forgets it: replay window <= one assertion lifetime (about 60 s) after a restart. Recorded, not persisted, to keep assertion handling free of disk I/O on the request path.
+- **Audience = CN of `cluster_cert.pem`** in the cert dir (cached one minute, only on success). An unregistered or unreadable cluster has no identity and rejects every assertion.
+- **ufctl contract is mine** (device flow shaped like the existing registration endpoints; `/clusters/{id}/remote/*` forwarding). It is written down in the package doc and enforced against a fake cloud only. Device key: an opaque revocable bearer secret, 0600; only ever sent to the cloud URL it was issued for, over https (or loopback http). `logout` deletes the local file only (revocation is cloud-side). `connect` is bound to 127.0.0.1 with no option to change that, owner-only by construction (the cloud decides ownership), no sharing, and it adds no features beyond a proxy.
+- **`ufctl` exit status**: `main.go` now exits 1 when a command fails (it ignored the error before, so scripts saw success).
+- **Files in other tracks' areas touched, minimally**: `rest/auth.go` (extract `accessFor`; behaviour unchanged, Track A's tests pass), `rest/security.go` (extract `requireJSONBody`), `rest/server.go`, `rest/logs.go`, `shared/utils/controlports.go` (3 lines), `agent/service/connection_service.go` and `conn_client/{conn_client,utils}.go` (small hooks), `ufctl/main.go`, `cmd/server/main.go` (one line), `edge/orchestrator/README.md`. Not touched: `install.sh`, `netsec.go`, Orchestrator gRPC, `docker_service.go`.
+- **RFD amended**: Remote access (the listener bullet) and Open questions (channel: interim implemented).
+
 ### Open issues
+
+**Cloud half, precisely what is missing (none of it is built):**
+1. **cloud_api, ufctl login**: `POST /ufctl/device` and `POST /ufctl/token` (contract in `edge/cmd/ufctl/remoteaccess/doc.go`), a device-key store (hashed, revocable, per account), and an account-UI page where the signed-in owner enters the user code and approves.
+2. **cloud_api, forwarding**: `ANY /clusters/{cluster_id}/remote/{path}` that authenticates the device key (and, for Cockpit, the OAuth session), calls `AssertionService.issue_for_cluster` per request (already refuses foreign/missing clusters identically), strips any client `X-Underleaf-Assertion`, attaches the fresh assertion, and relays the response including WebSocket upgrades. Decide the scopes an owner is granted (7a left this to the call site) and apply a CSRF/Origin policy for browser sessions.
+3. **conn_worker**: today it only `Accept`s agent-opened streams. It needs "open a stream on `LiveTunnels[connID].YamuxSess` toward the agent, write `UNDERLEAF-REMOTE/1\n`, relay HTTP", plus a way for cloud_api (Python) to hand it a request and an assertion (gRPC change in `conn_worker.proto` and regenerated stubs for both languages, or move the forwarder into Go).
+4. **A standing cluster connection**: connections are created per gateway stream; nothing creates a cluster-level connection record or tells the agent its id (`UNDERLEAF_REMOTE_CONNECTION_ID` is manual today). Also the agent has exactly one connection (`ConnClient.connection`), and `NewStream` dials the connection id of the stream, so a standing remote connection and gateway-stream connections would fight over it until the cloud uses one connection id per cluster.
+5. **nginx**: `location /api/v2/cloud/` has no `proxy_http_version 1.1` / `Upgrade` / `proxy_buffering off`, so WebSockets and log streaming through the cloud API will not work until it is changed; and the server leaf certificate from the 7a channel recommendation (so the pinned fetch can verify host names).
+
+**Edge side:**
+- **Install/Docker wiring not done**: `install.sh` and the Orchestrator image do not publish or configure the remote listener, and the agent's `UNDERLEAF_REMOTE_TARGET` / `UNDERLEAF_REMOTE_CONNECTION_ID` are env-only. A human or Track A/B owner of `install.sh` has to decide the published port and how the agent reaches it.
+- **Step 8** (retiring `UNDERLEAF_INSECURE_ALLOW_REMOTE`) must also cover `ServeRemote`, which uses `CheckBind`.
+- Replay cache is in memory (restart window above). The fetch cadence has no jitter; many clusters refreshing hourly in lockstep hit `/assertion-keys` together (cacheable; 5 min `max-age`).
+- **Not verified**: a real browser session on the UI through `ufctl connect`; the real nginx + TLS handshake of the pinned fetch (only a Go TLS server presenting the CA as its certificate, which reproduces the 7a finding); a real `ufagentd` dialing a real conn_worker (conn_worker cannot open streams yet, so the chain was tested with an in-process yamux pair); WebSocket through the *whole* chain (WebSocket is tested on the remote router and through the ufctl proxy separately, but the fake cloud in the chain test does not relay upgrades); the Docker install, Linux, amd64; `ufctl login` against anything but a fake; a real `orch-server` process (one was already running on this machine, so I did not start another).
 
 ## Step 8: Retire stopgaps
 
@@ -289,12 +512,41 @@ All of these are clarifications of an under-specified RFD, not reversals of a se
 
 ### Deviations from the RFD
 
+- **(agent-A, step 1) "Separate user-defined networks are isolated from each other" does not hold for published ports** (Docker 29.5.3 Desktop/arm64). Unpublished ports and DNS are isolated; `:50100` and the UI/API port, which must be published on host loopback for the host agent and browser, stay reachable from a workload via the Orchestrator's container IP, and on Docker Desktop via `host.docker.internal`. Source-IP checks cannot tell them apart (all arrive from the bridge gateway). The RFD fix is implemented as written; the "`:50100` unreachable from a workload" acceptance is not met. Caveat added to RFD "Local trust".
+- **(agent-A, step 3) Step 3 makes the above worse for REST**: the REST port used to be unpublished (isolated); one origin means it is now published, so a workload can reach it too. Mitigation available today: `UNDERLEAF_REQUIRE_TOKEN=1` (step 6), which breaks the UI.
+- **(agent-A, step 6) Tokens do not restrict anonymous local callers** (RFD "Local trust" keeps the loopback UI login-free); scopes matter in strict mode and for the remote listener. Details under step 6 decisions.
+- **(agent-A, step 2) Streams may not target Docker's API ports (2375/2376)** either; the RFD lists only Orchestrator/agent ports.
+- **(agent-C, 7a)** The assigned worktree (`.claude/worktrees/agent-a3f46e81c5de9f331`, branched from `main` instead of `rfd-5/integration`) disappeared during the session; the coordinator authorized branching `rfd-5/track-c` from `0868881`, so I created a new worktree `.claude/worktrees/rfd5-track-c` for it. Nothing else was touched. 7a also did not split the CA key from the OAuth JWT key (step 7a Decisions).
+
 ### Open questions for the human
 
+- **Published-port exposure to workloads (steps 1 and 3).** Pick one: (a) accept and document, with `UNDERLEAF_REQUIRE_TOKEN=1` for hardened installs; (b) authenticate the local gRPC/REST path even on one host (e.g. step 4's mTLS for the single-node agent; a UI login or token entry for REST), which contradicts the RFD's "local listener: none"; (c) Linux-only: run the Orchestrator with `--network host` bound to loopback, which workloads cannot reach, but this does not work on Docker Desktop for macOS; (d) a host firewall rule outside Docker (root, platform-specific); (e) unix-socket bind mount for gRPC (Linux only in practice). I could not test Linux.
+- **Should strict token mode become the default**, given the above? It needs a way for the UI to hold a token first.
+- **Persistent volume for the Orchestrator container** (db, certs, now tokens live in the container filesystem and are lost on recreate). Needed before "recreate to upgrade" is a safe instruction; not in the RFD.
+- **(agent-C, 7a)** Split the cloud's OAuth JWT key from the CA key now (forces re-login for all sessions) or together with the nginx server-leaf change? And which channel should the Orchestrator use to fetch the assertion key set: pinned listener with a CA-issued leaf (recommended) or public TLS? See [RFD-5.md Open questions](RFD-5.md#open-questions) and step 7a Open issues.
+
 ### Handoffs
+
+#### 2026-11-04 · agent-C · 7b ready for merge
+- Did: step 7b (edge half) on `rfd-5/track-c`, row 7b `in review`; see the step section for evidence and for the exact cloud half that is missing.
+- Merge notes: files shared with other tracks that I touched minimally are listed in step 7b Decisions. Please check: (1) `install.sh`/Docker image: publish and configure the remote listener if the human wants it in the single-node install (`UNDERLEAF_REMOTE_ADDR` on the Orchestrator, `UNDERLEAF_REMOTE_TARGET` and `UNDERLEAF_REMOTE_CONNECTION_ID` for the agent); (2) step 8 should include `rest.ServeRemote` in its sweep of `CheckBind`/`UNDERLEAF_INSECURE_ALLOW_REMOTE`; (3) Track B step 5 rewrites agent flow: keep `ServeRemoteStreams` hooked in `conn_client.establish` and the `Start()` standing-connection line in `connection_service.go`, and the denylist hooks from step 2; (4) `edge/orchestrator/README.md` Security model: five rows added after the WebSocket tickets row, keep both sides.
+- Blocked: none
+
+#### 2026-11-04 · agent-C · 7a to 7b
+- Did: delivered `shared/assertion` (public API below), the issuer and the key set endpoint `GET /api/v2/cloud/assertion-keys` (JWKS, unauthenticated, `Cache-Control: public, max-age=300`).
+- 7b API: `assertion.ParseKeySet([]byte) (*KeySet, error)`; `(*KeySet).Marshal() ([]byte, error)`; `(*KeySet).Lookup(kid, now, leeway) (ed25519.PublicKey, error)`; `(*KeySet).Prune(now) *KeySet`; `assertion.Verify(token string, ks *KeySet, opts VerifyOptions) (*Claims, error)` with `VerifyOptions{Audience, Issuer, RequiredScopes, Now, Leeway, MaxLifetime}`; `Claims{Issuer, Subject, Audience, Scopes, IssuedAt, ExpiresAt, JTI}` with `HasScope`, `Expiry`; sentinel errors `ErrMalformed, ErrAlgorithm, ErrNoKeys, ErrUnknownKey, ErrKeyExpired, ErrBadSignature, ErrIssuer, ErrExpired, ErrNotYetValid, ErrLifetime, ErrAudience, ErrScope` (`errors.Is`). Only `ErrUnknownKey` should trigger a (rate limited) refetch. Test helpers: `NewSigner(kid, ed25519.PrivateKey)`, `(*Signer).Sign(Claims)`, `NewJWK`, `Thumbprint`.
+- Things 7b must still do: fetch/cache/persist the set (persist `Marshal()` output, `Prune` before saving, keep last good on parse error), bounded refetch, jti replay cache until `Claims.Expiry()`, the remote listener, and choose the fetch channel (see Open questions). `Verify` is stateless and takes the expected cluster id as `Audience`; an empty audience is an error, never a wildcard.
+- Blocked: none
 
 #### 2026-11-04 · coordinator · baseline and setup
 - Did: created this journal and recorded the baseline; created `rfd-5/integration` from `main`.
 - Verified: see Baseline.
 - Next: spawn Track A (steps 1,2,3,6), Track B (steps 4,5,8), Track C (step 7a, then 7b once 3 and 6 are merged).
+- Blocked: none
+
+#### 2026-11-04 · agent-A · Track A (steps 1, 2, 3, 6) ready for merge
+- Did: four steps on branch `rfd-5/track-a`, in order, one commit each (see `git log`). All four rows are `in review`. Step 1's acceptance box "from a workload, `:9090` and `:50100` unreachable" is deliberately unticked (see Deviations).
+- Merge notes for the coordinator: (1) **Migration ids**: mine is `0008_api_tokens` (`migrationAPITokens`); if Track B also adds `0008_*`, ids are distinct strings applied in file-name order and the tables are disjoint, but rename one if you prefer a strict sequence. (2) Files shared with Track B that I touched minimally: `edge/orchestrator/interface/grpc_private/server.go` (one `Register...` line), `edge/orchestrator/interface/cli/cli.go` (one `AddCommand`), `shared/cli/utils/dependency_manager.go` (one field + one line), `edge/orchestrator_ui/public/tools/install.sh` (docker block only, plus `--network` and the published container port `9090`), `edge/docker/Dockerfile` (rewritten: no nginx; Track B's step 8 removes the two env stopgaps from it), `edge/orchestrator/README.md` Security model (rows added; keep both sides). `shared/utils/netsec.go` is untouched; new files `shared/utils/controlports.go`. (3) Step 5 (agent link) must keep `docker_service.go`'s `workloadHostConfig` and the denylist hooks in `conn_client.go`/`connection_service.go` when it rewrites the agent flow. (4) 7b needs the `routeScopes` table and `authMiddleware` in `edge/orchestrator/interface/rest/auth.go` (the remote listener's assertion scopes should map onto the same scopes) and the same-origin rule in `security.go`.
+- Verified: see each step. Final: `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./... -count=1` pass, gofmt clean, `npx tsc -b` clean.
+- Next: coordinator merges `rfd-5/track-a` into `rfd-5/integration` and marks the steps `done` once the open decisions above are settled or accepted.
 - Blocked: none

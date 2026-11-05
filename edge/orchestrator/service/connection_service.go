@@ -65,6 +65,13 @@ func (s *ConnectionService) TerminateConnection(ctx context.Context, connectionI
 
 func (s *ConnectionService) NewStream(ctx context.Context, nodeID, type_ string, port int) (*types.Stream, error) {
 	logger := utils.LoggerFromContext(ctx).With("node_id", nodeID)
+	// Streams publish a local port to the internet; refuse control-plane ports
+	// before anything is provisioned cloud-side. The agent re-checks when it
+	// opens the stream (it alone knows its own configuration).
+	if err := utils.CheckStreamPort(port); err != nil {
+		logger.Warn("refusing stream to control-plane port", "port", port, "error", err)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	conn, err := s.cloudClient.CreateConnection(ctx, types.CreateConnectionRequest{
 		NodeID: nodeID,
 		Name:   fmt.Sprintf("stream-%d", time.Now().Unix()),
@@ -88,6 +95,14 @@ func (s *ConnectionService) NewStream(ctx context.Context, nodeID, type_ string,
 
 	if err := s.agents.Agent(nodeID).NewStream(ctx, conn.ID, stream.ID, stream.Type.ToString(), *stream.Port); err != nil {
 		logger.Error("failed to create new stream on agent", "error", err)
+		// Don't leave a public stream pointing at nothing (e.g. the agent
+		// refused the port): best-effort cloud-side cleanup.
+		if cerr := s.cloudClient.CloseStream(ctx, stream.ID); cerr != nil {
+			logger.Warn("failed to close cloud-side stream after agent refusal", "error", cerr)
+		}
+		if terr := s.cloudClient.TerminateConnection(ctx, conn.ID); terr != nil {
+			logger.Warn("failed to terminate cloud-side connection after agent refusal", "error", terr)
+		}
 		return nil, err
 	}
 	logger.Info("requested agent to create new stream")

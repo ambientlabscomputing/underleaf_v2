@@ -3,6 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/lib/conn_client"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -24,6 +29,12 @@ func NewConnectionService(config utils.Config, cc *conn_client.ConnClient) *Conn
 
 func (s *ConnectionService) Start() {
 	s.connClient.Start()
+	// Remote access: keep one cloud connection open so the cloud can open
+	// remote-access streams toward this agent even when no gateway stream
+	// exists. Off unless both the connection id and the target are configured.
+	if id := strings.TrimSpace(os.Getenv(utils.EnvRemoteConnectionID)); id != "" && strings.TrimSpace(os.Getenv(utils.EnvRemoteTarget)) != "" {
+		s.connClient.Connect(context.Background(), id)
+	}
 }
 
 func (s *ConnectionService) ConnectToCloud(ctx context.Context, connectionID string) {
@@ -51,6 +62,11 @@ type NewStreamRequest struct {
 }
 
 func (s *ConnectionService) NewStream(ctx context.Context, req NewStreamRequest) error {
+	// Fail fast, before dialing the cloud. NewGatewayStream enforces the same
+	// check again where the local port is actually dialed.
+	if err := utils.CheckStreamPort(req.Port); err != nil {
+		return status.Error(codes.PermissionDenied, err.Error())
+	}
 	s.ConnectToCloud(ctx, req.ConnectionID)
 	switch req.Type {
 	case "gateway":
