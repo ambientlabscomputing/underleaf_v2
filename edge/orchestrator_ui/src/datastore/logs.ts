@@ -18,10 +18,24 @@ export function useLiveContainerLogs(dockerId: string, sinceMs?: number) {
   const [lines, setLines] = useState<LogLine[]>([]);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  // Bumped on every connect/disconnect so a ticket request that resolves after
+  // the hook moved on does not leave an orphaned socket open.
+  const generation = useRef(0);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!dockerId) return;
-    const ws = openLogStream(dockerId, sinceMs);
+    const mine = ++generation.current;
+    let ws: WebSocket;
+    try {
+      ws = await openLogStream(dockerId, sinceMs);
+    } catch {
+      if (mine === generation.current) setConnected(false);
+      return;
+    }
+    if (mine !== generation.current) {
+      ws.close();
+      return;
+    }
     wsRef.current = ws;
 
     ws.onopen = () => setConnected(true);
@@ -38,13 +52,14 @@ export function useLiveContainerLogs(dockerId: string, sinceMs?: number) {
   }, [dockerId, sinceMs]);
 
   const disconnect = useCallback(() => {
+    generation.current++;
     wsRef.current?.close();
     wsRef.current = null;
     setConnected(false);
   }, []);
 
   useEffect(() => {
-    connect();
+    void connect();
     return () => disconnect();
   }, [connect, disconnect]);
 

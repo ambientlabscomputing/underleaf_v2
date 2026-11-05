@@ -9,6 +9,7 @@ import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands/deploy"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands/nodes"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands/streams"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands/tokens"
 )
 
 type OrchestratorCLI struct{}
@@ -29,6 +30,7 @@ func AddCommands(root *cobra.Command) {
 	root.AddCommand(containers.ContainersCmd)
 	root.AddCommand(cloud.CloudCmd)
 	root.AddCommand(deploy.DeployCmd)
+	root.AddCommand(tokens.TokensCmd)
 	registerDevCommands(root)
 }
 

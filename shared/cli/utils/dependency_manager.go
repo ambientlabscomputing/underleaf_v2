@@ -22,6 +22,7 @@ const agentSocketPath = "/tmp/undf-agent.sock"
 // DependencyManager holds gRPC clients for orchestrator CLI commands.
 type DependencyManager struct {
 	OrchestratorPrivateClient grpc_private.OrchestratorPrivateClient
+	OrchestratorTokensClient  grpc_private.OrchestratorTokensClient
 	privateConn               *grpc.ClientConn
 }
 
@@ -44,6 +45,7 @@ func DependencyManagerBuilder(deps ...string) *DependencyManager {
 			}
 			dm.privateConn = conn
 			dm.OrchestratorPrivateClient = grpc_private.NewOrchestratorPrivateClient(conn)
+			dm.OrchestratorTokensClient = grpc_private.NewOrchestratorTokensClient(conn)
 		}
 	}
 	return dm

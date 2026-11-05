@@ -16,12 +16,11 @@ export class ApiError extends Error {
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    // const token = localStorage.getItem('auth_token');
-    const token = "TOKEN";
-
+    // No credential is attached: on the local, same-origin install the
+    // Orchestrator treats the UI as the machine's operator (RFD 5, "Local
+    // trust"). Automation uses scoped API tokens instead; see `orcli tokens`.
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
     };
 

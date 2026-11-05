@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 
@@ -23,6 +24,11 @@ type OrchestratorRESTServer struct {
 
 	// logSrc overrides the log relay (tests); nil means Service.Logs().
 	logSrc logSource
+	// tokenSrc overrides bearer-token verification (tests); nil means Service.Tokens().
+	tokenSrc tokenVerifier
+	// ticketSrc holds WebSocket tickets; created on first use.
+	ticketSrc  *ticketStore
+	ticketOnce sync.Once
 }
 
 // envUIDir names the directory holding the built UI (index.html + assets).
@@ -32,10 +38,12 @@ const envUIDir = "UNDERLEAF_UI_DIR"
 // and, if uiDir is set, the UI. Every request, including static assets and
 // WebSocket upgrades, goes through requestGuard.
 func (s *OrchestratorRESTServer) newRouter(basePath, uiDir string) *gin.Engine {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{Formatter: redactingLogFormatter}), gin.Recovery())
 
 	router.Use(securityHeaders())
 	router.Use(requestGuard())
+	router.Use(s.authMiddleware(basePath))
 	// No CORS middleware: the UI is served from this origin (or, in dev,
 	// proxied through the Vite server), so browsers never make cross-origin
 	// requests to the API. Cross-origin callers are rejected by requestGuard.
@@ -45,6 +53,7 @@ func (s *OrchestratorRESTServer) newRouter(basePath, uiDir string) *gin.Engine {
 	s.RegisterContainerRoutes(v2, s.Service)
 	s.RegisterLogRoutes(v2, s.Service)
 	s.RegisterDeploymentRoutes(v2, s.Service)
+	s.RegisterAuthRoutes(v2)
 	health := v2.Group("/health")
 	health.GET("", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
