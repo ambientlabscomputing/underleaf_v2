@@ -104,6 +104,31 @@ class OAuthConfig(BaseModel):
     )
 
 
+class AssertionConfig(BaseModel):
+    """Dedicated signing keys for cluster assertions (RFD 5). Deliberately
+    separate from OAuthConfig: these keys must never be the root CA / JWT key."""
+
+    keys_dir: str = Field(
+        default_factory=lambda: _repo_root_cert_path("assertion_keys"),
+        description="Directory holding the assertion signing keys (<kid>.pem + "
+        "<kid>.json). Created 0700 if missing. Do not point this at a directory "
+        "mounted into nginx or any other container that does not sign assertions.",
+    )
+    issuer: str = Field(
+        default="underleaf-cloud", description="`iss` placed in every assertion"
+    )
+    ttl_seconds: int = Field(default=60, description="Assertion lifetime (max 300)")
+    rotate_after_days: int = Field(
+        default=90,
+        description="A signing key older than this is replaced by a new one",
+    )
+    overlap_hours: int = Field(
+        default=168,
+        description="How long a replaced key stays published after rotation. Must "
+        "exceed the verifiers' key set refresh interval plus the assertion TTL.",
+    )
+
+
 class CORSConfig(BaseModel):
     allowed_origins: list[str] = Field(
         default=["*"],
@@ -188,6 +213,10 @@ class AppConfig(BaseModel):
     )
     oauth: OAuthConfig = Field(
         default_factory=OAuthConfig, description="OAuth configuration settings"
+    )
+    assertion: AssertionConfig = Field(
+        default_factory=AssertionConfig,
+        description="Cluster assertion signing key settings",
     )
     cors: CORSConfig = Field(
         default_factory=CORSConfig, description="CORS configuration settings"

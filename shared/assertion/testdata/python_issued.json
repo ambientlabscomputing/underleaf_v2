@@ -1,0 +1,25 @@
+{
+  "comment": "Issued by cloud_api AssertionLib; verified by Go shared/assertion. Regenerate: UPDATE_ASSERTION_VECTORS=1 pytest tests/lib/test_assertion_lib.py",
+  "now": 1796083200,
+  "audience": "cluster_interop",
+  "subject": "acct_interop",
+  "scopes": [
+    "deploy",
+    "read"
+  ],
+  "jwks": {
+    "keys": [
+      {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "kid": "D3zPuvQUwRzZfkKzGl_p9809x8Z9mU8dVpCXRragpo8",
+        "alg": "EdDSA",
+        "use": "sig",
+        "x": "5YBMPF0oPaYXjP4HmS4oKTZWrKFSBbIdfnuzwHHimJU",
+        "not_before": 1796083200,
+        "not_after": 1804464000
+      }
+    ]
+  },
+  "token": "eyJhbGciOiJFZERTQSIsImtpZCI6IkQzelB1dlFVd1J6WmZrS3pHbF9wOTgwOXg4WjltVThkVnBDWFJyYWdwbzgiLCJ0eXAiOiJ1bmRlcmxlYWYtYXNzZXJ0aW9uK2p3dCJ9.eyJpc3MiOiJ1bmRlcmxlYWYtY2xvdWQiLCJzdWIiOiJhY2N0X2ludGVyb3AiLCJhdWQiOiJjbHVzdGVyX2ludGVyb3AiLCJzY29wZXMiOlsiZGVwbG95IiwicmVhZCJdLCJpYXQiOjE3OTYwODMyMDAsImV4cCI6MTc5NjA4MzI2MCwianRpIjoiVHJsY1RUR0l2RmNLdkN2N3E0b0UzUSJ9.a-l-erKWp-NhG18t-QgIfddNCV0Zk3aBmAaZcSUuVcxxNZOCW5WYi1BepON-zENd6aj3PJLm-dFJJvI_Bk_CAg"
+}

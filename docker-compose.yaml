@@ -31,6 +31,9 @@ services:
     volumes:
         - ./configs/local/cloud_api.yaml:/etc/underleaf/config.yaml:ro
         - ./certs:/var/lib/underleaf/certs
+        # Assertion signing keys (RFD 5): a dedicated volume, deliberately NOT
+        # under ./certs, because nginx mounts ./certs and must never see them.
+        - assertion_keys:/var/lib/underleaf/assertion_keys
     # No host port mapping: cloud_api trusts the X-Subject-Id header nginx
     # injects only after validating a client cert (see interface/deps.py's
     # x_subject_id_token_middleware_). Publishing 8080 directly to the host
@@ -131,3 +134,4 @@ networks:
 
 volumes:
   postgres_data:
+  assertion_keys:
