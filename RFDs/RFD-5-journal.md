@@ -14,7 +14,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 | 6 | Scoped API tokens | in review | agent-A | rfd-5/track-a | 3 | 2026-11-04 |
 | 7a | Cloud: split signing key, publish key set | in review | agent-C | rfd-5/track-c | none | 2026-11-04 |
 | 7b | Edge: assertions, remote listener, `ufctl connect` | in review | agent-C | rfd-5/track-c | 3, 6, 7a | 2026-11-04 |
-| 8 | Retire stopgaps | in progress | agent-B | rfd-5/track-b | 5 | 2026-11-04 |
+| 8 | Retire stopgaps | in review | agent-B | rfd-5/track-b | 5 | 2026-11-04 |
 
 States: not started · in progress · blocked · in review · done
 
@@ -300,7 +300,7 @@ All of these are clarifications of an under-specified RFD, not reversals of a se
 9. **Membership is re-read per link attempt, but the unary `OrchestratorClient` (used by `ping`, `register`, `ReportContainers`, and certificate renewal) is built once at start.** A daemon that is already running when `ufagentd join` is run keeps its old unary client until restarted; the link itself switches over. `install.sh join` enrolls before starting the service, so the supported path is unaffected.
 
 ### Open issues
-- `UNDERLEAF_CLUSTER_TOKEN` is still honoured on the local listener and still attached by the agent's local dial; step 8 removes it.
+- `UNDERLEAF_CLUSTER_TOKEN` is still honoured on the local listener and still attached by the agent's local dial; step 8 removes it. *(Resolved in step 8.)*
 - Certificate renewal runs on the unary client's connection to the cluster listener (same mTLS identity), not on the link's own HTTP/2 connection. Functionally "over the live mTLS link", literally a second connection.
 - `e2e_testing/fixtures/config.py` still lists agent HTTP/gRPC ports (50101/50103/9091); it is a Python fixture I did not touch.
 - Track A touches `connection_service.go` (stream denylist at creation) and `docker_service.go`; my `connection_service.go` edits are small (constructor takes the directory, calls go through `agents.Agent(nodeID)`) but expect a textual conflict to resolve at merge.
@@ -499,14 +499,53 @@ Scope note: this is the **edge half**. The cloud half (forwarding endpoint, mint
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] `UNDERLEAF_CLUSTER_TOKEN`, `UNDERLEAF_INSECURE_ALLOW_REMOTE` and the Dockerfile flag removed; `grep -rn` finds no references (output pasted)
-- [ ] Docs updated; common checks green
+- [x] `UNDERLEAF_CLUSTER_TOKEN`, `UNDERLEAF_INSECURE_ALLOW_REMOTE` and the Dockerfile flag removed; `grep -rn` finds only the history-describing mentions listed in the log (output pasted)
+- [x] Docs updated (orchestrator README Security model, Dockerfile comments, RFD Migration note); common checks green
 
 ### Log
 
+#### 2026-11-04 20:05 · agent-B · stopgaps retired; container mode; merged rfd-5/integration first
+- Did:
+  - **Merged `rfd-5/integration` into `rfd-5/track-b` before this step** (commit `f81213a`), as the coordinator asked. Conflicts and how they were resolved: `Dockerfile` (A removed nginx and runs `orch-server` directly; I kept A's rewrite and replaced only the two env lines: `UNDERLEAF_BIND_ADDR=0.0.0.0`, `UNDERLEAF_CONTAINER=1`, kept `UNDERLEAF_UI_DIR`), `grpc_private/server.go` and `shared/cli/utils/dependency_manager.go` (both sides additive: kept `ClusterPrivate` and `OrchestratorTokens`), READMEs and the RFD/journal (both sides kept; status rows merged). Migration ids are distinct: A `0008_api_tokens`, B `0050_cluster_membership`, `0051_deployment_node`. Semantic fallout of the merge, not textual: A's `controlports.go` referenced constants I had removed (`AgentHttpPort`, `OrchestratorGRPCPort`, `AgentGRPCPort`); fixed (below).
+  - [`shared/utils/netsec.go`](../shared/utils/netsec.go): removed `UNDERLEAF_CLUSTER_TOKEN`, `UNDERLEAF_INSECURE_ALLOW_REMOTE`, `ClusterToken`, `ClusterAuthServerOptions`, `ClusterAuthDialOptions`, `CheckBind`, `ListenTCP`. New: `CheckLocalBind` / `ListenLocal` (loopback only) and `ContainerMode()`. Call sites updated: Orchestrator local gRPC listener, REST listener, **C's remote listener** (`rest/remote.go`), the agent's and `OrchestratorClient`'s local dial.
+  - Dockerfile: ENV now `UNDERLEAF_BIND_ADDR=0.0.0.0 UNDERLEAF_CONTAINER=1 UNDERLEAF_UI_DIR=...`; comments rewritten.
+  - [`shared/utils/controlports.go`](../shared/utils/controlports.go): per the coordinator's note (4) the denylist now includes the **cluster listener** (`50104`) and the *configured* local/cluster ports (`UNDERLEAF_ORCH_LOCAL_PORT`/`UNDERLEAF_ORCH_CLUSTER_PORT`); the ports older agents listened on (`9091`, `50101`, `50103`) stay denied as legacy. Agents add no ports (they dial out), so there are no agent-link ports to add.
+  - Docs: orchestrator README Security model (Loopback bind, new Container mode row, Docker row; token and fail-closed rows deleted; denylist row updated), RFD Migration "Implementation note (step 8)".
+- Decisions (also in "Decisions and deviations"): container mode requires BOTH `UNDERLEAF_CONTAINER=1` and a real container marker; remote listener follows the local-listener bind policy.
+- Verified:
+  - After the merge: `go build ./...`, `go build -tags devmode ./...`, `go vet ./...` clean; `go test -count=1 ./...` all `ok`; `gofmt -l edge shared cloud` empty (A fixed `docker_service.go`).
+  - `grep -rn "UNDERLEAF_CLUSTER_TOKEN\|UNDERLEAF_INSECURE_ALLOW_REMOTE" --exclude-dir=.claude --exclude-dir=node_modules --exclude-dir=.git -I .` ->
+    ```
+    RFDs/RFD-5-journal.md (history: this step's acceptance text and the step 5 open issue)
+    shared/utils/netsec_test.go:64-65   t.Setenv("UNDERLEAF_INSECURE_ALLOW_REMOTE", "1") / t.Setenv("UNDERLEAF_CLUSTER_TOKEN", "s3cret")
+    RFDs/RFD-5.md:44,164,202            (RFD text describing what is replaced)
+    ```
+    `netsec_test.go` is deliberate: `TestRetiredStopgapsHaveNoEffect` sets both and asserts a wildcard bind is still refused. No source, Dockerfile, script or README mentions them. (`OneTimeClusterToken` / `postWithClusterToken` in `cloud_client.go` are the unrelated cloud registration token.)
+  - New tests: `TestCheckLocalBind` (13 cases incl. env-marker-on-bare-host and container-without-marker, both refused), `TestRetiredStopgapsHaveNoEffect`, `TestListenLocalDefaultsToLoopback`, `TestListenLocalRefusesWildcardOutsideTheImage`, `TestListenLocalInTheImageBindsTheContainerInterface` (all in `shared/utils/netsec_test.go`, using a fake container marker file), `TestRemoteListenerRefusesNonLoopbackBinds` (`rest/remote_bind_test.go`, also sets the retired vars), `TestClusterAndLocalListenerPortsAreDeniedWhereverTheyAreConfigured` and the extended default-ports test (`controlports_test.go`). The invariant "a non-loopback bind cannot exist without mTLS" is still enforced for the cluster listener by `TestListenClusterRefusesWeakTLSConfigs` (step 4).
+  - **Real run after the merge** (`final8.sh`, real linux `orch-server`/`orcli` built from this tree inside a container from the locally present `nginx:stable-alpine` image, i.e. a real `/.dockerenv`; the actual image was **not** built because it runs `npm install`):
+    ```
+    1. bare host, UNDERLEAF_BIND_ADDR=0.0.0.0, with nothing / with the two retired vars / with UNDERLEAF_CONTAINER=1:
+       panic: ... refusing to bind the unauthenticated local listener to non-loopback address "0.0.0.0" ...   (nothing listening) x3
+    2. container, UNDERLEAF_BIND_ADDR=0.0.0.0 but no UNDERLEAF_CONTAINER:   panic: Server failed to start: refusing to bind ...
+    3. container with the image's env, ports published -p 127.0.0.1:...: "Server actively listening on http://0.0.0.0:9090", "gRPC local listener on [::]:50100"
+       curl http://127.0.0.1:25911/api/v1/health -> {"status":"OK"} HTTP 200 ; docker port: 9090/tcp -> 127.0.0.1:25911, 50100/tcp -> 127.0.0.1:25910, 50104/tcp -> 127.0.0.1:25912
+    4. host ufagentd (no TCP listeners) + `ufagent register` -> "[link] linked to the Orchestrator as node_... (local)" through 127.0.0.1:25910;
+       docker exec orcli nodes ls: local up; `orcli containers ingest` -> 17 container(s)    (resolves the RFD bullet "Docker-installed Orchestrator reaching the host agent")
+    5. orcli nodes add --advertise 127.0.0.1:25912 inside the container -> host `ufagentd join` -> "joined as node_..." -> linked (cluster); nodes ls: local up / cluster up
+    ```
+    All processes/containers removed afterwards.
+- Not verified: the real Docker image build and `install.sh` end to end (never run, per environment rules); that A's `underleaf-control` network still lets a host agent reach the published port (not exercised: my container used the default bridge); Linux hosts.
+- Next: report to the coordinator.
+- Blocked: none
+
 ### Decisions and deviations
+1. **Container-internal wildcard bind (the open design point of this step).** Without the old opt-in, the image still needs a wildcard bind for Docker's port publishing. Decision: an explicit marker `UNDERLEAF_CONTAINER=1` set by the image **and** a runtime check that the process is really in a container (`/.dockerenv` or `/run/.containerenv`); both are required (test: env on a bare host refused, container without the env refused). It applies only to the *local* (unauthenticated) listeners and to C's remote listener, never to the cluster listener (mTLS-only, any interface). It is not an "insecure flag" in disguise because (a) on a bare host it can never widen anything, (b) it is not documented as a knob for operators, only baked into the image, and (c) the exposure is bounded by how the host publishes the ports (loopback in `install.sh`). The honest remainder: inside the image the process cannot tell *how* the ports are published, so an operator who runs `docker run -p 50100:50100` has exposed an unauthenticated listener, exactly as before this RFD; the README says not to.
+2. **Remote listener (coordinator note 3).** C's `ServeRemote` was the only other `CheckBind` caller. It is plain HTTP authenticated by a short-lived signed assertion, and its only client is the agent's tunnel on the same host (`UNDERLEAF_REMOTE_TARGET`). Decision: it follows the local-listener policy (`CheckLocalBind`): loopback, or the container interface inside the image, never a network-facing bind. Making it network-facing would need TLS on that listener; that is not built and not needed for the tunnel design. Test: `TestRemoteListenerRefusesNonLoopbackBinds`.
+3. **What a workload can do through the single-node agent link (coordinator note 5; reasoning, not an experiment).** On Docker Desktop a workload can reach the published `:50100` via `host.docker.internal` (A's step 1 finding). Through the *link* it could: open a link claiming the local node's id (node ids are not secret: `GET /api/v1/nodes` on the equally reachable REST port lists them), thereby superseding the real agent's link; receive every command the Orchestrator then sends to the local node (container specs, environment variables, build archive URLs, anything a deployment manifest carries); answer them falsely (e.g. report success while nothing ran); and keep the real agent off until it reconnects (it backs off up to 15 s and supersedes in turn, so this is a tug of war the attacker can only win by continuously reconnecting). It could **not**: make the real agent run anything (commands only flow Orchestrator -> agent), reach a worker node's link (cluster nodes are refused on the local listener), or read other nodes' traffic. Everything else reachable on that port (`CreateNode`, `ReportContainers` for any node id on the local listener, and the REST API with `POST /deployments`, which is root-equivalent) is strictly more powerful than the link, so the link does not enlarge the exposure A recorded; it adds the ability to *read the local node's future commands*, which REST already gives via `GET /deployments` for specs. A per-install shared secret for the local link would close the impersonation part but not the REST/gRPC exposure; see Open questions.
+4. **Mixed-version safety**: older agents' ports (9091/50101/50103) remain on the stream denylist.
 
 ### Open issues
+- None skipped. Not verified items are listed in the log.
 
 ## Cross-cutting
 
@@ -524,8 +563,16 @@ Scope note: this is the **edge half**. The cloud half (forwarding endpoint, mint
 - **Should strict token mode become the default**, given the above? It needs a way for the UI to hold a token first.
 - **Persistent volume for the Orchestrator container** (db, certs, now tokens live in the container filesystem and are lost on recreate). Needed before "recreate to upgrade" is a safe instruction; not in the RFD.
 - **(agent-C, 7a)** Split the cloud's OAuth JWT key from the CA key now (forces re-login for all sessions) or together with the nginx server-leaf change? And which channel should the Orchestrator use to fetch the assertion key set: pinned listener with a CA-issued leaf (recommended) or public TLS? See [RFD-5.md Open questions](RFD-5.md#open-questions) and step 7a Open issues.
+- **(agent-B, step 5/8) Authenticate the single-node agent link?** The local-listener link is unauthenticated by design (RFD "Local trust") and can be impersonated by any process (or Docker Desktop workload) that can reach the published `:50100`; the consequences are in step 8 decision 3. Options: (a) accept (what is implemented); (b) a per-install secret generated by the Orchestrator, readable only by the owner (e.g. in the state dir, passed to the agent), required in the link hello; for the Docker-installed manager it needs a bind mount or `docker exec` hand-off; (c) have the single-node agent enroll through the cluster listener like any worker (the RFD allows it as a later optimization: "one code path"), which makes the local listener carry no agent traffic at all. (c) is the cleanest and removes the weakest path, at the cost of publishing the cluster port on loopback in `install.sh`.
+- **(agent-B, step 4) Docker-installed manager and remote workers.** For a worker on another machine to join, the cluster port must be published on a reachable interface (`-p <lan-ip>:50104:50104`); `install.sh` publishes only `127.0.0.1:{9090,50100}`. I did not edit A's docker block. Options: publish `127.0.0.1:50104` by default (inert until `orcli nodes add`; enough for same-host tests) and document the re-publish for LAN workers, or add a `--cluster-bind` installer option. Also `orcli` for a Docker-installed manager runs via `docker exec` (its unix socket is inside the container).
+- **(agent-B, step 4) Where is `install.sh` published?** `orcli nodes add` prints `https://<your-install-host>/install.sh` (override `UNDERLEAF_INSTALL_URL`); the repo does not say.
 
 ### Handoffs
+
+#### 2026-11-04 · agent-B · Track B (steps 4, 5, 8) ready for merge
+- Did: three steps on `rfd-5/track-b` (one or more commits each), rows 4, 5, 8 `in review`. `rfd-5/integration` (A + C 7b) was merged into the branch before step 8; the branch builds, vets and tests green on top of it.
+- Merge notes: (1) generated protobuf code: new files only (`cluster_private`, `cluster_public`, `agent_link`); `agent_public_grpc.pb.go` is deleted and `agent_public.pb.go` regenerated with the same toolchain (protoc 29.3, protoc-gen-go 1.36.6, protoc-gen-go-grpc 1.5.1), so no hand-merging should be needed. (2) Migrations `0050_cluster_membership`, `0051_deployment_node` (A has `0008_api_tokens`). (3) Behaviour changes other tracks may notice: the agent has no REST/gRPC listener (the `/health` on `:9091` is gone); the Orchestrator no longer has any agent address; `orcli nodes ls` output is a table. (4) New env overrides for running a second instance beside a real install: `UNDERLEAF_ORCH_SOCKET`, `UNDERLEAF_AGENT_SOCKET`, `UNDERLEAF_ORCH_LOCAL_PORT`, `UNDERLEAF_ORCH_CLUSTER_PORT`, `UNDERLEAF_CLUSTER_BIND`, `UNDERLEAF_ORCHESTRATOR_ADDR`, `UNDERLEAF_CLUSTER_DIR`. (5) Open questions for the human are in the section above (local link authentication; cluster port publishing in the Docker install).
+- Blocked: none
 
 #### 2026-11-04 · agent-C · 7b ready for merge
 - Did: step 7b (edge half) on `rfd-5/track-c`, row 7b `in review`; see the step section for evidence and for the exact cloud half that is missing.

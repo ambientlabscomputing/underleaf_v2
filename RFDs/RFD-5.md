@@ -165,6 +165,8 @@ Already done (security pass): loopback binds by default, `0600` sockets with own
 
 Stopgaps to remove: `UNDERLEAF_CLUSTER_TOKEN`, `UNDERLEAF_INSECURE_ALLOW_REMOTE`, and the Docker image's use of the latter.
 
+*Implementation note (step 8, done).* Both variables are gone. The local (unauthenticated) listeners bind loopback only, with one recorded exception for the Docker image: inside a container they must bind the container's interface for port publishing, so the image sets `UNDERLEAF_BIND_ADDR=0.0.0.0` and `UNDERLEAF_CONTAINER=1`, and a wildcard bind is honoured only when that variable is `1` **and** the process really is in a container (`/.dockerenv` or `/run/.containerenv`). Neither alone widens anything, and it never applies to the cluster listener, which is mTLS-only by construction. The remote (assertion-authenticated, plain HTTP) listener of step 7b follows the same policy as the local listeners: its only client is the agent's tunnel on the same host.
+
 Suggested order, each shippable alone:
 
 1. Isolate the Orchestrator on its own Docker network; put workloads on a separate one.
