@@ -10,7 +10,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 | 2 | Stream port denylist | not started | none | none | none | none |
 | 3 | One-origin UI + API | not started | none | none | none | none |
 | 4 | Cluster CA, listener, `nodes add`, join | in review | agent-B | rfd-5/track-b | none | 2026-11-04 |
-| 5 | Agent link | not started | none | none | 4 | none |
+| 5 | Agent link | in progress | agent-B | rfd-5/track-b | 4 | 2026-11-04 |
 | 6 | Scoped API tokens | not started | none | none | 3 | none |
 | 7a | Cloud: split signing key, publish key set | not started | none | none | none | none |
 | 7b | Edge: assertions, remote listener, `ufctl connect` | not started | none | none | 3, 6, 7a | none |

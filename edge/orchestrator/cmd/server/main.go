@@ -7,14 +7,17 @@ import (
 	"strconv"
 	"time"
 
+	agentpb "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cluster"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private"
 	grpc_public_server "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public/server"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/link"
 	_ "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository/migrations"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 )
 
 var RootCmd = &cobra.Command{
@@ -56,7 +59,15 @@ func Run() {
 		panic("Failed to start cluster membership: " + err.Error())
 	}
 	clusterServer := &cluster.Server{Service: svc}
+	// Worker agents link in over the cluster listener; their identity is the
+	// certificate that passed mTLS.
+	clusterLink := link.NewServer(svc.Links(), link.ClusterAuth{Identity: cluster.NodeID})
+	clusterServer.Register = func(gs *grpc.Server) { agentpb.RegisterAgentLinkServer(gs, clusterLink) }
 	clusterSvc.StartListener = clusterServer.Start
+	clusterSvc.Linked = svc.Links().Linked
+	// `nodes rm` and re-enrollment revoke certificates: cut live links too.
+	clusterSvc.OnNodeRemoved = svc.Links().Drop
+	clusterSvc.OnCertsRevoked = svc.Links().Drop
 	if clusterSvc.ListenerEnabled() {
 		if err := clusterServer.Start(clusterSvc.Advertised()); err != nil {
 			fmt.Printf("[cluster] warning: could not restore the cluster listener: %v\n", err)
@@ -77,7 +88,12 @@ func Run() {
 	go restServer.Serve()
 
 	// Initialize and start the gRPC public server (agent communication)
-	grpcPublicServer := grpc_public_server.OrchestratorGRPCPublicServer{Service: svc}
+	grpcPublicServer := grpc_public_server.OrchestratorGRPCPublicServer{
+		Service: svc,
+		// Single-node install: the manager's own agent links in over the
+		// loopback-only local listener.
+		Link: link.NewServer(svc.Links(), link.LocalAuth{Nodes: svc.Repository.Nodes}),
+	}
 	go grpcPublicServer.Serve()
 
 	// Initialize and start the gRPC private server (CLI access via unix socket)
@@ -87,17 +103,17 @@ func Run() {
 	// Ping the agent on startup to verify connectivity.
 	go func() {
 		ctx := context.Background()
-		for i := 0; i < 20; i++ {
+		for i := 0; i < 60; i++ {
 			result, err := svc.Health().PingPeer(ctx)
 			if err != nil {
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(time.Second)
 				continue
 			}
 			fmt.Printf("[health] ping → agent OK (responder=%s, rtt≈%dms)\n",
 				result.Responder, time.Now().UnixMilli()-result.TimestampUnixMs)
 			return
 		}
-		fmt.Println("[health] warning: agent did not respond within startup window")
+		fmt.Println("[health] warning: no agent linked within the startup window (agents dial in; see `orcli nodes ls`)")
 	}()
 
 	// Start container sync task (periodic trigger for agent to ingest containers).

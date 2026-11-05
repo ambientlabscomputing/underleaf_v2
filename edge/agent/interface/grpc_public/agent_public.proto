@@ -1,40 +1,19 @@
 syntax = "proto3";
-import "google/protobuf/empty.proto";
 
 package agent.public.v1;
 
 option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public";
 
-// AgentPublic is the orchestrator/agent-facing gRPC service, served over TCP.
-service AgentPublic {
-  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
-  rpc Ping(PingRequest) returns (PingResponse);
-  rpc IngestContainers(IngestContainersRequest) returns (IngestContainersResponse);
-  rpc GetNode(google.protobuf.Empty) returns (Node);
-
-  // Stream RPCs
-  rpc NewStream(NewStreamRequest) returns (google.protobuf.Empty);
-  rpc CloseStream(CloseStreamRequest) returns (google.protobuf.Empty);
-  rpc GetStream(GetStreamRequest) returns (StreamState);
-  rpc ListStreams(google.protobuf.Empty) returns (stream StreamState);
-
-  // Log RPCs — agent is the source of truth for container logs.
-  rpc GetContainerLogs(GetContainerLogsRequest) returns (GetContainerLogsResponse);
-  rpc StreamContainerLogs(StreamContainerLogsRequest) returns (stream LogLine);
-
-  // Deployment lifecycle RPCs — orchestrator-initiated container/volume
-  // management. The orchestrator owns naming/identity decisions (names are
-  // already namespaced by the time they reach the agent); the agent is a
-  // thin, stateless-per-call Docker executor. Responses are accept/error
-  // only — a pull or build can take tens of seconds, so these don't block
-  // on it. Final state surfaces through the existing ReportContainers push.
-  rpc CreateVolume(CreateVolumeRequest) returns (CreateVolumeResponse);
-  rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
-  rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
-  rpc StartContainer(ContainerNameRequest) returns (google.protobuf.Empty);
-  rpc StopContainer(ContainerNameRequest) returns (google.protobuf.Empty);
-  rpc RemoveContainer(ContainerNameRequest) returns (google.protobuf.Empty);
-}
+// This file holds the messages of the Orchestrator -> agent command vocabulary.
+// The AgentPublic gRPC *service* that used to live here is gone: it made every
+// worker listen on a TCP port that amounted to remote Docker execution. The
+// same operations are now commands carried over the agent link (agent_link.proto),
+// which the agent dials out to the Orchestrator. Deployment lifecycle commands:
+// the Orchestrator owns naming/identity decisions (names are already namespaced
+// by the time they reach the agent); the agent is a thin, stateless-per-call
+// Docker executor. Create/start/stop/remove answer accept-or-error only; a
+// pull or build can take tens of seconds, so final state surfaces through the
+// existing ReportContainers push.
 
 message GetStatusRequest {}
 

@@ -48,6 +48,10 @@ type ClusterService struct {
 	// OnNodeRemoved is called after `nodes rm` so live connections for the
 	// node can be closed.
 	OnNodeRemoved func(nodeID string)
+	// OnCertsRevoked is called when a node's certificates are revoked
+	// (`nodes rm`, or re-enrollment superseding them), so a link that was
+	// authenticated with a now-dead certificate does not outlive it.
+	OnCertsRevoked func(nodeID string)
 	// Linked reports whether a node currently has an agent link (wired up by
 	// the link hub; nil means "unknown", shown as not linked).
 	Linked func(nodeID string) bool
@@ -397,8 +401,12 @@ func (s *ClusterService) revokeNodeCerts(nodeID string, now time.Time) error {
 		return err
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.refreshDenyLocked()
+	err = s.refreshDenyLocked()
+	s.mu.Unlock()
+	if err == nil && s.OnCertsRevoked != nil {
+		s.OnCertsRevoked(nodeID)
+	}
+	return err
 }
 
 // IsLinked reports whether nodeID currently has an agent link.

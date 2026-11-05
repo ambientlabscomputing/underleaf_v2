@@ -3,9 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 
+	agentpb "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
 	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
 	sharedtypes "github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -18,6 +21,9 @@ var tcpPort = utils.OrchestratorLocalPort()
 type OrchestratorGRPCPublicServer struct {
 	grpc_public.UnimplementedOrchestratorPublicServer
 	Service *service.AppService
+	// Link serves the agent link on the local listener (single-node install).
+	// Its authenticator only accepts local-transport nodes; see link.LocalAuth.
+	Link agentpb.AgentLinkServer
 }
 
 // Serve starts the gRPC public server on TCP for agent communication.
@@ -27,8 +33,14 @@ func (s *OrchestratorGRPCPublicServer) Serve() {
 		panic(fmt.Sprintf("grpc_public: failed to listen on port %s: %v", tcpPort, err))
 	}
 
-	grpcServer := grpc.NewServer(utils.ClusterAuthServerOptions()...)
+	grpcServer := grpc.NewServer(append([]grpc.ServerOption{
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{MinTime: 10 * time.Second, PermitWithoutStream: true}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 30 * time.Second, Timeout: 10 * time.Second}),
+	}, utils.ClusterAuthServerOptions()...)...)
 	grpc_public.RegisterOrchestratorPublicServer(grpcServer, s)
+	if s.Link != nil {
+		agentpb.RegisterAgentLinkServer(grpcServer, s.Link)
+	}
 
 	fmt.Printf("gRPC public server listening on %s (cluster token required: %t)\n", lis.Addr(), utils.ClusterToken() != "")
 	if err := grpcServer.Serve(lis); err != nil {

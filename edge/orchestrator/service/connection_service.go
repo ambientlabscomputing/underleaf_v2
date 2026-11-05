@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	agentpb "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -13,13 +16,13 @@ import (
 
 type ConnectionService struct {
 	cloudClient *clients.CloudClient
-	agentClient *clients.AgentClient
+	agents      clients.AgentDirectory
 }
 
-func NewConnectionService(cc *clients.CloudClient, ac *clients.AgentClient) *ConnectionService {
+func NewConnectionService(cc *clients.CloudClient, agents clients.AgentDirectory) *ConnectionService {
 	return &ConnectionService{
 		cloudClient: cc,
-		agentClient: ac,
+		agents:      agents,
 	}
 }
 
@@ -83,13 +86,13 @@ func (s *ConnectionService) NewStream(ctx context.Context, nodeID, type_ string,
 	logger = logger.With("stream_id", stream.ID)
 	logger.Info("new stream provisioned cloud-side")
 
-	if err := s.agentClient.NewStream(ctx, conn.ID, stream.ID, stream.Type.ToString(), *stream.Port); err != nil {
+	if err := s.agents.Agent(nodeID).NewStream(ctx, conn.ID, stream.ID, stream.Type.ToString(), *stream.Port); err != nil {
 		logger.Error("failed to create new stream on agent", "error", err)
 		return nil, err
 	}
 	logger.Info("requested agent to create new stream")
 
-	streamState, err := s.pollStreamState(ctx, stream.ID, 30*time.Second)
+	streamState, err := s.pollStreamState(ctx, nodeID, stream.ID, 30*time.Second)
 	if err != nil {
 		logger.Error("failed to poll stream state", "error", err)
 		return nil, err
@@ -114,24 +117,51 @@ func (s *ConnectionService) CloseStream(ctx context.Context, streamID string) er
 	return nil
 }
 
+// GetStream finds a stream's live state on whichever linked agent holds it.
 func (s *ConnectionService) GetStream(ctx context.Context, streamID string) (*agentpb.StreamState, error) {
-	streamState, err := s.agentClient.GetStream(ctx, streamID)
-	if err != nil {
-		return nil, err
+	var firstErr error
+	for _, id := range s.agents.LinkedNodes() {
+		st, err := s.agents.Agent(id).GetStream(ctx, streamID)
+		if err == nil {
+			return st, nil
+		}
+		if status.Code(err) != codes.NotFound && firstErr == nil {
+			firstErr = err
+		}
 	}
-	return streamState, nil
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	return nil, status.Errorf(codes.NotFound, "stream %s not found on any linked node", streamID)
 }
 
+// ListStreams lists the live streams of every linked agent.
 func (s *ConnectionService) ListStreams(ctx context.Context) ([]*agentpb.StreamState, error) {
-	// TODO: multi-node support
-	streamStates, err := s.agentClient.ListStreams(ctx)
-	if err != nil {
-		return nil, err
+	nodes := s.agents.LinkedNodes()
+	if len(nodes) == 0 {
+		return nil, ErrNoAgents
 	}
-	return streamStates, nil
+	var all []*agentpb.StreamState
+	var firstErr error
+	failed := 0
+	for _, id := range nodes {
+		streams, err := s.agents.Agent(id).ListStreams(ctx)
+		if err != nil {
+			failed++
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		all = append(all, streams...)
+	}
+	if failed == len(nodes) {
+		return nil, firstErr
+	}
+	return all, nil
 }
 
-func (s *ConnectionService) pollStreamState(ctx context.Context, streamID string, timeout time.Duration) (*agentpb.StreamState, error) {
+func (s *ConnectionService) pollStreamState(ctx context.Context, nodeID, streamID string, timeout time.Duration) (*agentpb.StreamState, error) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	timer := time.NewTimer(timeout)
@@ -142,7 +172,7 @@ func (s *ConnectionService) pollStreamState(ctx context.Context, streamID string
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-ticker.C:
-			streamState, err := s.agentClient.GetStream(ctx, streamID)
+			streamState, err := s.agents.Agent(nodeID).GetStream(ctx, streamID)
 			if err != nil {
 				return nil, err
 			}
