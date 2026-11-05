@@ -21,7 +21,7 @@ build: proto
 ## build-dev: Build with dev-mode commands enabled (includes sql, etc.)
 build-dev: proto
 	go build -tags devmode -o bin/orcli ./orchestrator/cmd/cli
-	go build -o bin/orch-server ./orchestrator/cmd/server
+	go build -tags devmode -o bin/orch-server ./orchestrator/cmd/server
 	go build -o bin/migrate ./orchestrator/cmd/migrate
 	go build -o bin/ufagent ./agent/cmd/ufagent
 	go build -o bin/ufagentd ./agent/cmd/ufagentd
@@ -57,7 +57,7 @@ docker-build:
 
 ## docker-run: Build and run the Docker container
 docker-run: docker-build
-	docker run -p 9090:80 -p 50100:50100 underleaf:latest
+	docker run -p 127.0.0.1:9090:80 -p 127.0.0.1:50100:50100 underleaf:latest
 
 ## docker-push: Push the Docker image to GitHub Container Registry
 docker-push:

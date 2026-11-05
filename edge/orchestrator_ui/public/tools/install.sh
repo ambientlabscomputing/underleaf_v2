@@ -136,8 +136,8 @@ docker pull "${DOCKER_IMAGE}:${TAG}"
 
 echo "Starting orchestrator (HTTP :${HTTP_PORT}, gRPC :${GRPC_PORT}) ..."
 docker run -d \
-    -p "${HTTP_PORT}:80" \
-    -p "${GRPC_PORT}:50100" \
+    -p "127.0.0.1:${HTTP_PORT}:80" \
+    -p "127.0.0.1:${GRPC_PORT}:50100" \
     --restart unless-stopped \
     --name underleaf "${DOCKER_IMAGE}:${TAG}"
 

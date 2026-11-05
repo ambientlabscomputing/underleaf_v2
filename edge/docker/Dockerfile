@@ -25,6 +25,14 @@ COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/run-all.sh /usr/local/bin/run-all.sh
 RUN chmod +x /usr/local/bin/run-all.sh
 
+# Inside the container the orchestrator must bind all interfaces for Docker's
+# port publishing to reach it. It has no application-level auth, so exposure is
+# controlled by how the ports are published: bind them to loopback (-p 127.0.0.1:...),
+# as orchestrator_ui/public/tools/install.sh does. Set UNDERLEAF_CLUSTER_TOKEN
+# (and drop the insecure flag) before publishing 50100 to other hosts.
+ENV UNDERLEAF_BIND_ADDR=0.0.0.0 \
+    UNDERLEAF_INSECURE_ALLOW_REMOTE=1
+
 # Expose port and start Nginx
 EXPOSE 80 50100
 CMD ["/usr/local/bin/run-all.sh"]
