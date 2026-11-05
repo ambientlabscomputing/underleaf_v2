@@ -51,6 +51,7 @@ func NewService(config utils.Config) Service {
 		deployments:  &DeploymentService{Repository: repo},
 		manifests:    NewManifestService(),
 		reconciler:   &ReconcilerService{Repository: repo, AgentClient: agentClient},
+		cluster:      NewClusterService(repo, utils.ClusterStateDir(config, "ca"), utils.OrchestratorClusterPort()),
 	}
 }
 

@@ -1,7 +1,10 @@
 package service
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/docker/docker/client"
 
@@ -51,6 +54,14 @@ func NewService() Service {
 	peer, err := clients.NewOrchestratorClient()
 	if err != nil {
 		panic("agent: failed to create orchestrator gRPC client: " + err.Error())
+	}
+	// A node that joined a cluster renews its certificate in the background:
+	// it starts 90 days before expiry and retries daily (RFD 5, "Certificate
+	// lifetimes"), over the same mTLS connection the node already uses.
+	if m := peer.Member(); m != nil {
+		go clients.RunRenewal(context.Background(), time.Minute, 24*time.Hour,
+			func(ctx context.Context) (bool, error) { return clients.RenewIfDue(ctx, peer.Conn(), m, time.Now()) },
+			func(format string, args ...any) { utils.Logger.Info("[membership] " + fmt.Sprintf(format, args...)) })
 	}
 	repo, err := repository.NewRepository()
 	if err != nil {

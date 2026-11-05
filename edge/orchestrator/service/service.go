@@ -22,6 +22,7 @@ type Service interface {
 	Deployments() *DeploymentService
 	Manifests() *ManifestService
 	Reconciler() *ReconcilerService
+	Cluster() *ClusterService
 	DeployFromSource(ctx context.Context, source, ref, token string) (*types.Deployment, error)
 }
 
@@ -37,6 +38,7 @@ type AppService struct {
 	deployments  *DeploymentService
 	manifests    *ManifestService
 	reconciler   *ReconcilerService
+	cluster      *ClusterService
 }
 
 func (s *AppService) Nodes() *NodeService                { return s.nodes }
@@ -48,6 +50,7 @@ func (s *AppService) Connections() *ConnectionService    { return s.connections 
 func (s *AppService) Deployments() *DeploymentService    { return s.deployments }
 func (s *AppService) Manifests() *ManifestService        { return s.manifests }
 func (s *AppService) Reconciler() *ReconcilerService     { return s.reconciler }
+func (s *AppService) Cluster() *ClusterService           { return s.cluster }
 
 func (s *AppService) Start() error {
 	// implement start logic

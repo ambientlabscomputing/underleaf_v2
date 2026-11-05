@@ -17,18 +17,33 @@ func NewNodeRepository(db *sql.DB) *NodeRepository {
 	return &NodeRepository{db: db}
 }
 
+// CreateNode inserts a node reached over the local listener (the default
+// transport). Cluster members are created through UpsertClusterNode.
 func (r *NodeRepository) CreateNode(node *types.Node) error {
 	_, err := r.db.Exec(
-		"INSERT INTO nodes (id, name, ip_address, os, arch) VALUES (?, ?, ?, ?, ?)",
-		node.ID, node.Name, node.IPAddr, node.OS, node.Arch,
+		"INSERT INTO nodes (id, name, ip_address, os, arch, transport) VALUES (?, ?, ?, ?, ?, ?)",
+		node.ID, node.Name, node.IPAddr, node.OS, node.Arch, types.TransportLocal,
+	)
+	return err
+}
+
+// UpsertClusterNode records a node that joined through the cluster listener,
+// keeping its id if it re-enrolls. Host details are refreshed.
+func (r *NodeRepository) UpsertClusterNode(node *types.Node) error {
+	_, err := r.db.Exec(`
+		INSERT INTO nodes (id, name, ip_address, os, arch, transport) VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name, ip_address = excluded.ip_address,
+			os = excluded.os, arch = excluded.arch, transport = excluded.transport`,
+		node.ID, node.Name, node.IPAddr, node.OS, node.Arch, types.TransportCluster,
 	)
 	return err
 }
 
 func (r *NodeRepository) GetNodeByID(id string) (*types.Node, error) {
-	row := r.db.QueryRow("SELECT id, name, ip_address, os, arch FROM nodes WHERE id = ?", id)
+	row := r.db.QueryRow("SELECT id, name, ip_address, os, arch, transport FROM nodes WHERE id = ?", id)
 	node := &types.Node{}
-	err := row.Scan(&node.ID, &node.Name, &node.IPAddr, &node.OS, &node.Arch)
+	err := row.Scan(&node.ID, &node.Name, &node.IPAddr, &node.OS, &node.Arch, &node.Transport)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +94,7 @@ func (r *NodeRepository) ListNodes(query types.QueryNodesRequest) ([]*types.Node
 	var nodes []*types.Node
 	for rows.Next() {
 		node := &types.Node{}
-		if err := rows.Scan(&node.ID, &node.Name, &node.IPAddr, &node.OS, &node.Arch); err != nil {
+		if err := rows.Scan(&node.ID, &node.Name, &node.IPAddr, &node.OS, &node.Arch, &node.Transport); err != nil {
 			return nil, 0, err
 		}
 		nodes = append(nodes, node)

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package orchestrator.public.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public";
+
+// ClusterPublic is served on the cluster listener only (mTLS required). The
+// caller is identified by the verified client certificate, never by anything
+// in a message.
+service ClusterPublic {
+  // Renew issues a fresh node certificate to the calling member. It runs over
+  // the member's live mTLS connection; an expired certificate cannot call it
+  // (the handshake fails), which is why renewal starts 90 days early and the
+  // backstop is re-enrolling with a new join string.
+  rpc Renew(RenewRequest) returns (RenewResponse);
+}
+
+message RenewRequest {
+  // PEM certificate request whose CN is the caller's node id.
+  string csr_pem = 1;
+}
+
+message RenewResponse {
+  string cert_pem       = 1;
+  string ca_bundle_pem  = 2;
+  int64  not_after_unix = 3;
+}

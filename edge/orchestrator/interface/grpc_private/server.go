@@ -14,7 +14,8 @@ import (
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative orchestrator_private.proto
 
-const unixSocketPath = "/tmp/undf-orch.sock"
+// unixSocketPath is /tmp/undf-orch.sock unless UNDERLEAF_ORCH_SOCKET overrides it.
+var unixSocketPath = utils.OrchestratorSocketPath()
 
 type OrchestratorGRPCPrivateServer struct {
 	UnimplementedOrchestratorPrivateServer
@@ -30,6 +31,7 @@ func (s *OrchestratorGRPCPrivateServer) Serve() {
 
 	grpcServer := grpc.NewServer()
 	RegisterOrchestratorPrivateServer(grpcServer, s)
+	RegisterClusterPrivateServer(grpcServer, &clusterPrivate{Service: s.Service})
 
 	fmt.Printf("gRPC private server listening on unix://%s\n", unixSocketPath)
 	if err := grpcServer.Serve(lis); err != nil {

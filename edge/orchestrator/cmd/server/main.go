@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cluster"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private"
 	grpc_public_server "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public/server"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/rest"
@@ -46,6 +47,30 @@ func Run() {
 	if err := svc.Start(); err != nil {
 		panic("Failed to start service: " + err.Error())
 	}
+
+	// Cluster membership (RFD 5): the cluster-local CA is generated on first
+	// start. The cluster listener (mTLS) only comes up after `orcli nodes add`,
+	// or on restart if it was enabled before.
+	clusterSvc := svc.Cluster()
+	if err := clusterSvc.Start(); err != nil {
+		panic("Failed to start cluster membership: " + err.Error())
+	}
+	clusterServer := &cluster.Server{Service: svc}
+	clusterSvc.StartListener = clusterServer.Start
+	if clusterSvc.ListenerEnabled() {
+		if err := clusterServer.Start(clusterSvc.Advertised()); err != nil {
+			fmt.Printf("[cluster] warning: could not restore the cluster listener: %v\n", err)
+		}
+	}
+	go func() {
+		for range time.Tick(24 * time.Hour) {
+			if n, err := clusterSvc.PruneRevoked(); err != nil {
+				fmt.Printf("[cluster] deny-list prune failed: %v\n", err)
+			} else if n > 0 {
+				fmt.Printf("[cluster] pruned %d expired entr(ies) from the revocation deny list\n", n)
+			}
+		}
+	}()
 
 	// Initialize and start the REST server
 	restServer := rest.OrchestratorRESTServer{Service: svc}

@@ -22,11 +22,17 @@ type Repository struct {
 	Containers   *ContainerRepository
 	Registration *RegistrationRepository
 	Deployments  *DeploymentRepository
+	Cluster      *ClusterRepository
 }
 
 func NewRepository() (*Repository, error) {
 	cfg := utils.GetConfig(utils.OrchestratorConfig)
-	db, err := sql.Open("sqlite", cfg.DBPath)
+	return NewRepositoryAt(cfg.DBPath)
+}
+
+// NewRepositoryAt opens the Orchestrator database at an explicit path.
+func NewRepositoryAt(dbPath string) (*Repository, error) {
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("repository: open db: %w", err)
 	}
@@ -41,8 +47,12 @@ func NewRepository() (*Repository, error) {
 		Containers:   containerRepo,
 		Registration: registrationRepo,
 		Deployments:  deploymentRepo,
+		Cluster:      NewClusterRepository(db),
 	}, nil
 }
+
+// Close releases the database handle.
+func (r *Repository) Close() error { return r.db.Close() }
 
 func (r *Repository) Start() error {
 	return r.Migrator.Migrate()
