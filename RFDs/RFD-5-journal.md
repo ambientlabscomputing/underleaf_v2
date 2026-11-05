@@ -6,7 +6,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 
 | Step | Title | State | Owner | Branch / PR | Needs | Updated |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Network isolation | not started | none | none | none | none |
+| 1 | Network isolation | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
 | 2 | Stream port denylist | not started | none | none | none | none |
 | 3 | One-origin UI + API | not started | none | none | none | none |
 | 4 | Cluster CA, listener, `nodes add`, join | not started | none | none | none | none |
@@ -42,16 +42,61 @@ Environment notes for all agents:
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] Exposure reproduced from a workload container (`:9090`, `:50100` reachable) BEFORE the fix, output pasted
-- [ ] After fix: from a workload, Orchestrator `:9090` and `:50100` unreachable (output pasted)
-- [ ] After fix: host agent still reaches the Orchestrator via the loopback-published port
-- [ ] Negative-path tests; build/vet/test/gofmt green; README Security model updated; single-node install needs no new manual steps
+- [x] Exposure reproduced from a workload container (`:9090`, `:50100` reachable) BEFORE the fix, output pasted
+- [ ] After fix: from a workload, Orchestrator `:9090` and `:50100` unreachable (output pasted) **PARTIAL: `:9090` and DNS blocked, published `:50100`/`:80` still reachable on Docker 29.5.3; see log and Open issues**
+- [x] After fix: host agent still reaches the Orchestrator via the loopback-published port
+- [x] Negative-path tests; build/vet/test/gofmt green; README Security model updated; single-node install needs no new manual steps (install.sh does it; verified as the extracted block only)
 
 ### Log
 
+#### 2026-11-04 · agent-A · reproduce the exposure (BEFORE)
+- Did: built the Orchestrator image locally from the baseline tree in a scratch context outside the repo (`CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o ctx/bin/orch-server-linux-arm64 ./orchestrator/cmd/server`, then `docker build -t rfd5-a-orch:before -f docker/Dockerfile ctx`). Note: the Dockerfile's `npm run build` (`tsc -b && vite build`) **fails at baseline** with two TypeScript errors (`PageShell.tsx:116` `primaryTypographyProps`, `theme.ts:102` `containedPrimary`, both MUI 9 typings), so the scratch Dockerfile used `npx vite build` instead (see Open issues). Ran it the way install.sh does: `docker run -d -p 127.0.0.1:15090:80 -p 127.0.0.1:15100:50100 --name rfd5-a-orch-before rfd5-a-orch:before` (default bridge). Inside, `netstat` shows `0.0.0.0:80` (nginx, static UI only), `:::9090` (Orchestrator REST), `:::50100` (agent gRPC). Then a stand-in workload: `docker run -d --name rfd5-a-workload-before alpine:3.20 sleep 600` (default bridge, which is exactly where the agent's `ContainerCreate` puts workloads today), with a throwaway Go gRPC probe copied in.
+- Verified (from the workload container, orchestrator at 172.17.0.2, workload at 172.17.0.3):
+  ```
+  REST :9090  wget --header 'Host: localhost' http://172.17.0.2:9090/api/v1/health -> {"status":"OK"}
+              .../api/v1/nodes -> {"results":null,"count":0,"total":0,...}
+              POST .../api/v1/deployments {"source":"gh:x/y"} -> HTTP 400 (reached the handler; guards passed)
+  gRPC :50100 /probe 172.17.0.2:50100 -> grpc GetNodes OK: 0 node(s), total=0
+                                          grpc Ping: responder:"orchestrator" ... <nil>
+  ```
+  So both `:9090` and `:50100` are reachable from a workload, and the Host guard does not help (the attacker sets `Host: localhost`). Host-side baseline: `127.0.0.1:15100` gRPC OK, `127.0.0.1:15090` -> nginx 200.
+- Also found (baseline, not caused by this work): in the Docker install only `:80` (nginx, static files) is published (as host `:9090`); the Orchestrator REST `:9090` inside the container is **not** published. `curl http://127.0.0.1:15090/api/v1/health` returns the SPA `index.html` (200, text/html) because nginx's `try_files` falls back to it. The UI's API base is `http://localhost:9090/api/v1`, so the installed UI cannot reach the API. Step 3 removes this by construction.
+- Next: implement the network split in the agent and install.sh.
+- Blocked: none
+
+#### 2026-11-04 · agent-A · network isolation implemented, AFTER evidence
+- Did: [edge/agent/service/workload_network.go](../edge/agent/service/workload_network.go) (new): the agent creates (idempotently, bridge driver, labelled) a user-defined network `underleaf-workloads` (`UNDERLEAF_WORKLOAD_NETWORK` overrides; `bridge`, `host`, `none`, `default`, `container:*` and the Orchestrator's `underleaf-control` are refused) and `CreateContainer` in [docker_service.go](../edge/agent/service/docker_service.go) now sets `HostConfig.NetworkMode` to it via `workloadHostConfig`. An existing network of that name that is not a bridge is refused. `install.sh` ([diff](../edge/orchestrator_ui/public/tools/install.sh)) creates network `underleaf-control` and runs the Orchestrator container on it; for an existing install it moves the container off the default bridge in place (connect, disconnect `bridge`, `docker restart`; data preserved). `make docker-run` likewise. Also gofmt-fixed `docker_service.go` (the known baseline issue: one const alignment line). README Security model: new "Network isolation" row including the limit below.
+- Verified:
+  - Unit tests, [workload_network_test.go](../edge/agent/service/workload_network_test.go), all against a fake Docker network API: creates a non-internal bridge when absent; reuses an existing bridge (no recreate); refuses host/null/overlay/macvlan drivers; surfaces inspect and create errors; tolerates a creation race; rejects `bridge`/`host`/`none`/`default`/control-network/`container:x` names (and never touches Docker for them); success cached, failure not cached; `workloadHostConfig` is never default/bridge/host and keeps tmpfs/restart/binds. `go test ./edge/agent/service` -> ok.
+  - Real Docker (opt-in): `UNDERLEAF_DOCKER_INTEGRATION=1 UNDERLEAF_WORKLOAD_NETWORK=rfd5-a-workloads go test -run Integration -v ./edge/agent/service` -> PASS: the container created by `DockerService.CreateContainer` is on exactly one network, `rfd5-a-workloads`, not `bridge`; the network is a labelled bridge.
+  - install.sh block, executed for real (the `ORCH_NETWORK=`..`fi` block of the actual file, extracted and retargeted to `rfd5-a-*` names and ports 15191/15101): fresh run created `rfd5-a-control` and the container on it with `127.0.0.1:15191->80, 127.0.0.1:15101->50100`. Existing-install path: a legacy container started the old way on `bridge` was moved with the block -> networks `rfd5-a-control` only, host gRPC probe OK, UI 200, container file marker preserved. (Found on the way: without the `docker restart`, the moved container's published ports stop working; the restart is in the script.)
+  - **After, from a workload on `rfd5-a-workloads` (172.25.0.2) to the Orchestrator on `rfd5-a-control` (172.24.0.2):**
+    ```
+    REST :9090 by IP        -> wget: download timed out            (BLOCKED)
+    by name rfd5-a-orch     -> wget: bad address                   (BLOCKED, no cross-network DNS)
+    nc :9090                -> Operation timed out                 (BLOCKED)
+    nc :80                  -> 172.24.0.2:80 open                  (REACHABLE: published port)
+    nc :50100 / gRPC probe  -> open / "grpc GetNodes OK: 0 node(s)" (REACHABLE: published port)
+    from a container ON rfd5-a-control, REST :9090 -> {"status":"OK"}  (orchestrator itself is healthy)
+    ```
+    Host path (what the agent uses): `probe-darwin 127.0.0.1:15101` -> `grpc GetNodes OK`; `curl 127.0.0.1:15191/` -> 200.
+  - **The isolation is only partial.** Docker 29.5.3 (Desktop, arm64) lets a container on another bridge reach a *published* port through the container's IP, and `host.docker.internal:<published port>` also reaches host-loopback-published ports (verified with a source-address echo server: `nc -z host.docker.internal 15300` from the workload succeeded). Source-IP guards cannot help: all three paths (host, other-network workload, host.docker.internal) arrive at the container with source = the bridge gateway (172.24.0.1), because Docker masquerades the cross-bridge hop. Network options `enable_icc=false` and `gateway_mode_ipv4=nat` were tried; neither blocks it. See Decisions/Open issues and Cross-cutting.
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./...` all pass; `gofmt -l edge shared` empty.
+- Next: step 2.
+- Blocked: none
+
 ### Decisions and deviations
 
+- **Network names**: `underleaf-control` (Orchestrator, created by install.sh/make) and `underleaf-workloads` (workloads, created by the agent on first deploy; override with `UNDERLEAF_WORKLOAD_NETWORK`, which also lets tests use scratch names). The agent owns the workload network because only it knows when a workload is created, and so install.sh has nothing to do for the worker side.
+- **Existing installs**: install.sh moves a running `underleaf` container in place instead of failing on the name clash as it did before. Already-deployed workloads stay on the default bridge until their next (re)deploy, because `CreateContainer` force-removes and recreates; no automatic migration of running workloads. Deliberate: avoids restarting user services during an install.
+- **Deviation (needs human decision, see Cross-cutting): the RFD's premise "separate user-defined networks are isolated from each other" does not hold for published ports on the Docker used here.** Unpublished ports (REST `:9090` today) and DNS are isolated; published ones are not. Because the single-node design publishes `:50100` (and after step 3 the single UI/API port) on host loopback for the host agent and browser, the workload can still reach them. The RFD fix as written is implemented and is a real improvement (it closes everything unpublished and removes name resolution) but does not satisfy "`:50100` unreachable from a workload". Not papered over: the acceptance box is left unticked.
+
 ### Open issues
+
+- Published-port reachability from workloads (above). Candidate fixes for the human: (a) accept it and rely on the app-level controls (Host/Origin guards do not stop a deliberate in-container attacker); (b) give the local gRPC listener a credential even on the local path, e.g. step 4's mTLS applied to the single-node agent (contradicts the "local listener: None" row of the RFD); (c) host firewall rule outside Docker (needs root, platform-specific); (d) stop publishing gRPC through Docker and use a unix socket bind mount (works on Linux, unreliable on Docker Desktop). Not verified on a Linux Docker Engine: only Docker Desktop 29.5.3 (arm64) was available, where `host.docker.internal` additionally reaches loopback-published ports.
+- Baseline defect: `npm run build` in the UI fails on two MUI 9 type errors, so `make docker-build`/`docker build -f edge/docker/Dockerfile` cannot produce an image from a clean checkout. Not fixed in step 1 (step 3 must produce a UI build, see there).
+- The single-node install path was exercised only as the extracted docker block of install.sh, not the whole script (binaries/launchd parts need the real machine).
+- Linux/amd64 and a real worker host were not tested.
 
 ## Step 2: Stream port denylist
 

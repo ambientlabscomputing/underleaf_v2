@@ -134,11 +134,30 @@ install_service
 echo "Pulling ${DOCKER_IMAGE}:${TAG} ..."
 docker pull "${DOCKER_IMAGE}:${TAG}"
 
-echo "Starting orchestrator (HTTP :${HTTP_PORT}, gRPC :${GRPC_PORT}) ..."
-docker run -d \
-    -p "127.0.0.1:${HTTP_PORT}:80" \
-    -p "127.0.0.1:${GRPC_PORT}:50100" \
-    --restart unless-stopped \
-    --name underleaf "${DOCKER_IMAGE}:${TAG}"
+# The orchestrator gets its own user-defined network. Workloads run on a
+# different one (created by the agent), so a compromised workload cannot reach
+# the orchestrator's ports; the host agent still reaches it through the
+# loopback-published ports below. (RFD 5, step 1)
+ORCH_NETWORK="underleaf-control"
+docker network inspect "$ORCH_NETWORK" >/dev/null 2>&1 || docker network create "$ORCH_NETWORK" >/dev/null
+
+if docker inspect underleaf >/dev/null 2>&1; then
+    # Existing install: move the container off the default bridge in place
+    # (keeps its data) rather than recreating it. The restart is required:
+    # without it Docker leaves the published ports bound to the old network
+    # endpoint and the host can no longer reach the container.
+    docker network connect "$ORCH_NETWORK" underleaf 2>/dev/null || true
+    docker network disconnect bridge underleaf 2>/dev/null || true
+    docker restart underleaf >/dev/null
+    echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'."
+else
+    echo "Starting orchestrator (HTTP :${HTTP_PORT}, gRPC :${GRPC_PORT}) ..."
+    docker run -d \
+        --network "$ORCH_NETWORK" \
+        -p "127.0.0.1:${HTTP_PORT}:80" \
+        -p "127.0.0.1:${GRPC_PORT}:50100" \
+        --restart unless-stopped \
+        --name underleaf "${DOCKER_IMAGE}:${TAG}"
+fi
 
 echo "Done! UI available at http://localhost:${HTTP_PORT}"
