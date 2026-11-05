@@ -10,7 +10,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 | 2 | Stream port denylist | not started | none | none | none | none |
 | 3 | One-origin UI + API | not started | none | none | none | none |
 | 4 | Cluster CA, listener, `nodes add`, join | in review | agent-B | rfd-5/track-b | none | 2026-11-04 |
-| 5 | Agent link | in progress | agent-B | rfd-5/track-b | 4 | 2026-11-04 |
+| 5 | Agent link | in review | agent-B | rfd-5/track-b | 4 | 2026-11-04 |
 | 6 | Scoped API tokens | not started | none | none | 3 | none |
 | 7a | Cloud: split signing key, publish key set | not started | none | none | none | none |
 | 7b | Edge: assertions, remote listener, `ufctl connect` | not started | none | none | 3, 6, 7a | none |
@@ -161,17 +161,65 @@ All of these are clarifications of an under-specified RFD, not reversals of a se
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] A worker listens on nothing (checked, output pasted)
-- [ ] Commands round-trip over the gRPC bidirectional link (test)
-- [ ] Link reconnects after a drop (test)
-- [ ] Reconciler picks nodes by link; no hardcoded `127.0.0.1:50101` remains (grep pasted)
-- [ ] Open question 'Command vocabulary for the agent link' settled and recorded; common checks green
+- [x] A worker listens on nothing (checked, output pasted): host process and alpine container, see log entry "real-process proof"
+- [x] Commands round-trip over the gRPC bidirectional link (tests: `TestCommandsRoundTripOverTheLink`, `TestAgentLinkOverMTLSTakesIdentityFromTheCertificate`; real: `orcli containers ingest` through the link against the real Docker daemon)
+- [x] Link reconnects after a drop (tests: `TestLinkReconnectsAfterServerSideDrop`, `TestLinkReconnectsAfterTheConnectionIsKilled`, `TestReconnectBackoffGrowsAndIsCapped`; real: manager SIGKILL + restart, both agents re-linked on their own)
+- [x] Reconciler picks nodes by link; no hardcoded `127.0.0.1:50101` remains (tests in `reconciler_pick_test.go`; grep pasted in the log)
+- [x] Open question 'Command vocabulary for the agent link' settled and recorded (below + RFD "Open questions" amended); common checks green (one caveat: `gofmt -l` still lists the pre-existing `docker_service.go`, untouched)
 
 ### Log
 
+#### 2026-11-04 19:30 · agent-B · agent link (gRPC bidi stream), reconciler by link, listeners removed from the worker
+- Did (commits `8cdf574` + follow-up on `rfd-5/track-b`):
+  - Protocol: [`agent_link.proto`](../edge/agent/interface/grpc_public/agent_link.proto), service `AgentLink` { `Link(stream AgentMessage) returns (stream OrchestratorMessage)`, `LogStream(stream LogLine) returns (stream Empty)` }. The `AgentPublic` *service* is deleted from `agent_public.proto` (its messages stay: they are the command payloads); the generated `agent_public_grpc.pb.go` is gone. `protoc` 29.3 / `protoc-gen-go` 1.36.6 / `protoc-gen-go-grpc` 1.5.1 are installed and regenerate byte-identically (checked before changing anything), so generated code was regenerated, not hand-written.
+  - Orchestrator side [`edge/orchestrator/link`](../edge/orchestrator/link): `Hub` (live links by node id, request-id matching, `Drop`), `Server` (the `Link` and `LogStream` handlers, `Authenticator`s: `LocalAuth`, `ClusterAuth`), `nodeClient` (an `AgentAPI` whose every method is a command on the node's link). `shared/clients/agent_client.go` (with `agentAddr = 127.0.0.1:50101`) is deleted; `shared/clients/agent_api.go` holds `AgentAPI`, `AgentDirectory` (resolves a *node id*, never an address) and `NoLinkError`.
+  - Agent side [`edge/agent/link`](../edge/agent/link): `Client` (dial out, hello/welcome, run commands concurrently with a cap of 64 and read-side backpressure, `Cancel` support, reconnect with exponential backoff 0.5 s -> 15 s +-20 % jitter, reset after a link was stable 15 s), `Dispatcher` (the former `AgentPublic` server bodies, one `case` per command), `NewDialer` (re-reads membership on every attempt: joined -> cluster listener over mTLS; not joined -> loopback local listener, node id from the agent's DB).
+  - The worker's listeners are gone: `ufagentd run` starts only the unix-socket CLI server and the link client. Deleted `edge/agent/interface/grpc_public/server` (the `:50101` gRPC server) and `edge/agent/interface/rest` (the `:9091` REST server, `/health` only); removed now-unused `AgentHttpPort`/`OrchestratorGRPCPort`/`AgentGRPCPort`/`AgentBasePath` and the agent's default HTTP config from `shared/utils/config.go`.
+  - Orchestrator services moved off the address: [`reconciler_service.go`](../edge/orchestrator/service/reconciler_service.go) (`singleNode()` removed; `pickNode` by link, sticky via new `deployments.node_id`, migration `0051_deployment_node`), `health_service.go` (ping first linked node, ingest all linked), `log_service.go` (finds the container's node, then its link), `connection_service.go` (stream calls go to the node they name; `GetStream`/`ListStreams` search/aggregate linked nodes), `registration_service.go` (cloud registration reads the manager's node from the registry via `NodeService.ManagerNode`, no agent RPC). `orcli nodes ls` LINK column is live.
+  - Docs: root README, `edge/agent/README.md`, `edge/orchestrator/README.md` (Interfaces + Security model "Agent link" row), RFD (open question settled, Single-node implementation note, final bullet marked resolved).
+- Verified:
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...` clean; `go test -race -count=1 ./...` all `ok`; `go test -race -count=8 ./edge/agent/link/` stable. New tests: `edge/agent/link/link_test.go` (round trip incl. request fields and agent error codes, no-link -> `*NoLinkError` before/after, 300 concurrent requests answered out of order each get their own answer, reconnect after server-side drop and after the server is killed and restarted, in-flight caller released with `ErrLinkDropped`, caller cancel reaches the agent handler, a newer link supersedes a ghost, local listener refuses cluster/unknown/empty node ids and tells the agent why, `ClusterAuth` takes identity from the certificate only, backoff grows and is capped, log sub-stream flows/ends on cancel/token is single-use and bound to the node), `edge/orchestrator/interface/cluster/link_test.go` (link over the real mTLS listener, a member cannot claim another node, `nodes rm` drops the live link and the revoked agent cannot return, re-enrollment drops the old certificate's link), `edge/orchestrator/service/reconciler_pick_test.go` (commands go to the linked node only, no link -> clear error and no placement, links of unregistered nodes ignored, sticky placement, node down -> `NoLinkError` instead of a silent move, lowest-id unlinked node skipped, health service over all linked nodes).
+  - `grep -rn "127.0.0.1:50101" --exclude-dir=.claude --exclude-dir=node_modules --exclude-dir=.git .` -> only `RFDs/RFD-5.md:234` and `RFDs/RFD-5-journal.md` (text describing the old behaviour). `grep -rn "agentAddr\|singleNode\|NewAgentClient" --include=*.go .` -> empty.
+  - **Real-process proof** (`final5.sh`; manager + two `ufagentd` processes + one alpine container; scratch dirs, ports 25900-25902; all cleaned up, `pgrep`/`docker ps -a`/`lsof` afterwards show nothing left):
+    ```
+    A. single-node: ufagentd (local listener) backs off "this node is not registered ... run `ufagent register`", then after `ufagent register`:
+       [link] linked to the Orchestrator as node_dbluflo1jmp240glpjn0 (local)        manager: [link] node ... linked (local listener)
+       node_dbluflo1jmp240glpjn0  Joses-MacBook-Pro.local  local  up  -
+    B. $ lsof -nP -iTCP -sTCP:LISTEN -a -p 8716      (pid 8716 = .../bin/ufagentd)   -> (empty) exit 1
+       $ lsof -nP -i -a -p 8716                      -> only outbound: TCP 127.0.0.1:60400->127.0.0.1:25900 (ESTABLISHED) (x2: link + unary client)
+       manager for contrast: orch-serv 127.0.0.1:25901 (LISTEN), 127.0.0.1:25900 (LISTEN)
+    C. orcli containers ingest -> "ingest complete: 16 container(s) synced"   (orchestrator -> link -> agent -> real Docker -> ReportContainers back)
+    D. cluster worker (join string, second process): [link] linked ... (cluster); nodes ls: local up / cluster up (729d); worker pid 9025: no LISTEN sockets,
+       only TCP 127.0.0.1:60440->127.0.0.1:25902 (ESTABLISHED); orcli containers ingest -> 32 container(s) (both agents answered)
+    E. kill -9 manager; agents: "disconnected (... error reading from server: EOF); reconnecting in 4s", then "connection refused ... reconnecting in 2s/4s/8s";
+       manager restarted -> both "linked" again without help; nodes ls: both up; ingest ok
+    F. orcli nodes rm <worker> -> agent: "disconnected (... tls: bad certificate); reconnecting in 4s / 8s / 16s"  (revoked, backing off); nodes ls: worker gone
+    G. container worker (alpine, ufagentd-linux join + run): "[link] linked ... (cluster)"; manager nodes ls: cluster up
+       netstat -ltn  -> (no TCP listeners)    netstat -lx -> only /tmp/undf-agent.sock    netstat -tn -> 2x ESTABLISHED 172.17.0.2 -> 192.168.65.254:25902
+    ```
+    (An earlier run of the same script was invalid: it used stale binaries, and my pid capture pointed at a bash wrapper; both fixed and the script re-run before the numbers above.)
+- Not verified: the Orchestrator running inside the Docker image reached by a host agent through the loopback-published port (needs the image, which Track A is changing; the code path is the local listener exactly as exercised in A, but not through Docker's port publishing); CreateContainer/Start/Stop/Remove/CreateVolume against the real Docker daemon (the `Dispatcher` cases are straight ports of the old server bodies, only `IngestContainers` ran for real); real log following (`OpenLogStream` is covered with a fake handler and the real hub/server, but no container was streamed); gateway stream commands (`NewStream`/`GetStream`/`ListStreams` need the cloud); Linux/systemd service restart behaviour; multi-node placement beyond unit tests (all real nodes share this machine's Docker).
+- Next: step 8.
+- Blocked: none
+
 ### Decisions and deviations
 
+1. **Command vocabulary (the RFD open question), settled.** Everything the old `AgentPublic` service did is a plain request/response `Command` -> `CommandResult` matched by request id, except open-ended output. `ListStreams` (a server-stream only because it returns a list) becomes a plain command with a list result. `StreamContainerLogs` becomes the `OpenLogStream` command plus a **sub-stream**: the agent opens a second gRPC stream (`LogStream`) on the same connection and attaches it with a single-use token that was issued for exactly that node; the Orchestrator ends it by finishing the call (the log stream is bidirectional only so an idle agent can learn it was cancelled). This keeps a chatty log from blocking control commands. Recorded in the RFD's Open questions (struck through, with the answer).
+2. **Auth on the local-listener link (RFD underspecified; recorded in the RFD under Single-node).** The local listener is unauthenticated and loopback-only, so the link on it cannot be authenticated; it is *distinguished* by two rules. (a) The hello names a node and that node must exist with transport `local` (the manager's own agent, registered through the local listener); a node that joined through the cluster listener is refused there with a message telling the agent to use its certificate. This is what stops a local process (or a workload that reaches the port) from taking over a remote worker's link. (b) A link only carries commands *from* the Orchestrator *to* the agent. A rogue local link can therefore receive the local node's commands (container specs, environment variables) and answer them falsely or keep the real agent off the link (a newer link supersedes an older one, deliberately, so a reconnecting agent is never locked out by its own half-dead connection); it cannot make the Orchestrator or an agent do anything. It gains nothing the unauthenticated local REST/gRPC does not already give a local process, and is strictly less than today's `:50101`, where any local process could drive the agent's Docker. **What this does not give:** proof that the local agent link is the real agent. A stronger variant (a per-install secret in a `0600` file the agent presents) is listed as an open question for the human.
+3. **Cluster listener identity**: the node is the verified certificate's CN. A hello that names a different node is `PermissionDenied`; the listener's interceptors re-check revocation and membership when a stream opens, and `nodes rm`/re-enrollment `Drop` the live link (mid-stream revocation is not polled).
+4. **Placement.** Deployments have no node field; "pick by link" needs a rule. Rule: a deployment is placed on the first node (by id) that is registered and currently linked, the choice is stored (`deployments.node_id`, migration `0051_deployment_node`) and never changed silently. If that node has no link the reconcile fails with `NoLinkError`; there is no automatic failover (it would orphan the containers and the last-applied snapshot). Moving a deployment is a separate feature.
+5. **Cloud registration no longer RPCs the agent**: it takes the manager's node from the node registry (`NodeService.ManagerNode`: the local-transport node, else the first). Registration therefore works while the agent is down.
+6. **Fan-out**: the periodic container sync and `orcli containers ingest` command *every* linked node and succeed unless all fail; `GetStream` searches linked nodes; `ListStreams` aggregates. `PingPeer` pings the first linked node.
+7. **Removed rather than kept**: the agent REST server (only `/health` on `:9091`) and its config; `agent_client.go`. A worker with no TCP listener at all was the requirement; `/health` on a worker is gone (the unix-socket `ufagent ping` remains).
+8. **Keepalive/backoff**: gRPC client keepalive 30 s/10 s (server enforcement min 10 s) so half-dead connections are detected; reconnect 0.5 s doubling to 15 s with +-20 % jitter, reset after a link was stable 15 s.
+9. **Membership is re-read per link attempt, but the unary `OrchestratorClient` (used by `ping`, `register`, `ReportContainers`, and certificate renewal) is built once at start.** A daemon that is already running when `ufagentd join` is run keeps its old unary client until restarted; the link itself switches over. `install.sh join` enrolls before starting the service, so the supported path is unaffected.
+
 ### Open issues
+- `UNDERLEAF_CLUSTER_TOKEN` is still honoured on the local listener and still attached by the agent's local dial; step 8 removes it.
+- Certificate renewal runs on the unary client's connection to the cluster listener (same mTLS identity), not on the link's own HTTP/2 connection. Functionally "over the live mTLS link", literally a second connection.
+- `e2e_testing/fixtures/config.py` still lists agent HTTP/gRPC ports (50101/50103/9091); it is a Python fixture I did not touch.
+- Track A touches `connection_service.go` (stream denylist at creation) and `docker_service.go`; my `connection_service.go` edits are small (constructor takes the directory, calls go through `agents.Agent(nodeID)`) but expect a textual conflict to resolve at merge.
+- `AgentAPI.StreamContainerLogs` changed shape (returns a channel instead of a gRPC stream client); the REST WebSocket handler needed no change because `LogService` hides it.
 
 ## Step 6: Scoped API tokens
 

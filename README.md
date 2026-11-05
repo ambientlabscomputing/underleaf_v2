@@ -100,7 +100,8 @@ Interfaces
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
 | gRPC | Unix socket management API for CLI | `unix:/tmp/undf-orch.sock` |
-| gRPC | Agent-Orchestrator communication | `:50100` |
+| gRPC | Agent-Orchestrator communication, local listener (single-node, loopback only) | `127.0.0.1:50100` |
+| gRPC (mTLS) | Agent-Orchestrator communication, cluster listener (worker nodes; exists only after `orcli nodes add`) | `:50104` |
 | http | REST API for the Orchestrator UI and integrations (JSON only, no static assets served) | `http://localhost:9090/api/v1/` |
 
 #### Orchestrator UI
@@ -136,8 +137,7 @@ Interfaces
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
 | gRPC | Unix socket management API for CLI | `unix:/tmp/undf-agent.sock` |
-| gRPC | Agent-Orchestrator + Agent-Agent communication | `:50101` |
-| http | Local REST API (currently just `/health`) | `http://localhost:9091/api/v1/` |
+| gRPC (outbound) | Agent link: the agent dials the Orchestrator and keeps one bidirectional stream open for commands. **The agent listens on no TCP port.** | to the Orchestrator's local listener (`127.0.0.1:50100`) or cluster listener (mTLS) |
 
 
 ### Underleaf Cloud

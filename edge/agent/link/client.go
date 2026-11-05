@@ -57,7 +57,7 @@ type Client struct {
 	Version string
 
 	MinBackoff  time.Duration // default 500ms
-	MaxBackoff  time.Duration // default 30s
+	MaxBackoff  time.Duration // default 15s
 	StableAfter time.Duration // a link this old resets the backoff; default 15s
 	MaxInFlight int           // concurrent commands; default 64
 	Logf        func(format string, args ...any)
@@ -71,7 +71,7 @@ func (c *Client) defaults() {
 		c.MinBackoff = 500 * time.Millisecond
 	}
 	if c.MaxBackoff == 0 {
-		c.MaxBackoff = 30 * time.Second
+		c.MaxBackoff = 15 * time.Second
 	}
 	if c.StableAfter == 0 {
 		c.StableAfter = 15 * time.Second

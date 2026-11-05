@@ -92,7 +92,9 @@ The agent already dials out toward the cloud (`conn_client`), so outbound-only i
 
 ### Single-node
 
-The default install is a one-node cluster whose agent uses the **local listener** (no ceremony, nothing to paste). It is not forced through enrollment. If later we want one code path, `install.sh` can run the join flow against the local listener automatically; that is an optimization, not a requirement.
+The default install is a one-node cluster whose agent uses the **local listener** (no ceremony, nothing to paste). It is not forced through enrollment.
+
+*Implementation note (step 5).* The agent link on the local listener has no credential, because the listener has none: the agent names its node in the hello. Two rules bound what that allows. A link on the local listener may only claim a node whose transport is `local` (registered through the local listener, i.e. the manager's own agent); a node that joined through the cluster listener can be reached only with its certificate. And a link is a channel for commands *from* the Orchestrator *to* the agent, so a rogue local link can receive the local node's commands and answer them falsely or keep the real agent off the link, but cannot make anything run. That is no more than the local REST API and local gRPC already give a local process, and strictly less than the old `:50101` exposure. If later we want one code path, `install.sh` can run the join flow against the local listener automatically; that is an optimization, not a requirement.
 
 ## Local trust and its limits
 
@@ -174,7 +176,7 @@ Suggested order, each shippable alone:
 ## Open questions
 
 - **Channel for fetching the assertion key set.** Does the cloud endpoint that would serve it present a server cert chaining to the CA pinned at registration? If so, fetch over a connection verified against `ca_chain.pem` and never rely on public TLS. If not, either serve the key set from an endpoint that does, or accept public TLS for this one fetch and document it. Not yet checked against the cloud's nginx config.
-- **Command vocabulary for the agent link.** Which `AgentPublic` methods become link commands as-is, and which (e.g. log or exec streaming, if any) need their own sub-streams. To settle when step 5 is designed in detail.
+- ~~**Command vocabulary for the agent link.**~~ *Settled in step 5.* Every former `AgentPublic` method is a plain request/response command (`Command` / `CommandResult` in `agent_link.proto`) except one. `ListStreams` was a server-stream only because it returns a list, so it is a plain command with a list result. `StreamContainerLogs` is open-ended, so it is the `OpenLogStream` command (answered at once) plus a **sub-stream**: the agent opens a second gRPC stream (`AgentLink.LogStream`) on the same connection, attaches it with a single-use token bound to the node the command was issued to, and the Orchestrator ends it by finishing the call. A chatty log therefore cannot hold up control commands that share the link, and cancelling needs no protocol of its own. There is no exec or other open-ended command today; a future one should follow the same pattern (command that returns a token, then a sub-stream). Request/response commands carry a request id; a caller that gives up sends `Cancel`, and an in-flight command whose link drops is released with an explicit "outcome unknown" error.
 
 ## Execution plan
 
@@ -300,4 +302,4 @@ Rules:
 6. **Record decisions when made,** with the why. Deviations from the RFD go in the journal and, once accepted, in the RFD too.
 7. **Short and factual.** Link to commits, PRs and files instead of pasting diffs.
 8. **Resumable cold.** A new agent must be able to continue from the RFD, the status table and the latest log entries of its step alone.
-- **Docker-installed Orchestrator reaching the host agent** over loopback in the single-node install: the current `127.0.0.1` dial from inside the container does not reach the host. Agent dial-out (decision 5) resolves this, since the host agent connects *to* the published port.
+- **Docker-installed Orchestrator reaching the host agent** over loopback in the single-node install: the current `127.0.0.1` dial from inside the container does not reach the host. Agent dial-out (decision 5) resolves this, since the host agent connects *to* the published port. *Resolved in step 5: the agent dials the loopback-published local port; the Orchestrator has no agent address at all.*
