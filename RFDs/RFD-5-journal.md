@@ -1,20 +1,20 @@
 # RFD-5 Implementation Journal
 
-Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2026-11-04 by coordinator
+Base: main @ 782f917 · Integration branch: rfd-5/integration (all tracks merged) · Last updated: 2026-11-04 by coordinator
 
 ## Status
 
 | Step | Title | State | Owner | Branch / PR | Needs | Updated |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Network isolation | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
-| 2 | Stream port denylist | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
-| 3 | One-origin UI + API | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
+| 2 | Stream port denylist | done | agent-A | rfd-5/track-a | none | 2026-11-04 |
+| 3 | One-origin UI + API | done | agent-A | rfd-5/track-a | none | 2026-11-04 |
 | 4 | Cluster CA, listener, `nodes add`, join | in review | agent-B | rfd-5/track-b | none | 2026-11-04 |
 | 5 | Agent link | in review | agent-B | rfd-5/track-b | 4 | 2026-11-04 |
-| 6 | Scoped API tokens | in review | agent-A | rfd-5/track-a | 3 | 2026-11-04 |
+| 6 | Scoped API tokens | done | agent-A | rfd-5/track-a | 3 | 2026-11-04 |
 | 7a | Cloud: split signing key, publish key set | in review | agent-C | rfd-5/track-c | none | 2026-11-04 |
 | 7b | Edge: assertions, remote listener, `ufctl connect` | in review | agent-C | rfd-5/track-c | 3, 6, 7a | 2026-11-04 |
-| 8 | Retire stopgaps | in review | agent-B | rfd-5/track-b | 5 | 2026-11-04 |
+| 8 | Retire stopgaps | done | agent-B | rfd-5/track-b | 5 | 2026-11-04 |
 
 States: not started · in progress · blocked · in review · done
 
@@ -597,3 +597,11 @@ Scope note: this is the **edge half**. The cloud half (forwarding endpoint, mint
 - Verified: see each step. Final: `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./... -count=1` pass, gofmt clean, `npx tsc -b` clean.
 - Next: coordinator merges `rfd-5/track-a` into `rfd-5/integration` and marks the steps `done` once the open decisions above are settled or accepted.
 - Blocked: none
+
+#### 2026-11-04 · coordinator · all tracks merged into rfd-5/integration
+- Did: merged track-c (7a), track-a (1,2,3,6), track-c (7b), track-b (4,5,8) into `rfd-5/integration`; resolved the only conflicts (journal status rows and Cross-cutting lists, keeping both sides). Marked 2, 3, 6, 8 `done`; 1, 4, 5, 7a, 7b stay `in review` because of unticked or skipped items below.
+- Verified: on the merged tree `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test -count=1 ./...` (18 packages ok), `gofmt -l $(git ls-files '*.go')` empty, `sh -n install.sh` ok. Stopgap grep: only RFD/journal text and two regression-guard tests remain; `127.0.0.1:50101`: only RFD/journal text.
+- Why not done: **1** `:50100`/REST reachable from workloads via published ports (needs human decision, see Open questions); **4** a Docker-installed manager cannot be joined by remote workers until the cluster port is published; **5** only `IngestContainers` exercised against real Docker; **7a** fetch channel (CA-issued nginx leaf) and CA/JWT key split not done; **7b** the whole cloud half (device login, forwarder, conn_worker stream opening, nginx WS) does not exist, so the chain is tested against fakes only.
+- Not run by the coordinator: the real `install.sh`, a clean Docker image build of the merged tree, Linux/amd64, a real browser through `ufctl connect`.
+- Next: human decisions in Open questions; then the cloud half of 7b and the install wiring.
+- Blocked: human decisions.
