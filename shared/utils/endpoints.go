@@ -62,14 +62,28 @@ func OrchestratorSocketPath() string { return envOr(EnvOrchSocket, defaultOrchSo
 // AgentSocketPath is the ufagent unix socket.
 func AgentSocketPath() string { return envOr(EnvAgentSocket, defaultAgentSocket) }
 
-// ClusterStateDir is where cluster membership state is kept for role ("ca" on
-// the manager, "node" on a worker). By default it is a sibling of the role's
-// database, so it lives wherever that role's state already lives; with
-// UNDERLEAF_CLUSTER_DIR it is a per-role subdirectory of that path. Roles never
-// share a directory, so a single-host dev setup does not collide.
+// ClusterStateDir is where cluster membership state is kept for role: "ca" on
+// the manager (the CA and its key) or "node" on a worker (its certificate and
+// the CA bundle it trusts).
+//
+//   - UNDERLEAF_CLUSTER_DIR, if set, wins; each role gets its own subdirectory.
+//   - The manager's CA lives beside its database, i.e. wherever the
+//     Orchestrator's state already lives.
+//   - A worker's credentials live in the user's config directory, an absolute
+//     path, rather than next to the (cwd-relative) agent database. `ufagentd
+//     join` is typically run from a shell and `ufagentd run` from a launchd or
+//     systemd service whose working directory differs; both must agree on where
+//     the credentials are.
+//
+// Roles never share a directory, so a single-host dev setup does not collide.
 func ClusterStateDir(cfg Config, role string) string {
 	if v := strings.TrimSpace(os.Getenv(EnvStateDir)); v != "" {
 		return filepath.Join(v, role)
+	}
+	if role == "node" {
+		if dir, err := os.UserConfigDir(); err == nil && dir != "" {
+			return filepath.Join(dir, "underleaf", "cluster-node")
+		}
 	}
 	return filepath.Join(filepath.Dir(cfg.DBPath), "cluster-"+role)
 }

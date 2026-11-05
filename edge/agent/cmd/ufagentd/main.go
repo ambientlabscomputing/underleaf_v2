@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_private"
@@ -69,5 +70,9 @@ func Run() {
 }
 
 func main() {
-	RootCmd.Execute()
+	if err := RootCmd.Execute(); err != nil {
+		// cobra has already printed the error; scripts (install.sh's join flow)
+		// need a non-zero status.
+		os.Exit(1)
+	}
 }

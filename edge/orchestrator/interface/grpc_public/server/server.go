@@ -12,7 +12,8 @@ import (
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
-const tcpPort = "50100"
+// tcpPort is the local listener port (50100 unless UNDERLEAF_ORCH_LOCAL_PORT overrides it).
+var tcpPort = utils.OrchestratorLocalPort()
 
 type OrchestratorGRPCPublicServer struct {
 	grpc_public.UnimplementedOrchestratorPublicServer

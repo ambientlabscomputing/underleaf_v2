@@ -43,6 +43,8 @@ On first start the Orchestrator generates a **cluster-local CA** (key never leav
 
 A non-loopback listener cannot exist without mTLS, so no "insecure remote" flag is needed. This replaces `UNDERLEAF_CLUSTER_TOKEN` and `UNDERLEAF_INSECURE_ALLOW_REMOTE`, which are stopgaps.
 
+*Implementation note (step 4, amended).* A node that is joining has no certificate yet, so the cluster port serves two sides, told apart by ALPN during the TLS handshake: **h2** (gRPC, the whole control surface) requires a client certificate chaining to the cluster CA at the handshake; **http/1.1** reaches only the join endpoint (`POST /v1/join`), which authenticates the server (against the pinned fingerprint) but not the client, and can never reach gRPC. The listener constructor (`utils.ListenCluster`) refuses to build a listener whose mTLS side does not require and verify client certificates, which is how "a non-loopback listener cannot exist without mTLS" is enforced in code rather than by convention.
+
 ### Join flow
 
 ```

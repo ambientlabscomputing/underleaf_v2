@@ -26,6 +26,7 @@ Running it again with a fresh string re-enrolls the node and keeps its node id
 (use this if the node's certificate expired while it was switched off).`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true // a failed join is not a usage error
 		force, _ := cmd.Flags().GetBool("force")
 		cfg := utils.GetConfig(utils.AgentConfig)
 		stateDir := utils.ClusterStateDir(cfg, "node")
