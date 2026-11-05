@@ -4,6 +4,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -41,8 +42,9 @@ func splitEnv(key string) []string {
 	return out
 }
 
-// allowedOrigins is the browser-origin allowlist used by CORS, the Origin
-// guard, and the log WebSocket.
+// allowedOrigins is the extra browser-origin allowlist used by the Origin
+// guard and the log WebSocket. The UI's own origin never needs listing: see
+// sameOrigin.
 func allowedOrigins() []string {
 	return append(append([]string{}, defaultAllowedOrigins...), splitEnv(envAllowedOrigins)...)
 }
@@ -54,6 +56,29 @@ func originAllowed(origin string) bool {
 		}
 	}
 	return false
+}
+
+// sameOrigin reports whether origin is this server's own origin: its
+// authority equals the request's Host, and that Host is itself an allowed
+// (loopback) name. This is what lets the UI be served from the API's own
+// origin on whatever port it is published, without any configuration and
+// without trusting any foreign origin. A page on another host or port cannot
+// pass it, and a rebound hostname fails the Host check.
+func sameOrigin(origin, host string) bool {
+	if !hostAllowed(host) {
+		return false
+	}
+	u, err := url.Parse(origin)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" {
+		return false
+	}
+	return strings.EqualFold(u.Host, host)
+}
+
+// originPermitted is the one Origin policy shared by the REST guard and the
+// WebSocket upgrader.
+func originPermitted(origin, host string) bool {
+	return originAllowed(origin) || sameOrigin(origin, host)
 }
 
 func hostAllowed(hostport string) bool {
@@ -79,7 +104,7 @@ func requestGuard() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "host not allowed"})
 			return
 		}
-		if origin := c.GetHeader("Origin"); origin != "" && !originAllowed(origin) {
+		if origin := c.GetHeader("Origin"); origin != "" && !originPermitted(origin, c.Request.Host) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "origin not allowed"})
 			return
 		}

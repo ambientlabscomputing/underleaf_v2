@@ -96,3 +96,33 @@ func TestWebSocketOriginCheck(t *testing.T) {
 		t.Fatal("foreign origin must be rejected")
 	}
 }
+
+func TestSameOrigin(t *testing.T) {
+	t.Setenv(envAllowedHosts, "")
+	cases := []struct {
+		name         string
+		origin, host string
+		want         bool
+	}{
+		{"own origin", "http://localhost:9090", "localhost:9090", true},
+		{"own origin, ipv4", "http://127.0.0.1:8088", "127.0.0.1:8088", true},
+		{"own origin, ipv6", "http://[::1]:9090", "[::1]:9090", true},
+		{"own origin, https", "https://localhost:9443", "localhost:9443", true},
+		{"own origin, default port", "http://localhost", "localhost", true},
+		{"other port", "http://localhost:9090", "localhost:9091", false},
+		{"other loopback name", "http://127.0.0.1:9090", "localhost:9090", false},
+		{"foreign origin", "https://evil.example", "localhost:9090", false},
+		{"rebound host matches origin", "http://evil.example:9090", "evil.example:9090", false},
+		{"origin with path", "http://localhost:9090/x", "localhost:9090", false},
+		{"opaque origin", "null", "localhost:9090", false},
+		{"non-http scheme", "ftp://localhost:9090", "localhost:9090", false},
+		{"empty", "", "localhost:9090", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sameOrigin(tc.origin, tc.host); got != tc.want {
+				t.Fatalf("sameOrigin(%q, %q) = %v, want %v", tc.origin, tc.host, got, tc.want)
+			}
+		})
+	}
+}

@@ -100,6 +100,8 @@ Loopback REST and the local gRPC listener are unauthenticated by design: anyone 
 
 Fix: the Orchestrator runs on its own user-defined Docker network, and workloads run on a different one. Separate user-defined networks are isolated from each other. The host agent still reaches the Orchestrator through the loopback-published port.
 
+> **Caveat found while implementing step 1** (see the [journal](RFD-5-journal.md), step 1): Docker isolates *unpublished* ports between user-defined networks, but a *published* port (here `:50100`, and the UI/API port) stays reachable from a container on another network through the Orchestrator's container IP, and on Docker Desktop also through `host.docker.internal`. The loopback-published ports the host agent and browser need are exactly those, so this fix closes the unpublished ports and name resolution but not the published ones. Whether and how to close them is an open decision.
+
 **Loopback is not a trust boundary when something on the host forwards to it.** The agent forwards gateway streams to local ports. Nothing today stops `orcli streams new --port 9090` from publishing the Orchestrator's REST API. The Host guard happens to block it (the gateway hostname is not loopback), but that is an accident of one check.
 
 Fix, enforced in the agent where the stream is opened: **streams may not target control-plane ports** (Orchestrator REST/gRPC, agent sockets/ports). Reject at creation and on every forward.
