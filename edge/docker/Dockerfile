@@ -24,13 +24,16 @@ RUN apk add --no-cache ca-certificates
 COPY --from=uibuilder /app/dist /usr/share/underleaf/ui
 COPY bin/orch-server-linux-${TARGETARCH} /usr/local/bin/orch-server
 
-# Inside the container the orchestrator must bind all interfaces for Docker's
-# port publishing to reach it. It has no application-level auth, so exposure is
-# controlled by how the ports are published: bind them to loopback (-p 127.0.0.1:...),
-# as orchestrator_ui/public/tools/install.sh does. Set UNDERLEAF_CLUSTER_TOKEN
-# (and drop the insecure flag) before publishing 50100 to other hosts.
+# Inside the container the Orchestrator's local listeners (REST, local gRPC) must
+# bind the container's interface for Docker's port publishing to reach them.
+# They have no application-level auth, so exposure is decided by how the ports
+# are published: bind them to loopback (-p 127.0.0.1:...), as
+# orchestrator_ui/public/tools/install.sh does. UNDERLEAF_CONTAINER=1 is what
+# permits the wildcard bind, and only when the process really is in a container;
+# it never applies to the cluster listener (worker nodes), which is mTLS-only
+# and needs no switch. Do not publish the local ports on a non-loopback address.
 ENV UNDERLEAF_BIND_ADDR=0.0.0.0 \
-    UNDERLEAF_INSECURE_ALLOW_REMOTE=1 \
+    UNDERLEAF_CONTAINER=1 \
     UNDERLEAF_UI_DIR=/usr/share/underleaf/ui
 
 # 9090: UI + REST API (one origin). 50100: agent gRPC.

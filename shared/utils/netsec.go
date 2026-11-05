@@ -1,50 +1,54 @@
 package utils
 
 import (
-	"context"
-	"crypto/subtle"
 	"fmt"
 	"net"
 	"os"
 	"strings"
 	"syscall"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
-// Local-listener hardening shared by the orchestrator and agent.
+// Bind policy shared by the orchestrator and agent (RFD 5, "Two listeners").
 //
-// None of the edge listeners (REST, gRPC, unix sockets) carry per-user
-// authentication, so the trust boundary is "who can reach the listener".
-// These helpers keep that boundary at the local host by default and make
-// widening it an explicit, loud decision.
+// There are exactly two kinds of TCP listener in Underleaf:
+//
+//   - The *local* listeners (the Orchestrator's REST API and its local gRPC
+//     listener) have no authentication by design: the trust boundary is the
+//     local host. They therefore bind loopback, and ListenLocal refuses
+//     anything else.
+//   - The *cluster* listener is the only one allowed to face a network. It
+//     cannot be built without mutual TLS (ListenCluster), so there is no
+//     "insecure remote" switch and nothing to opt into.
+//
+// Agents have no TCP listeners at all; they dial out.
 const (
-	// EnvBindAddr is the interface TCP listeners bind to. Default 127.0.0.1.
+	// EnvBindAddr is the interface the local listeners bind. Default 127.0.0.1.
+	// A non-loopback value is accepted only in container mode (below).
 	EnvBindAddr = "UNDERLEAF_BIND_ADDR"
-	// EnvClusterToken is a shared secret required on agent<->orchestrator gRPC.
-	EnvClusterToken = "UNDERLEAF_CLUSTER_TOKEN"
-	// EnvInsecureAllowRemote acknowledges a non-loopback bind with no
-	// application-level protection (e.g. inside a container whose published
-	// ports are restricted by the container runtime).
-	EnvInsecureAllowRemote = "UNDERLEAF_INSECURE_ALLOW_REMOTE"
+	// EnvContainerMode is set to "1" by the Underleaf Docker image. It is the one
+	// recorded exception to "local listeners are loopback-only": inside a
+	// container the local listeners must bind the container's interface for
+	// Docker's port publishing to reach them, and the exposure is then decided by
+	// how the host publishes the ports (install.sh publishes them on
+	// 127.0.0.1 only). The setting is honoured only when the process really is
+	// in a container (ContainerMode), so exporting it on a bare host does not
+	// widen anything, and it never applies to the cluster listener, which is
+	// governed by mTLS alone.
+	EnvContainerMode = "UNDERLEAF_CONTAINER"
 
 	defaultBindAddr = "127.0.0.1"
 )
 
-// BindAddr returns the interface TCP listeners should bind to.
+// containerMarkers are files that exist inside a container. A variable so tests
+// can point at temporary files.
+var containerMarkers = []string{"/.dockerenv", "/run/.containerenv"}
+
+// BindAddr returns the interface the local TCP listeners should bind to.
 func BindAddr() string {
 	if v := strings.TrimSpace(os.Getenv(EnvBindAddr)); v != "" {
 		return v
 	}
 	return defaultBindAddr
-}
-
-// ClusterToken returns the configured agent<->orchestrator shared secret, or "".
-func ClusterToken() string {
-	return os.Getenv(EnvClusterToken)
 }
 
 func isLoopbackHost(host string) bool {
@@ -56,31 +60,44 @@ func isLoopbackHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// CheckBind returns an error when addr would expose a listener beyond the
-// local host without protection. A non-loopback bind is accepted only if the
-// listener enforces the cluster token (tokenProtected) or the operator set
-// UNDERLEAF_INSECURE_ALLOW_REMOTE=1. Empty and wildcard hosts count as remote.
-func CheckBind(host string, tokenProtected bool) error {
+// ContainerMode reports whether this process was started as the Underleaf
+// image's entrypoint: UNDERLEAF_CONTAINER=1 *and* a container marker file. Both
+// are required, so neither a stray environment variable on a bare host nor an
+// unrelated container is enough to widen a bind.
+func ContainerMode() bool {
+	if os.Getenv(EnvContainerMode) != "1" {
+		return false
+	}
+	for _, m := range containerMarkers {
+		if _, err := os.Stat(m); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// CheckLocalBind returns an error when host would expose an unauthenticated
+// local listener beyond the local host. Loopback is always fine; anything else
+// (including the empty and wildcard hosts) only in container mode.
+func CheckLocalBind(host string) error {
 	if isLoopbackHost(host) {
 		return nil
 	}
-	if tokenProtected && ClusterToken() != "" {
-		return nil
-	}
-	if os.Getenv(EnvInsecureAllowRemote) == "1" {
+	if ContainerMode() {
 		return nil
 	}
 	return fmt.Errorf(
-		"refusing to bind to non-loopback address %q without protection: set %s, "+
-			"or set %s=1 to accept the risk (e.g. when the container runtime restricts published ports)",
-		host, EnvClusterToken, EnvInsecureAllowRemote)
+		"refusing to bind the unauthenticated local listener to non-loopback address %q: "+
+			"local listeners have no authentication and are loopback-only (%s only widens this "+
+			"inside the Underleaf Docker image). Worker nodes connect through the cluster "+
+			"listener, which requires mTLS: run `orcli nodes add`",
+		host, EnvBindAddr)
 }
 
-// ListenTCP listens on BindAddr():port after applying CheckBind.
-// tokenProtected says whether the caller enforces the cluster token.
-func ListenTCP(port string, tokenProtected bool) (net.Listener, error) {
+// ListenLocal listens on BindAddr():port after applying CheckLocalBind.
+func ListenLocal(port string) (net.Listener, error) {
 	host := BindAddr()
-	if err := CheckBind(host, tokenProtected); err != nil {
+	if err := CheckLocalBind(host); err != nil {
 		return nil, err
 	}
 	return net.Listen("tcp", net.JoinHostPort(host, port))
@@ -136,62 +153,4 @@ func checkOwnSocket(fi os.FileInfo, path string) error {
 		return fmt.Errorf("%s is owned by uid %d, not the current user (uid %d)", path, st.Uid, os.Getuid())
 	}
 	return nil
-}
-
-// --- cluster-token gRPC auth -------------------------------------------------
-
-const authMetadataKey = "authorization"
-
-func checkClusterToken(ctx context.Context, want string) error {
-	md, _ := metadata.FromIncomingContext(ctx)
-	for _, v := range md.Get(authMetadataKey) {
-		got := strings.TrimPrefix(v, "Bearer ")
-		if subtle.ConstantTimeCompare([]byte(got), []byte(want)) == 1 {
-			return nil
-		}
-	}
-	return status.Error(codes.Unauthenticated, "missing or invalid cluster token")
-}
-
-// ClusterAuthServerOptions returns server options enforcing the cluster token
-// on every RPC, or nil when no token is configured.
-func ClusterAuthServerOptions() []grpc.ServerOption {
-	want := ClusterToken()
-	if want == "" {
-		return nil
-	}
-	return []grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, h grpc.UnaryHandler) (any, error) {
-			if err := checkClusterToken(ctx, want); err != nil {
-				return nil, err
-			}
-			return h(ctx, req)
-		}),
-		grpc.ChainStreamInterceptor(func(srv any, ss grpc.ServerStream, _ *grpc.StreamServerInfo, h grpc.StreamHandler) error {
-			if err := checkClusterToken(ss.Context(), want); err != nil {
-				return err
-			}
-			return h(srv, ss)
-		}),
-	}
-}
-
-type tokenCreds struct{ token string }
-
-func (t tokenCreds) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
-	return map[string]string{authMetadataKey: "Bearer " + t.token}, nil
-}
-
-// RequireTransportSecurity is false: the edge gRPC links are plaintext today,
-// so the token gates access but does not defend against a network sniffer.
-func (tokenCreds) RequireTransportSecurity() bool { return false }
-
-// ClusterAuthDialOptions returns dial options attaching the cluster token to
-// every RPC, or nil when no token is configured.
-func ClusterAuthDialOptions() []grpc.DialOption {
-	token := ClusterToken()
-	if token == "" {
-		return nil
-	}
-	return []grpc.DialOption{grpc.WithPerRPCCredentials(tokenCreds{token})}
 }

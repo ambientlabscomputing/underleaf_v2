@@ -12,7 +12,8 @@ import (
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative agent_private.proto
 
-const unixSocketPath = "/tmp/undf-agent.sock"
+// unixSocketPath is /tmp/undf-agent.sock unless UNDERLEAF_AGENT_SOCKET overrides it.
+var unixSocketPath = utils.AgentSocketPath()
 
 type AgentGRPCPrivateServer struct {
 	UnimplementedAgentPrivateServer

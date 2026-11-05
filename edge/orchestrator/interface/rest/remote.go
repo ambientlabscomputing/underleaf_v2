@@ -41,8 +41,12 @@ import (
 // unauthenticated local principal.
 
 // EnvRemoteAddr is host:port for the remote listener. Unset or empty disables
-// it (the default): no remote access unless the operator turns it on. See
-// utils.CheckBind for the bind policy it shares with the local listener.
+// it (the default): no remote access unless the operator turns it on. It shares
+// the local listeners' bind policy (utils.CheckLocalBind): loopback, or the
+// container interface inside the Docker image. Its only client is the agent's
+// tunnel on the same host, so it has no reason to face a network; and unlike the
+// cluster listener it is plain HTTP authenticated by a bearer-style assertion,
+// so it must not be exposed beyond loopback.
 const EnvRemoteAddr = utils.EnvRemoteAddr
 
 // remoteAuthenticator verifies an assertion. *remote.Verifier in production.
@@ -143,7 +147,7 @@ func (s *OrchestratorRESTServer) ServeRemote() error {
 	if err != nil {
 		return fmt.Errorf("%s=%q: %w", EnvRemoteAddr, raw, err)
 	}
-	if err := utils.CheckBind(host, false); err != nil {
+	if err := utils.CheckLocalBind(host); err != nil {
 		return fmt.Errorf("remote listener: %w", err)
 	}
 

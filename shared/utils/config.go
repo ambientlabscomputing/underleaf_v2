@@ -30,11 +30,9 @@ const (
 	ConnectionsGatewayPort NamedPort = 9020
 	ConnectionsNodePort    NamedPort = 9021
 
-	// Edge
+	// Edge. The agent listens on no TCP port: it dials out to the Orchestrator
+	// (RFD 5). The Orchestrator's gRPC ports are in endpoints.go.
 	OrchestratorHttpPort NamedPort = 9090
-	AgentHttpPort        NamedPort = 9091
-	OrchestratorGRPCPort NamedPort = 50101
-	AgentGRPCPort        NamedPort = 50103
 )
 
 type BasePath string
@@ -51,7 +49,6 @@ const (
 
 	// edge components do not share a reverse proxy or domain, so these paths only need to be unique within the component
 	OrchestratorBasePath BasePath = "/api/v1/"
-	AgentBasePath        BasePath = "/api/v1/"
 )
 
 type HttpConfig struct {
@@ -127,13 +124,6 @@ func init() {
 		ConnectionsClient: &ConnectionsClient{
 			Host: "localhost",
 			Port: ConnectionsNodePort,
-		},
-		Http: HttpConfig{
-			Port:         AgentHttpPort,
-			ReadTimeout:  "5s",
-			WriteTimeout: "10s",
-			IdleTimeout:  "15s",
-			BasePath:     AgentBasePath,
 		},
 		DBPath:                   "agent.db",
 		ContainerSyncIntervalSec: 60,

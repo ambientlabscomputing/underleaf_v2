@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/link"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 )
@@ -22,6 +23,8 @@ type Service interface {
 	Deployments() *DeploymentService
 	Manifests() *ManifestService
 	Reconciler() *ReconcilerService
+	Cluster() *ClusterService
+	Links() *link.Hub
 	DeployFromSource(ctx context.Context, source, ref, token string) (*types.Deployment, error)
 }
 
@@ -37,6 +40,8 @@ type AppService struct {
 	deployments  *DeploymentService
 	manifests    *ManifestService
 	reconciler   *ReconcilerService
+	cluster      *ClusterService
+	links        *link.Hub
 }
 
 func (s *AppService) Nodes() *NodeService                { return s.nodes }
@@ -48,6 +53,8 @@ func (s *AppService) Connections() *ConnectionService    { return s.connections 
 func (s *AppService) Deployments() *DeploymentService    { return s.deployments }
 func (s *AppService) Manifests() *ManifestService        { return s.manifests }
 func (s *AppService) Reconciler() *ReconcilerService     { return s.reconciler }
+func (s *AppService) Cluster() *ClusterService           { return s.cluster }
+func (s *AppService) Links() *link.Hub                   { return s.links }
 
 func (s *AppService) Start() error {
 	// implement start logic

@@ -1,5 +1,21 @@
 #!/bin/sh
 
+# Usage:
+#   install.sh [tag] [http-port] [grpc-port]   install a manager node (single-node cluster)
+#   install.sh join <join-string> [tag]        add this machine to an existing cluster
+#                                              (the string comes from `orcli nodes add`)
+MODE="install"
+if [ "$1" = "join" ]; then
+    MODE="join"
+    JOIN_STRING="$2"
+    if [ -z "$JOIN_STRING" ]; then
+        echo "usage: install.sh join <join-string> [tag]" >&2
+        exit 1
+    fi
+    shift
+    shift
+fi
+
 TAG=$1
 HTTP_PORT=$2
 GRPC_PORT=$3
@@ -45,7 +61,11 @@ esac
 echo "Installing binaries from release '${TAG}' (${GOOS}/${GOARCH}) to ${INSTALL_DIR} ..."
 mkdir -p "$INSTALL_DIR"
 
-for BIN in ufagent ufagentd orcli; do
+BINS="ufagent ufagentd orcli"
+if [ "$MODE" = "join" ]; then
+    BINS="ufagent ufagentd" # a worker needs no orcli
+fi
+for BIN in $BINS; do
     URL="${RELEASE_BASE}/${BIN}-${GOOS}-${GOARCH}"
     echo "  Downloading ${BIN}..."
     if ! curl -fSL "$URL" -o "${INSTALL_DIR}/${BIN}"; then
@@ -128,7 +148,22 @@ EOF
     esac
 }
 
+# A joining node enrolls before its service starts, so the daemon comes up as a
+# cluster member. A failed join installs nothing as a service.
+if [ "$MODE" = "join" ]; then
+    echo "Joining the cluster ..."
+    if ! "${INSTALL_DIR}/ufagentd" join "$JOIN_STRING"; then
+        echo "Join failed; no service was installed. Ask for a fresh string with 'orcli nodes add' and try again." >&2
+        exit 1
+    fi
+fi
+
 install_service
+
+if [ "$MODE" = "join" ]; then
+    echo "Done! This machine is now a worker in the cluster."
+    exit 0
+fi
 
 # ── Pull and run the orchestrator via Docker ──────────────────────────────────
 echo "Pulling ${DOCKER_IMAGE}:${TAG} ..."

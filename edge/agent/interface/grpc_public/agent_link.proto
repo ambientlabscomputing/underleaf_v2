@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "agent_public.proto";
+
+package agent.public.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public";
+
+// AgentLink is the agent link (RFD 5, decisions 5 and 6): the *agent* dials out
+// to the Orchestrator and keeps one long-lived bidirectional stream open. The
+// Orchestrator sends commands down it and the agent answers up it, matched by
+// request id. Nothing on a worker listens for the Orchestrator.
+//
+// The service is implemented by the Orchestrator and served on its local
+// listener (single-node install, loopback only) and on its cluster listener
+// (mTLS). The command vocabulary below is the former AgentPublic service
+// re-expressed as messages; the message types it reuses live in
+// agent_public.proto.
+service AgentLink {
+  // Link is opened once per connection. Flow:
+  //   agent  -> LinkHello            (first message)
+  //   server -> LinkWelcome | error  (the server decides whether to accept)
+  //   server -> Command(request_id)  ...  agent -> CommandResult(request_id)
+  //   server -> Cancel(request_id)   (the caller gave up)
+  rpc Link(stream AgentMessage) returns (stream OrchestratorMessage);
+
+  // LogStream is the sub-stream for one open-ended command (following a
+  // container's logs). The agent opens it after accepting an OpenLogStream
+  // command, passing the command's token in the "x-link-stream-token" metadata
+  // key (and, on the local listener, its node id in "x-link-node-id"). The
+  // agent sends LogLines; the Orchestrator never sends a message, it ends the
+  // stream by finishing the call, which is how an idle agent learns it was
+  // cancelled. Open-ended streams get their own gRPC stream so a chatty log
+  // cannot hold up control commands that share the link.
+  rpc LogStream(stream LogLine) returns (stream google.protobuf.Empty);
+}
+
+// ── agent -> orchestrator ────────────────────────────────────────────────────
+
+message AgentMessage {
+  oneof msg {
+    LinkHello     hello  = 1;
+    CommandResult result = 2;
+  }
+}
+
+message LinkHello {
+  // On the cluster listener the node id is the one in the client certificate
+  // and this field must be empty or equal to it. On the local listener (no
+  // certificate) it names the node and must be a local-transport node.
+  string node_id       = 1;
+  string agent_version = 2;
+}
+
+// ── orchestrator -> agent ────────────────────────────────────────────────────
+
+message OrchestratorMessage {
+  oneof msg {
+    LinkWelcome welcome = 1;
+    Command     command = 2;
+    Cancel      cancel  = 3;
+  }
+}
+
+message LinkWelcome {
+  string node_id   = 1;
+  string transport = 2; // "local" | "cluster"
+}
+
+message Cancel {
+  string request_id = 1;
+}
+
+// Command is one request. Which methods are plain commands and which need a
+// sub-stream is the settled answer to RFD 5's open question "Command
+// vocabulary for the agent link": everything the old AgentPublic service did
+// is a plain request/response command except StreamContainerLogs (open-ended),
+// which is OpenLogStream + the LogStream sub-stream. ListStreams was a
+// server-stream only because it returns a list; it is a plain command with a
+// list result.
+message Command {
+  string request_id = 1; // unique per link; the answer carries it back
+  oneof cmd {
+    PingRequest             ping               = 10;
+    GetStatusRequest        get_status         = 11;
+    IngestContainersRequest ingest_containers  = 12;
+    google.protobuf.Empty   get_node           = 13;
+    NewStreamRequest        new_stream         = 14;
+    CloseStreamRequest      close_stream       = 15;
+    GetStreamRequest        get_stream         = 16;
+    google.protobuf.Empty   list_streams       = 17;
+    GetContainerLogsRequest get_container_logs = 18;
+    CreateVolumeRequest     create_volume      = 19;
+    ListVolumesRequest      list_volumes       = 20;
+    CreateContainerRequest  create_container   = 21;
+    ContainerNameRequest    start_container    = 22;
+    ContainerNameRequest    stop_container     = 23;
+    ContainerNameRequest    remove_container   = 24;
+    OpenLogStream           open_log_stream    = 25;
+  }
+}
+
+message OpenLogStream {
+  string stream_token = 1; // capability for the LogStream sub-stream
+  string docker_id    = 2;
+  int64  since_ms     = 3; // 0 = tail only
+}
+
+message CommandError {
+  int32  code    = 1; // google.rpc.Code / grpc codes.Code
+  string message = 2;
+}
+
+message ListStreamsResult {
+  repeated StreamState streams = 1;
+}
+
+message CommandResult {
+  string request_id = 1;
+  // Set when the command failed; no result is then present.
+  CommandError error = 2;
+  oneof result {
+    PingResponse             ping               = 10;
+    GetStatusResponse        get_status         = 11;
+    IngestContainersResponse ingest_containers  = 12;
+    Node                     node               = 13;
+    google.protobuf.Empty    ok                 = 14; // new/close stream, start/stop/remove, open_log_stream
+    StreamState              stream             = 16;
+    ListStreamsResult        streams            = 17;
+    GetContainerLogsResponse container_logs     = 18;
+    CreateVolumeResponse     create_volume      = 19;
+    ListVolumesResponse      volumes            = 20;
+    CreateContainerResponse  create_container   = 21;
+  }
+}

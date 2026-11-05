@@ -20,8 +20,11 @@ import (
 // compile/observe/diff/plan decisions live here in the Orchestrator; the
 // Agent (see Phase 3) is a thin, stateless-per-call Docker executor.
 type ReconcilerService struct {
-	Repository  *repository.Repository
-	AgentClient *clients.AgentClient
+	Repository *repository.Repository
+	// Agents resolves a node to its agent link. The reconciler never holds an
+	// address: it picks a node that has a live link and commands it through
+	// that link.
+	Agents clients.AgentDirectory
 }
 
 // resourceKind distinguishes the two resource types track 2 manages.
@@ -86,10 +89,11 @@ func (s *ReconcilerService) Reconcile(ctx context.Context, deployment *types.Dep
 		return err
 	}
 
-	node, err := s.singleNode()
+	node, err := s.pickNode(deployment.ID)
 	if err != nil {
 		return err
 	}
+	agent := s.Agents.Agent(node.ID)
 
 	observedContainers, err := s.Repository.Containers.ListContainersByNode(node.ID)
 	if err != nil {
@@ -102,7 +106,7 @@ func (s *ReconcilerService) Reconcile(ctx context.Context, deployment *types.Dep
 		}
 	}
 
-	observedVolumes, err := s.AgentClient.ListVolumes(ctx)
+	observedVolumes, err := agent.ListVolumes(ctx)
 	if err != nil {
 		return fmt.Errorf("reconciler: list observed volumes: %w", err)
 	}
@@ -118,22 +122,51 @@ func (s *ReconcilerService) Reconcile(ctx context.Context, deployment *types.Dep
 
 	ops := diff(graph, observedByName, observedVolNames, prev)
 
-	if err := s.execute(ctx, graph, ops); err != nil {
+	if err := s.execute(ctx, agent, graph, ops); err != nil {
 		return err
 	}
 
 	return s.saveLastApplied(deployment.ID, graph)
 }
 
-func (s *ReconcilerService) singleNode() (*types.Node, error) {
-	nodes, _, err := s.Repository.Nodes.ListNodes(types.QueryNodesRequest{})
+// pickNode chooses the node a deployment is reconciled onto, by link.
+//
+// A deployment sticks to the node it was first placed on (its containers and
+// last-applied snapshot live there); moving it silently would orphan them. If
+// that node has no live link the reconcile fails with a clear error instead of
+// quietly redeploying elsewhere. A deployment with no placement yet goes to the
+// first node (by id) that is registered and currently linked.
+func (s *ReconcilerService) pickNode(deploymentID string) (*types.Node, error) {
+	placed, err := s.Repository.Deployments.GetNodeID(deploymentID)
 	if err != nil {
-		return nil, fmt.Errorf("reconciler: list nodes: %w", err)
+		return nil, fmt.Errorf("reconciler: read placement: %w", err)
 	}
-	if len(nodes) == 0 {
-		return nil, fmt.Errorf("reconciler: no agent node registered")
+	linked := s.Agents.LinkedNodes()
+	isLinked := make(map[string]bool, len(linked))
+	for _, id := range linked {
+		isLinked[id] = true
 	}
-	return nodes[0], nil
+	if placed != "" {
+		node, err := s.Repository.Nodes.GetNodeByID(placed)
+		if err != nil {
+			return nil, fmt.Errorf("reconciler: deployment is placed on node %s, which is no longer registered: %w", placed, err)
+		}
+		if !isLinked[placed] {
+			return nil, fmt.Errorf("reconciler: deployment is placed on node %s, which has no active agent link: %w", placed, &clients.NoLinkError{NodeID: placed})
+		}
+		return node, nil
+	}
+	for _, id := range linked { // sorted
+		node, err := s.Repository.Nodes.GetNodeByID(id)
+		if err != nil {
+			continue // linked but not (or no longer) a registered node
+		}
+		if err := s.Repository.Deployments.SetNodeID(deploymentID, node.ID); err != nil {
+			return nil, fmt.Errorf("reconciler: record placement: %w", err)
+		}
+		return node, nil
+	}
+	return nil, fmt.Errorf("reconciler: no node has an active agent link (is ufagentd running and connected? see `orcli nodes ls`)")
 }
 
 func (s *ReconcilerService) loadLastApplied(deploymentID string) (*lastAppliedSnapshot, error) {
@@ -424,13 +457,13 @@ func orderOps(ops []operation, graph *compiledGraph) []operation {
 }
 
 // execute runs the plan in order, stopping at the first failure.
-func (s *ReconcilerService) execute(ctx context.Context, graph *compiledGraph, ops []operation) error {
+func (s *ReconcilerService) execute(ctx context.Context, agent clients.AgentAPI, graph *compiledGraph, ops []operation) error {
 	for _, op := range ops {
 		switch op.Type {
 		case opCreate:
 			if op.ID.Kind == resourceVolume {
 				v := graph.Volumes[op.ID.Name]
-				if err := s.AgentClient.CreateVolume(ctx, op.ID.Name, "", map[string]string{
+				if err := agent.CreateVolume(ctx, op.ID.Name, "", map[string]string{
 					"underleaf.slug":   graph.Slug,
 					"underleaf.volume": v.Name,
 				}); err != nil {
@@ -438,18 +471,18 @@ func (s *ReconcilerService) execute(ctx context.Context, graph *compiledGraph, o
 				}
 				continue
 			}
-			if err := s.createAndStart(ctx, graph, op.ID.Name, graph.Services[op.ID.Name]); err != nil {
+			if err := s.createAndStart(ctx, agent, graph, op.ID.Name, graph.Services[op.ID.Name]); err != nil {
 				return err
 			}
 		case opUpdate:
-			if err := s.stopAndRemove(ctx, op.ID.Name); err != nil {
+			if err := s.stopAndRemove(ctx, agent, op.ID.Name); err != nil {
 				return err
 			}
-			if err := s.createAndStart(ctx, graph, op.ID.Name, graph.Services[op.ID.Name]); err != nil {
+			if err := s.createAndStart(ctx, agent, graph, op.ID.Name, graph.Services[op.ID.Name]); err != nil {
 				return err
 			}
 		case opDelete:
-			if err := s.stopAndRemove(ctx, op.ID.Name); err != nil {
+			if err := s.stopAndRemove(ctx, agent, op.ID.Name); err != nil {
 				return err
 			}
 		case opAdopt, opNoop:
@@ -459,17 +492,17 @@ func (s *ReconcilerService) execute(ctx context.Context, graph *compiledGraph, o
 	return nil
 }
 
-func (s *ReconcilerService) stopAndRemove(ctx context.Context, name string) error {
-	if err := s.AgentClient.StopContainer(ctx, name); err != nil {
+func (s *ReconcilerService) stopAndRemove(ctx context.Context, agent clients.AgentAPI, name string) error {
+	if err := agent.StopContainer(ctx, name); err != nil {
 		return fmt.Errorf("reconciler: stop container %s: %w", name, err)
 	}
-	if err := s.AgentClient.RemoveContainer(ctx, name); err != nil {
+	if err := agent.RemoveContainer(ctx, name); err != nil {
 		return fmt.Errorf("reconciler: remove container %s: %w", name, err)
 	}
 	return nil
 }
 
-func (s *ReconcilerService) createAndStart(ctx context.Context, graph *compiledGraph, name string, svc types.ServiceSpec) error {
+func (s *ReconcilerService) createAndStart(ctx context.Context, agent clients.AgentAPI, graph *compiledGraph, name string, svc types.ServiceSpec) error {
 	req := clients.CreateContainerRequest{
 		Name:        name,
 		Image:       svc.Image,
@@ -499,10 +532,10 @@ func (s *ReconcilerService) createAndStart(ctx context.Context, graph *compiledG
 		}
 	}
 
-	if _, err := s.AgentClient.CreateContainer(ctx, req); err != nil {
+	if _, err := agent.CreateContainer(ctx, req); err != nil {
 		return fmt.Errorf("reconciler: create container %s: %w", name, err)
 	}
-	if err := s.AgentClient.StartContainer(ctx, name); err != nil {
+	if err := agent.StartContainer(ctx, name); err != nil {
 		return fmt.Errorf("reconciler: start container %s: %w", name, err)
 	}
 	return nil

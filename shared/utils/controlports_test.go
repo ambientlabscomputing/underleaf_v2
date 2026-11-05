@@ -10,7 +10,7 @@ import (
 func TestCheckStreamPortDeniesControlPlaneDefaults(t *testing.T) {
 	t.Setenv("UNDERLEAF_CONFIG", "")
 	t.Setenv(EnvExtraControlPorts, "")
-	for _, p := range []int{9090, 9091, 50100, 50101, 50103, 2375, 2376} {
+	for _, p := range []int{9090, 9091, 50100, 50101, 50103, 50104, 2375, 2376} {
 		err := CheckStreamPort(p)
 		if err == nil {
 			t.Fatalf("port %d must be denied", p)
@@ -89,5 +89,19 @@ func TestRemoteListenerPortsAreDenied(t *testing.T) {
 	t.Setenv(EnvRemoteTarget, "")
 	if err := CheckStreamPort(50999); err != nil {
 		t.Errorf("unrelated port denied: %v", err)
+	}
+}
+
+// The cluster listener (and the local gRPC listener that now carries the single-node
+// agent link) must be unpublishable as a stream even when moved off their defaults.
+func TestClusterAndLocalListenerPortsAreDeniedWhereverTheyAreConfigured(t *testing.T) {
+	t.Setenv("UNDERLEAF_CONFIG", "")
+	t.Setenv(EnvExtraControlPorts, "")
+	t.Setenv(EnvOrchClusterPort, "41104")
+	t.Setenv(EnvOrchLocalPort, "41100")
+	for _, p := range []int{41104, 41100, 50104, 50100} {
+		if err := CheckStreamPort(p); !errors.Is(err, ErrControlPlanePort) {
+			t.Errorf("port %d must be denied, got %v", p, err)
+		}
 	}
 }

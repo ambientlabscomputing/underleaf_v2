@@ -28,12 +28,19 @@ import (
 const EnvExtraControlPorts = "UNDERLEAF_EXTRA_CONTROL_PORTS"
 
 const (
-	// OrchestratorPublicGRPCPort is where the Orchestrator's agent-facing gRPC
-	// listener actually binds (orchestrator/interface/grpc_public/server).
+	// OrchestratorPublicGRPCPort is where the Orchestrator's local gRPC listener
+	// (also the single-node agent link) binds by default.
 	OrchestratorPublicGRPCPort NamedPort = 50100
-	// AgentPublicGRPCPort is where the agent's gRPC listener actually binds
-	// (agent/interface/grpc_public/server).
-	AgentPublicGRPCPort NamedPort = 50101
+	// OrchestratorClusterListenerPort is where the cluster listener (mTLS; worker
+	// agent links and the join endpoint) binds by default.
+	OrchestratorClusterListenerPort NamedPort = 50104
+
+	// Agents no longer listen on any TCP port (they dial out; RFD 5 step 5).
+	// These are the ports older agents did listen on; they stay denied so a
+	// mixed-version fleet, or an old agent left running, is still protected.
+	legacyAgentRESTPort NamedPort = 9091
+	legacyAgentGRPCPort NamedPort = 50101
+	legacyAgentAltGRPC  NamedPort = 50103
 
 	dockerAPIPlainPort NamedPort = 2375
 	dockerAPITLSPort   NamedPort = 2376
@@ -48,14 +55,22 @@ var ErrControlPlanePort = errors.New("stream target port is not allowed")
 // honoured.
 func ControlPlanePorts() map[int]string {
 	ports := map[int]string{
-		OrchestratorHttpPort.Int():       "Orchestrator REST API",
-		OrchestratorPublicGRPCPort.Int(): "Orchestrator gRPC",
-		OrchestratorGRPCPort.Int():       "Orchestrator gRPC (configured constant)",
-		AgentHttpPort.Int():              "agent REST API",
-		AgentPublicGRPCPort.Int():        "agent gRPC",
-		AgentGRPCPort.Int():              "agent gRPC (configured constant)",
-		dockerAPIPlainPort.Int():         "Docker daemon API",
-		dockerAPITLSPort.Int():           "Docker daemon API (TLS)",
+		OrchestratorHttpPort.Int():            "Orchestrator REST API",
+		OrchestratorPublicGRPCPort.Int():      "Orchestrator gRPC (local listener / agent link)",
+		OrchestratorClusterListenerPort.Int(): "Orchestrator cluster listener (mTLS / agent link)",
+		legacyAgentRESTPort.Int():             "agent REST API (older agents)",
+		legacyAgentGRPCPort.Int():             "agent gRPC (older agents)",
+		legacyAgentAltGRPC.Int():              "agent gRPC (older agents)",
+		dockerAPIPlainPort.Int():              "Docker daemon API",
+		dockerAPITLSPort.Int():                "Docker daemon API (TLS)",
+	}
+	// Ports the listeners are actually configured on (see endpoints.go), which
+	// may differ from the defaults.
+	if p, err := strconv.Atoi(OrchestratorLocalPort()); err == nil && p > 0 {
+		ports[p] = "Orchestrator gRPC (configured local listener)"
+	}
+	if p, err := strconv.Atoi(OrchestratorClusterPort()); err == nil && p > 0 {
+		ports[p] = "Orchestrator cluster listener (configured)"
 	}
 	// Configured listeners. Both configs are consulted in every process: the
 	// config file belongs to this process, but denying one extra port is

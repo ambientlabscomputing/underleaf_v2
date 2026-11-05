@@ -3,33 +3,46 @@ package server
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 
+	agentpb "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
 	grpc_public "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/service"
 	sharedtypes "github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
-const tcpPort = "50100"
+// tcpPort is the local listener port (50100 unless UNDERLEAF_ORCH_LOCAL_PORT overrides it).
+var tcpPort = utils.OrchestratorLocalPort()
 
 type OrchestratorGRPCPublicServer struct {
 	grpc_public.UnimplementedOrchestratorPublicServer
 	Service *service.AppService
+	// Link serves the agent link on the local listener (single-node install).
+	// Its authenticator only accepts local-transport nodes; see link.LocalAuth.
+	Link agentpb.AgentLinkServer
 }
 
 // Serve starts the gRPC public server on TCP for agent communication.
 func (s *OrchestratorGRPCPublicServer) Serve() {
-	lis, err := utils.ListenTCP(tcpPort, true)
+	lis, err := utils.ListenLocal(tcpPort)
 	if err != nil {
 		panic(fmt.Sprintf("grpc_public: failed to listen on port %s: %v", tcpPort, err))
 	}
 
-	grpcServer := grpc.NewServer(utils.ClusterAuthServerOptions()...)
+	grpcServer := grpc.NewServer(
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{MinTime: 10 * time.Second, PermitWithoutStream: true}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 30 * time.Second, Timeout: 10 * time.Second}),
+	)
 	grpc_public.RegisterOrchestratorPublicServer(grpcServer, s)
+	if s.Link != nil {
+		agentpb.RegisterAgentLinkServer(grpcServer, s.Link)
+	}
 
-	fmt.Printf("gRPC public server listening on %s (cluster token required: %t)\n", lis.Addr(), utils.ClusterToken() != "")
+	fmt.Printf("gRPC local listener on %s (unauthenticated; loopback only outside the Docker image)\n", lis.Addr())
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(fmt.Sprintf("grpc_public: server failed: %v", err))
 	}

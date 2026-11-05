@@ -9,7 +9,6 @@ package grpc_public
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -1422,7 +1421,7 @@ var File_agent_public_proto protoreflect.FileDescriptor
 
 const file_agent_public_proto_rawDesc = "" +
 	"\n" +
-	"\x12agent_public.proto\x12\x0fagent.public.v1\x1a\x1bgoogle/protobuf/empty.proto\"\x12\n" +
+	"\x12agent_public.proto\x12\x0fagent.public.v1\"\x12\n" +
 	"\x10GetStatusRequest\"+\n" +
 	"\x11GetStatusResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"Q\n" +
@@ -1532,25 +1531,7 @@ const file_agent_public_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"L\n" +
 	"\x13ListVolumesResponse\x125\n" +
-	"\avolumes\x18\x01 \x03(\v2\x1b.agent.public.v1.VolumeInfoR\avolumes2\xcb\n" +
-	"\n" +
-	"\vAgentPublic\x12R\n" +
-	"\tGetStatus\x12!.agent.public.v1.GetStatusRequest\x1a\".agent.public.v1.GetStatusResponse\x12C\n" +
-	"\x04Ping\x12\x1c.agent.public.v1.PingRequest\x1a\x1d.agent.public.v1.PingResponse\x12g\n" +
-	"\x10IngestContainers\x12(.agent.public.v1.IngestContainersRequest\x1a).agent.public.v1.IngestContainersResponse\x128\n" +
-	"\aGetNode\x12\x16.google.protobuf.Empty\x1a\x15.agent.public.v1.Node\x12F\n" +
-	"\tNewStream\x12!.agent.public.v1.NewStreamRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
-	"\vCloseStream\x12#.agent.public.v1.CloseStreamRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
-	"\tGetStream\x12!.agent.public.v1.GetStreamRequest\x1a\x1c.agent.public.v1.StreamState\x12E\n" +
-	"\vListStreams\x12\x16.google.protobuf.Empty\x1a\x1c.agent.public.v1.StreamState0\x01\x12g\n" +
-	"\x10GetContainerLogs\x12(.agent.public.v1.GetContainerLogsRequest\x1a).agent.public.v1.GetContainerLogsResponse\x12^\n" +
-	"\x13StreamContainerLogs\x12+.agent.public.v1.StreamContainerLogsRequest\x1a\x18.agent.public.v1.LogLine0\x01\x12[\n" +
-	"\fCreateVolume\x12$.agent.public.v1.CreateVolumeRequest\x1a%.agent.public.v1.CreateVolumeResponse\x12X\n" +
-	"\vListVolumes\x12#.agent.public.v1.ListVolumesRequest\x1a$.agent.public.v1.ListVolumesResponse\x12d\n" +
-	"\x0fCreateContainer\x12'.agent.public.v1.CreateContainerRequest\x1a(.agent.public.v1.CreateContainerResponse\x12O\n" +
-	"\x0eStartContainer\x12%.agent.public.v1.ContainerNameRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
-	"\rStopContainer\x12%.agent.public.v1.ContainerNameRequest\x1a\x16.google.protobuf.Empty\x12P\n" +
-	"\x0fRemoveContainer\x12%.agent.public.v1.ContainerNameRequest\x1a\x16.google.protobuf.EmptyBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
+	"\avolumes\x18\x01 \x03(\v2\x1b.agent.public.v1.VolumeInfoR\avolumesBOZMgithub.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_publicb\x06proto3"
 
 var (
 	file_agent_public_proto_rawDescOnce sync.Once
@@ -1596,7 +1577,6 @@ var file_agent_public_proto_goTypes = []any{
 	nil,                                // 27: agent.public.v1.CreateContainerRequest.LabelsEntry
 	nil,                                // 28: agent.public.v1.CreateVolumeRequest.LabelsEntry
 	nil,                                // 29: agent.public.v1.VolumeInfo.LabelsEntry
-	(*emptypb.Empty)(nil),              // 30: google.protobuf.Empty
 }
 var file_agent_public_proto_depIdxs = []int32{
 	4,  // 0: agent.public.v1.IngestContainersResponse.containers:type_name -> agent.public.v1.Container
@@ -1608,40 +1588,8 @@ var file_agent_public_proto_depIdxs = []int32{
 	28, // 6: agent.public.v1.CreateVolumeRequest.labels:type_name -> agent.public.v1.CreateVolumeRequest.LabelsEntry
 	29, // 7: agent.public.v1.VolumeInfo.labels:type_name -> agent.public.v1.VolumeInfo.LabelsEntry
 	23, // 8: agent.public.v1.ListVolumesResponse.volumes:type_name -> agent.public.v1.VolumeInfo
-	0,  // 9: agent.public.v1.AgentPublic.GetStatus:input_type -> agent.public.v1.GetStatusRequest
-	2,  // 10: agent.public.v1.AgentPublic.Ping:input_type -> agent.public.v1.PingRequest
-	5,  // 11: agent.public.v1.AgentPublic.IngestContainers:input_type -> agent.public.v1.IngestContainersRequest
-	30, // 12: agent.public.v1.AgentPublic.GetNode:input_type -> google.protobuf.Empty
-	12, // 13: agent.public.v1.AgentPublic.NewStream:input_type -> agent.public.v1.NewStreamRequest
-	13, // 14: agent.public.v1.AgentPublic.CloseStream:input_type -> agent.public.v1.CloseStreamRequest
-	15, // 15: agent.public.v1.AgentPublic.GetStream:input_type -> agent.public.v1.GetStreamRequest
-	30, // 16: agent.public.v1.AgentPublic.ListStreams:input_type -> google.protobuf.Empty
-	8,  // 17: agent.public.v1.AgentPublic.GetContainerLogs:input_type -> agent.public.v1.GetContainerLogsRequest
-	10, // 18: agent.public.v1.AgentPublic.StreamContainerLogs:input_type -> agent.public.v1.StreamContainerLogsRequest
-	20, // 19: agent.public.v1.AgentPublic.CreateVolume:input_type -> agent.public.v1.CreateVolumeRequest
-	22, // 20: agent.public.v1.AgentPublic.ListVolumes:input_type -> agent.public.v1.ListVolumesRequest
-	17, // 21: agent.public.v1.AgentPublic.CreateContainer:input_type -> agent.public.v1.CreateContainerRequest
-	19, // 22: agent.public.v1.AgentPublic.StartContainer:input_type -> agent.public.v1.ContainerNameRequest
-	19, // 23: agent.public.v1.AgentPublic.StopContainer:input_type -> agent.public.v1.ContainerNameRequest
-	19, // 24: agent.public.v1.AgentPublic.RemoveContainer:input_type -> agent.public.v1.ContainerNameRequest
-	1,  // 25: agent.public.v1.AgentPublic.GetStatus:output_type -> agent.public.v1.GetStatusResponse
-	3,  // 26: agent.public.v1.AgentPublic.Ping:output_type -> agent.public.v1.PingResponse
-	6,  // 27: agent.public.v1.AgentPublic.IngestContainers:output_type -> agent.public.v1.IngestContainersResponse
-	11, // 28: agent.public.v1.AgentPublic.GetNode:output_type -> agent.public.v1.Node
-	30, // 29: agent.public.v1.AgentPublic.NewStream:output_type -> google.protobuf.Empty
-	30, // 30: agent.public.v1.AgentPublic.CloseStream:output_type -> google.protobuf.Empty
-	14, // 31: agent.public.v1.AgentPublic.GetStream:output_type -> agent.public.v1.StreamState
-	14, // 32: agent.public.v1.AgentPublic.ListStreams:output_type -> agent.public.v1.StreamState
-	9,  // 33: agent.public.v1.AgentPublic.GetContainerLogs:output_type -> agent.public.v1.GetContainerLogsResponse
-	7,  // 34: agent.public.v1.AgentPublic.StreamContainerLogs:output_type -> agent.public.v1.LogLine
-	21, // 35: agent.public.v1.AgentPublic.CreateVolume:output_type -> agent.public.v1.CreateVolumeResponse
-	24, // 36: agent.public.v1.AgentPublic.ListVolumes:output_type -> agent.public.v1.ListVolumesResponse
-	18, // 37: agent.public.v1.AgentPublic.CreateContainer:output_type -> agent.public.v1.CreateContainerResponse
-	30, // 38: agent.public.v1.AgentPublic.StartContainer:output_type -> google.protobuf.Empty
-	30, // 39: agent.public.v1.AgentPublic.StopContainer:output_type -> google.protobuf.Empty
-	30, // 40: agent.public.v1.AgentPublic.RemoveContainer:output_type -> google.protobuf.Empty
-	25, // [25:41] is the sub-list for method output_type
-	9,  // [9:25] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for method output_type
+	9,  // [9:9] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
 	9,  // [9:9] is the sub-list for extension extendee
 	0,  // [0:9] is the sub-list for field type_name
@@ -1660,7 +1608,7 @@ func file_agent_public_proto_init() {
 			NumEnums:      0,
 			NumMessages:   30,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   0,
 		},
 		GoTypes:           file_agent_public_proto_goTypes,
 		DependencyIndexes: file_agent_public_proto_depIdxs,
