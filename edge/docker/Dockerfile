@@ -11,19 +11,18 @@ RUN npm install
 COPY orchestrator_ui/ .
 RUN npm run build
 
-FROM nginx:stable-alpine AS runner
+# The Orchestrator serves the UI and the API from one listener (one origin), so
+# there is no separate web server in the image.
+FROM alpine:3.20 AS runner
 
 # Target architecture is injected by BuildKit
 ARG TARGETARCH
 
-# Copy the static build output to Nginx's web root
-COPY --from=uibuilder /app/dist /usr/share/nginx/html
-COPY bin/orch-server-linux-${TARGETARCH} /usr/local/bin/orch-server
+# CA certificates: the Orchestrator makes outbound HTTPS calls (GitHub, cloud).
+RUN apk add --no-cache ca-certificates
 
-# Copy custom Nginx configuration to handle SPA routing (optional but recommended)
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY docker/run-all.sh /usr/local/bin/run-all.sh
-RUN chmod +x /usr/local/bin/run-all.sh
+COPY --from=uibuilder /app/dist /usr/share/underleaf/ui
+COPY bin/orch-server-linux-${TARGETARCH} /usr/local/bin/orch-server
 
 # Inside the container the orchestrator must bind all interfaces for Docker's
 # port publishing to reach it. It has no application-level auth, so exposure is
@@ -31,8 +30,9 @@ RUN chmod +x /usr/local/bin/run-all.sh
 # as orchestrator_ui/public/tools/install.sh does. Set UNDERLEAF_CLUSTER_TOKEN
 # (and drop the insecure flag) before publishing 50100 to other hosts.
 ENV UNDERLEAF_BIND_ADDR=0.0.0.0 \
-    UNDERLEAF_INSECURE_ALLOW_REMOTE=1
+    UNDERLEAF_INSECURE_ALLOW_REMOTE=1 \
+    UNDERLEAF_UI_DIR=/usr/share/underleaf/ui
 
-# Expose port and start Nginx
-EXPOSE 80 50100
-CMD ["/usr/local/bin/run-all.sh"]
+# 9090: UI + REST API (one origin). 50100: agent gRPC.
+EXPOSE 9090 50100
+CMD ["/usr/local/bin/orch-server", "run"]

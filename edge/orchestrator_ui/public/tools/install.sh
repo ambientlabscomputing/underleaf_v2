@@ -150,11 +150,12 @@ if docker inspect underleaf >/dev/null 2>&1; then
     docker network disconnect bridge underleaf 2>/dev/null || true
     docker restart underleaf >/dev/null
     echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'."
+    echo "It keeps its current image. To switch to ${DOCKER_IMAGE}:${TAG} (UI and API on one port), run: docker rm -f underleaf, then re-run this installer. Note: that discards the orchestrator's state inside the old container."
 else
     echo "Starting orchestrator (HTTP :${HTTP_PORT}, gRPC :${GRPC_PORT}) ..."
     docker run -d \
         --network "$ORCH_NETWORK" \
-        -p "127.0.0.1:${HTTP_PORT}:80" \
+        -p "127.0.0.1:${HTTP_PORT}:9090" \
         -p "127.0.0.1:${GRPC_PORT}:50100" \
         --restart unless-stopped \
         --name underleaf "${DOCKER_IMAGE}:${TAG}"

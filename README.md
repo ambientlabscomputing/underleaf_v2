@@ -101,11 +101,11 @@ Interfaces
 | -------- | ------- | -------- |
 | gRPC | Unix socket management API for CLI | `unix:/tmp/undf-orch.sock` |
 | gRPC | Agent-Orchestrator communication | `:50100` |
-| http | REST API for the Orchestrator UI and integrations (JSON only, no static assets served) | `http://localhost:9090/api/v1/` |
+| http | REST API for the Orchestrator UI and integrations; the same listener serves the built UI at `/` (one origin, no CORS) | `http://localhost:9090/api/v1/` |
 
 #### Orchestrator UI
 
-Operator UI for managing your cluster. A standalone Vite dev server/SPA build — it is **not** served by the orchestrator process itself, it just calls the REST API above.
+Operator UI for managing your cluster. The orchestrator process serves the built UI and the REST API from one listener (`UNDERLEAF_UI_DIR`; the Docker image sets it), so the browser sees a single origin. In development, a Vite dev server proxies `/api` to the orchestrator.
 
 | Info | Value |
 | ---- | ----- |
@@ -117,9 +117,9 @@ Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI dev server (`npm run dev`) | `http://localhost:5183/` |
+| http | UI dev server (`npm run dev`, proxies `/api` to the orchestrator) | `http://localhost:5183/` |
+| http | UI as served by the orchestrator | `http://localhost:9090/` |
 
-No production static-hosting path is wired up for this UI yet (unlike Account UI, which nginx serves — see below); it's dev-server-only today.
 
 ### All Nodes
 

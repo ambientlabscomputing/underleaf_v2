@@ -8,7 +8,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Network isolation | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
 | 2 | Stream port denylist | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
-| 3 | One-origin UI + API | not started | none | none | none | none |
+| 3 | One-origin UI + API | in review | agent-A | rfd-5/track-a | none | 2026-11-04 |
 | 4 | Cluster CA, listener, `nodes add`, join | not started | none | none | none | none |
 | 5 | Agent link | not started | none | none | 4 | none |
 | 6 | Scoped API tokens | not started | none | none | 3 | none |
@@ -135,16 +135,39 @@ Environment notes for all agents:
 **Goal:** see the RFD [Migration](RFD-5.md#migration) and the relevant section for this step.
 
 **Acceptance:**
-- [ ] UI loads from the Orchestrator's single origin with no CORS configuration (evidence)
-- [ ] Log WebSockets work over that origin (evidence)
-- [ ] Dev-server workflow still works, or its replacement is documented
-- [ ] Common checks green; install.sh / Dockerfile / README updated
+- [x] UI loads from the Orchestrator's single origin with no CORS configuration (evidence)
+- [x] Log WebSockets work over that origin (evidence)
+- [x] Dev-server workflow still works, or its replacement is documented
+- [x] Common checks green; install.sh / Dockerfile / README updated
 
 ### Log
 
+#### 2026-11-04 · agent-A · UI and API from one listener
+- Did: Orchestrator REST server now serves the built UI from the API's own listener ([server.go](../edge/orchestrator/interface/rest/server.go) `newRouter`, [ui.go](../edge/orchestrator/interface/rest/ui.go)): `UNDERLEAF_UI_DIR` (set by the Docker image) points at the build; any non-API GET/HEAD gets the file or the SPA `index.html`; unknown `/api/v1/*` paths get a JSON 404 not the SPA; dotfiles never served; lookups confined by `http.Dir`; `index.html` is `no-cache`, `assets/*` `immutable`. **CORS removed** (`gin-contrib/cors` dropped from the router, `go.mod`/`go.sum` tidied: only that dependency left). Guards **not weakened**: Host/Origin/Content-Type run first on every request including assets and WebSocket upgrades. The Origin policy gained one rule, `sameOrigin` ([security.go](../edge/orchestrator/interface/rest/security.go)): an Origin is accepted if its authority equals the request's `Host` *and* that Host is itself loopback-allowed, so the UI works on whatever port it is published on with no configuration; it is also what the WebSocket upgrader now uses (`originPermitted`). Added `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`, `nosniff` (a no-login UI that can deploy workloads must not be frameable). A `logSource` seam lets tests run the real WebSocket route without an agent.
+  Dockerfile: **nginx removed** ([Dockerfile](../edge/docker/Dockerfile) now `alpine:3.20` + `ca-certificates` running only `orch-server`; `docker/nginx.conf` and `docker/run-all.sh` deleted; image 93 MB -> 41 MB). Container serves UI + API on `:9090`, gRPC `:50100`. `install.sh` and `make docker-run` publish `127.0.0.1:${HTTP_PORT}:9090` (was `:80`). UI: API base is relative (`/api/v1`), the log WebSocket URL is derived from `window.location` (this also fixes it pointing at `/api/v2`, which the server never served); `vite.config.ts` proxies `/api` with `ws: true` to `ORCHESTRATOR_URL` (default `http://127.0.0.1:9090`). Fixed the two baseline TypeScript errors that made `npm run build` (hence the image build) fail ([PageShell.tsx](../edge/orchestrator_ui/src/components/PageShell.tsx), [theme.ts](../edge/orchestrator_ui/src/components/theme/theme.ts), MUI 9 API changes). READMEs updated (root, orchestrator Security model, UI).
+- Verified:
+  - `go test ./edge/orchestrator/interface/rest -count=1 -v`: 12 tests pass, new ones: `TestUIAndAPIShareOneOrigin` (UI, SPA fallback, asset caching, API and API-404 on one host:port), `TestNoCORSHeadersAreEverSent` (no `Access-Control-*` for any origin; foreign preflight -> 403), `TestUIAssetsAreBehindTheSameGuards` (rebound Host -> 403 on `/`, assets and API; foreign Origin -> 403 on UI; form POST -> 415 even same-origin; same-origin JSON POST reaches the handler (400); other-port origin -> 403; POST to a UI path -> 405), `TestUIDoesNotServeFilesOutsideItsRoot` (`/.env`, `/../secret.txt`, encoded variants never leak; security headers present), `TestLogWebSocketWorksOnTheUIOrigin` (real gorilla client: upgrade with same-origin, no-Origin and dev-origin; receives both lines), `TestLogWebSocketStillRejectsForeignOriginsAndHosts` (foreign origin, other port, rebound Host x3 -> HTTP 403), `TestSameOrigin` (13 cases incl. ipv6, opaque `null`, path, scheme). Pre-existing guard tests untouched and passing. Mutation check: making `originPermitted` ignore `sameOrigin` fails `TestUIAssetsAreBehindTheSameGuards` and `TestLogWebSocketWorksOnTheUIOrigin`.
+  - Real image, real browser: `docker build -f docker/Dockerfile` (context = scratch copy, `bin/orch-server-linux-arm64` cross-built) succeeds with the real `npm run build` (tsc + vite). Started via the install.sh docker block (`rfd5-a-*` names, host `127.0.0.1:15291`). `curl`: `/` 200 `text/html`, `Cache-Control: no-cache`, `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`; `/api/v1/health` 200 `{"status":"OK"}`; `/containers` (SPA route) 200 html; 0 `Access-Control-*` headers; foreign `Origin` -> 403, `Host: evil.example` -> 403; `ps` shows no nginx, `netstat`: only `:9090` and `:50100`. In the browser pane at `http://127.0.0.1:15291/`: the UI rendered ("No nodes registered yet", i.e. the nodes call succeeded), network log shows only same-origin requests (`/`, `/assets/index-*.js`, `/assets/index-*.css`, `/api/v1/nodes`, `/api/v1/health`, all 200), no console errors, and `new WebSocket('ws://127.0.0.1:15291/api/v1/containers/abc/logs/stream')` from the page upgrades and delivers a message (the relay's JSON error, since no agent was running).
+  - Dev-server workflow: `ORCHESTRATOR_URL=http://127.0.0.1:15291 npx vite` and the browser at `http://localhost:5183/`: page renders; `fetch('/api/v1/nodes')` 200, `POST /api/v1/deployments {}` 400 (reached the handler through the guards), and a WebSocket through the Vite proxy opens and delivers a message. So `make ui-run`/`make run` keep working with no CORS and no `VITE_API_URL`.
+  - After the move, a stand-in workload on another network can reach `http://<orchestrator-ip>:9090/api/v1/health` (it is now a published port); see Open issues. `wget https://github.com` from the container works (CA certs present).
+  - `go build ./...`, `go build -tags devmode ./...`, `go vet ./...`, `go test ./...` pass; `gofmt -l` empty; `npx tsc -b` 0 errors.
+- Next: step 6.
+- Blocked: none
+
 ### Decisions and deviations
 
+- **nginx removed, not reduced.** One listener is the point (a tunnel exposes one port); keeping nginx as a reverse proxy would add a second process and a second set of headers for nothing. The final image stage is plain alpine.
+- **UI directory by env, not `go:embed`.** Embedding needs the UI built before `go build`, which would break `go build ./...` on a clean checkout and the CI binary matrix (which builds `orch-server` without Node). A runtime directory (`UNDERLEAF_UI_DIR`) keeps the Go build independent; the host `orch-server` from `make run` serves API only and the UI comes from Vite.
+- **No CORS at all** rather than a tighter CORS: with a proxy in dev and same-origin in prod there is no legitimate cross-origin caller. `VITE_API_URL` (direct-to-API dev) now requires `UNDERLEAF_ALLOWED_ORIGINS`.
+- **Same-origin rule instead of listing the published port.** `install.sh` allows any `HTTP_PORT`, so a static Origin allowlist cannot cover the UI's own origin; comparing Origin to the already-validated Host is exact and cannot admit a foreign page. This is the only change to the guards, and it only adds the server's own origin.
+- **Upgrade path for existing installs**: an old container keeps its old image (and `:80`-published UI that could never reach the API); `install.sh` prints how to switch. Not automated because the orchestrator's state (db, certs) lives in the container filesystem and recreating loses it.
+- **UI errors fixed outside "step scope"**: the two TypeScript errors were baseline blockers for building the image; minimal MUI 9 migrations, no behaviour change. `eslint` still reports 8 pre-existing `no-restricted-imports` errors in `pages/` (untouched).
+
 ### Open issues
+
+- **Published port = reachable by workloads (compounds step 1's open issue).** Before step 3 the REST port (`:9090` in the container) was *not* published, so a workload could not reach it; now UI and API share the published port, so a workload on another network can reach the REST API through the Orchestrator's container IP (verified above), subject only to the Host/Origin/Content-Type guards, which an attacker controls. Same underlying cause and same candidate fixes as step 1; it needs a human decision before the single-node Docker install can be called isolated. Token scopes (step 6) do not help on the no-login UI path.
+- The Docker install still keeps the orchestrator's state (db, certs) in the container filesystem (no volume), and `orcli` on the host cannot reach the container's unix socket; both pre-existing, untouched.
+- Not verified: the full `install.sh` (only its docker block), Linux, amd64 image, the `ufctl connect` use of this origin (step 7b).
 
 ## Step 4: Cluster CA, listener, `nodes add`, join
 

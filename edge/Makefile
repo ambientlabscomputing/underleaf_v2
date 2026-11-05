@@ -58,7 +58,7 @@ docker-build:
 ## docker-run: Build and run the Docker container
 docker-run: docker-build
 	-docker network create underleaf-control
-	docker run --network underleaf-control -p 127.0.0.1:9090:80 -p 127.0.0.1:50100:50100 underleaf:latest
+	docker run --network underleaf-control -p 127.0.0.1:9090:9090 -p 127.0.0.1:50100:50100 underleaf:latest
 
 ## docker-push: Push the Docker image to GitHub Container Registry
 docker-push:

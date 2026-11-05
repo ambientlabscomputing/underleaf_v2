@@ -1,6 +1,8 @@
 
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:9090/api/v1';
+// Same-origin by default: the Orchestrator serves this UI and the API from one
+// origin (and `npm run dev` proxies /api to it), so no CORS is involved.
+const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
 
 export class ApiError extends Error {
     status: number;

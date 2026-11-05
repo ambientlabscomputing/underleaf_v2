@@ -24,10 +24,11 @@ export const logsService = {
   },
 };
 
-// Build a WebSocket URL from the REST BASE_URL.
+// Build a WebSocket URL from the REST base URL (same origin by default).
 const wsBase = (() => {
-  const base = import.meta.env.VITE_API_URL ?? 'http://localhost:9090/api/v2';
-  return base.replace(/^http/, 'ws');
+  const url = new URL(import.meta.env.VITE_API_URL ?? '/api/v1', window.location.href);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString().replace(/\/$/, '');
 })();
 
 export function openLogStream(dockerId: string, sinceMs?: number): WebSocket {

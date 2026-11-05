@@ -99,10 +99,13 @@ export const theme = createTheme({
           fontWeight: 500,
           borderRadius: 6,
         },
-        containedPrimary: {
-          '&:hover': { background: primary.light },
-        },
       },
+      variants: [
+        {
+          props: { variant: 'contained', color: 'primary' },
+          style: { '&:hover': { background: primary.light } },
+        },
+      ],
     },
 
     MuiIconButton: {
