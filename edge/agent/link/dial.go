@@ -45,10 +45,10 @@ func NewDialer(cfg utils.Config, localNodeID func() (string, error)) func(ctx co
 		if err != nil {
 			return nil, fmt.Errorf("this node is not registered with the Orchestrator yet (run `ufagent register`): %w", err)
 		}
-		conn, err := grpc.NewClient(utils.OrchestratorLocalAddr(), append([]grpc.DialOption{
+		conn, err := grpc.NewClient(utils.OrchestratorLocalAddr(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 			grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 30 * time.Second, Timeout: 10 * time.Second, PermitWithoutStream: true}),
-		}, utils.ClusterAuthDialOptions()...)...)
+		)
 		if err != nil {
 			return nil, err
 		}

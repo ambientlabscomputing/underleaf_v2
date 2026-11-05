@@ -43,9 +43,9 @@ func (s *OrchestratorRESTServer) Serve() {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
 
-	// The REST API is unauthenticated, so it stays on loopback unless the
-	// operator explicitly opts in (see utils.CheckBind).
-	if err := utils.CheckBind(utils.BindAddr(), false); err != nil {
+	// The REST API is unauthenticated, so it stays on loopback (the Docker
+	// image is the one recorded exception; see utils.CheckLocalBind).
+	if err := utils.CheckLocalBind(utils.BindAddr()); err != nil {
 		panic(fmt.Sprintf("Server failed to start: %v", err))
 	}
 	addr := net.JoinHostPort(utils.BindAddr(), strconv.Itoa(int(config.Http.Port)))

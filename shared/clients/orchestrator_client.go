@@ -44,8 +44,7 @@ func NewOrchestratorClient() (*OrchestratorClient, error) {
 		// node).
 		return nil, fmt.Errorf("cluster membership state is unreadable: %w", err)
 	}
-	conn, err := grpc.NewClient(utils.OrchestratorLocalAddr(),
-		append([]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}, utils.ClusterAuthDialOptions()...)...)
+	conn, err := grpc.NewClient(utils.OrchestratorLocalAddr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}

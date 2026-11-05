@@ -28,21 +28,21 @@ type OrchestratorGRPCPublicServer struct {
 
 // Serve starts the gRPC public server on TCP for agent communication.
 func (s *OrchestratorGRPCPublicServer) Serve() {
-	lis, err := utils.ListenTCP(tcpPort, true)
+	lis, err := utils.ListenLocal(tcpPort)
 	if err != nil {
 		panic(fmt.Sprintf("grpc_public: failed to listen on port %s: %v", tcpPort, err))
 	}
 
-	grpcServer := grpc.NewServer(append([]grpc.ServerOption{
+	grpcServer := grpc.NewServer(
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{MinTime: 10 * time.Second, PermitWithoutStream: true}),
 		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 30 * time.Second, Timeout: 10 * time.Second}),
-	}, utils.ClusterAuthServerOptions()...)...)
+	)
 	grpc_public.RegisterOrchestratorPublicServer(grpcServer, s)
 	if s.Link != nil {
 		agentpb.RegisterAgentLinkServer(grpcServer, s.Link)
 	}
 
-	fmt.Printf("gRPC public server listening on %s (cluster token required: %t)\n", lis.Addr(), utils.ClusterToken() != "")
+	fmt.Printf("gRPC local listener on %s (unauthenticated; loopback only outside the Docker image)\n", lis.Addr())
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(fmt.Sprintf("grpc_public: server failed: %v", err))
 	}
