@@ -10,10 +10,11 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	agentpb "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 // TODO: we need to grab this dynamically from the db, ok for now with one node only mode
-const agentAddr = "localhost:50101"
+const agentAddr = "127.0.0.1:50101"
 
 // AgentClient is a gRPC client for the AgentPublic service.
 type AgentClient struct {
@@ -22,7 +23,7 @@ type AgentClient struct {
 }
 
 func NewAgentClient() (*AgentClient, error) {
-	conn, err := grpc.NewClient(agentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(agentAddr, append([]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}, utils.ClusterAuthDialOptions()...)...)
 	if err != nil {
 		return nil, err
 	}

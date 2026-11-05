@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/ui"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/migrator"
@@ -46,9 +48,47 @@ func (r *Repository) Start() error {
 	return r.Migrator.Migrate()
 }
 
+// sqliteLimitAttached is SQLITE_LIMIT_ATTACHED.
+const sqliteLimitAttached = 7
+
+// openReadOnly opens a throwaway connection that cannot modify anything.
+// mode=ro stops writes to the database file, but ATTACH DATABASE '<path>' would
+// still create/write an arbitrary file, so ATTACH is disabled by capping
+// attached databases at zero. (PRAGMA query_only is not enough: a query can
+// switch it back off.)
+func (r *Repository) openReadOnly(ctx context.Context) (*sql.DB, *sql.Conn, error) {
+	cfg := utils.GetConfig(utils.OrchestratorConfig)
+	u := url.URL{Opaque: cfg.DBPath, Scheme: "file", RawQuery: "mode=ro"}
+	db, err := sql.Open("sqlite", u.String())
+	if err != nil {
+		return nil, nil, err
+	}
+	db.SetMaxOpenConns(1)
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		db.Close()
+		return nil, nil, err
+	}
+	if _, err := sqlite.Limit(conn, sqliteLimitAttached, 0); err != nil {
+		conn.Close()
+		db.Close()
+		return nil, nil, err
+	}
+	return db, conn, nil
+}
+
+// Query runs an ad-hoc read-only SQL query (dev tooling only; see
+// grpc_private/sql_dev.go). Writes and ATTACH are rejected.
 func (r *Repository) Query(query string) (string, error) {
 	ui.Debug("Running SQL query: %s", query)
-	rows, err := r.db.Query(query)
+	db, conn, err := r.openReadOnly(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("repository: open read-only db: %w", err)
+	}
+	defer db.Close()
+	defer conn.Close()
+
+	rows, err := conn.QueryContext(context.Background(), query)
 	if err != nil {
 		ui.PrintError("Sql query error: %v", err)
 		return "", fmt.Errorf("repository: run sql: %w", err)

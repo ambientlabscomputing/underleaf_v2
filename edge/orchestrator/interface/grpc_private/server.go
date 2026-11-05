@@ -3,8 +3,6 @@ package grpc_private
 import (
 	"context"
 	"fmt"
-	"net"
-	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -25,11 +23,7 @@ type OrchestratorGRPCPrivateServer struct {
 
 // Serve starts the gRPC private server on a unix socket for CLI access.
 func (s *OrchestratorGRPCPrivateServer) Serve() {
-	if err := os.Remove(unixSocketPath); err != nil && !os.IsNotExist(err) {
-		panic(fmt.Sprintf("grpc_private: failed to remove stale socket: %v", err))
-	}
-
-	lis, err := net.Listen("unix", unixSocketPath)
+	lis, err := utils.ListenUnixPrivate(unixSocketPath)
 	if err != nil {
 		panic(fmt.Sprintf("grpc_private: failed to listen on unix socket: %v", err))
 	}
@@ -72,15 +66,6 @@ func (s *OrchestratorGRPCPrivateServer) GetNodes(_ context.Context, req *GetNode
 	}
 	nodesResp.Count = int64(count)
 	return nodesResp, nil
-}
-
-// SqlQuery implements OrchestratorPrivateServer.
-func (s *OrchestratorGRPCPrivateServer) SqlQuery(ctx context.Context, req *SqlQueryRequest) (*SqlQueryResponse, error) {
-	result, err := s.Service.Query(req.Query)
-	if err != nil {
-		return nil, err
-	}
-	return &SqlQueryResponse{Result: result}, nil
 }
 
 // TriggerIngest implements OrchestratorPrivateServer — tells the local agent to ingest its Docker containers.

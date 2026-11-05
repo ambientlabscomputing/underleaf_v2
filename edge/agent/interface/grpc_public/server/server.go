@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -14,9 +13,10 @@ import (
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/lib/conn_client"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
-const tcpAddr = ":50101"
+const tcpPort = "50101"
 
 type AgentGRPCPublicServer struct {
 	grpc_public.UnimplementedAgentPublicServer
@@ -25,15 +25,15 @@ type AgentGRPCPublicServer struct {
 
 // Serve starts the gRPC public server on TCP for orchestrator communication.
 func (s *AgentGRPCPublicServer) Serve() {
-	lis, err := net.Listen("tcp", tcpAddr)
+	lis, err := utils.ListenTCP(tcpPort, true)
 	if err != nil {
-		panic(fmt.Sprintf("grpc_public: failed to listen on %s: %v", tcpAddr, err))
+		panic(fmt.Sprintf("grpc_public: failed to listen on port %s: %v", tcpPort, err))
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(utils.ClusterAuthServerOptions()...)
 	grpc_public.RegisterAgentPublicServer(grpcServer, s)
 
-	fmt.Printf("gRPC public server listening on %s\n", tcpAddr)
+	fmt.Printf("gRPC public server listening on %s (cluster token required: %t)\n", lis.Addr(), utils.ClusterToken() != "")
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(fmt.Sprintf("grpc_public: server failed: %v", err))
 	}

@@ -11,8 +11,13 @@ import (
 )
 
 var wsUpgrader = websocket.Upgrader{
-	// Allow all origins for dev; tighten in production.
-	CheckOrigin: func(r *http.Request) bool { return true },
+	// Browsers always send Origin on WebSocket handshakes and aren't bound by
+	// CORS here, so enforce the same allowlist as the REST API. Non-browser
+	// clients omit Origin.
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		return origin == "" || originAllowed(origin)
+	},
 }
 
 func (s *OrchestratorRESTServer) RegisterLogRoutes(router *gin.RouterGroup, _ *service.AppService) {

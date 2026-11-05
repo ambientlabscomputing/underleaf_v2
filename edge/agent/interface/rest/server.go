@@ -2,7 +2,9 @@ package rest
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -23,7 +25,10 @@ func (s *AgentRESTServer) Serve() {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
 
-	addr := fmt.Sprintf(":%d", config.Http.Port)
+	if err := utils.CheckBind(utils.BindAddr(), false); err != nil {
+		panic(fmt.Sprintf("Server failed to start: %v", err))
+	}
+	addr := net.JoinHostPort(utils.BindAddr(), strconv.Itoa(int(config.Http.Port)))
 
 	srv := &http.Server{
 		Addr:         addr,
@@ -33,7 +38,7 @@ func (s *AgentRESTServer) Serve() {
 		IdleTimeout:  utils.ParseDuration(config.Http.IdleTimeout),
 	}
 
-	fmt.Printf("Server actively listening on http://localhost:%d\n", config.Http.Port)
+	fmt.Printf("Server actively listening on http://%s\n", addr)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		panic(fmt.Sprintf("Server failed to start: %v", err))
 	}

@@ -9,9 +9,10 @@ import (
 
 	orchpb "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_public"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
-const orchestratorAddr = "localhost:50100"
+const orchestratorAddr = "127.0.0.1:50100"
 
 // OrchestratorClient is a gRPC client for the OrchestratorPublic service.
 type OrchestratorClient struct {
@@ -20,7 +21,7 @@ type OrchestratorClient struct {
 }
 
 func NewOrchestratorClient() (*OrchestratorClient, error) {
-	conn, err := grpc.NewClient(orchestratorAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(orchestratorAddr, append([]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}, utils.ClusterAuthDialOptions()...)...)
 	if err != nil {
 		return nil, err
 	}

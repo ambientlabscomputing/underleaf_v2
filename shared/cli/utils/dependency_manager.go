@@ -8,6 +8,7 @@ import (
 
 	agent_grpc_private "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_private"
 	grpc_private "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private"
+	sharedutils "github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 const (
@@ -29,6 +30,11 @@ func DependencyManagerBuilder(deps ...string) *DependencyManager {
 	for _, dep := range deps {
 		switch dep {
 		case RequireOrchPrivateClient:
+			// /tmp is shared: don't send requests (which can carry GitHub
+			// tokens) to a socket another user planted there.
+			if err := sharedutils.VerifyOwnSocket(privateSocketPath); err != nil {
+				panic("Failed to connect to orchestrator: " + err.Error())
+			}
 			conn, err := grpc.NewClient(
 				fmt.Sprintf("unix://%s", privateSocketPath),
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -61,6 +67,9 @@ func AgentDependencyManagerBuilder(deps ...string) *AgentDependencyManager {
 	for _, dep := range deps {
 		switch dep {
 		case RequireAgentPrivateClient:
+			if err := sharedutils.VerifyOwnSocket(agentSocketPath); err != nil {
+				panic("Failed to connect to agent: " + err.Error())
+			}
 			conn, err := grpc.NewClient(
 				fmt.Sprintf("unix://%s", agentSocketPath),
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
