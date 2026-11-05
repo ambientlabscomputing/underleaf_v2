@@ -15,6 +15,7 @@ Usage in a router:
 
 from functools import lru_cache
 
+from cloud_api.lib.assertion_lib import AssertionLib
 from cloud_api.lib.auth_lib import AuthLib
 from cloud_api.lib.conn_worker_client import ConnWorkerClient
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
@@ -40,6 +41,7 @@ from cloud_api.repository.usage_alert_repository import UsageAlertRepository
 from cloud_api.repository.usage_event_repository import UsageEventRepository
 from cloud_api.repository.user_repository import UserRepository
 from cloud_api.service.account_service import AccountService
+from cloud_api.service.assertion_service import AssertionService
 from cloud_api.service.auth_service import AuthService
 from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
@@ -133,6 +135,23 @@ def get_stripe_webhook_event_repo() -> StripeWebhookEventRepository:
 def get_auth_lib() -> AuthLib:
     """AuthLib is expensive to construct (RSA cert load/generate). One instance."""
     return AuthLib(get_user_repo())
+
+
+@lru_cache
+def get_assertion_lib() -> AssertionLib:
+    """Dedicated assertion signing keys. Independent of AuthLib's CA/JWT key."""
+    from cloud_api import app_config
+
+    if not app_config:
+        raise RuntimeError("App config not loaded")
+    cfg = app_config.assertion
+    return AssertionLib(
+        cfg.keys_dir,
+        issuer=cfg.issuer,
+        ttl_seconds=cfg.ttl_seconds,
+        rotate_after_days=cfg.rotate_after_days,
+        overlap_hours=cfg.overlap_hours,
+    )
 
 
 @lru_cache
@@ -343,6 +362,13 @@ def get_registration_service() -> RegistrationService:
         registration_repo=get_registration_repo(),
         cluster_repo=get_cluster_repo(),
         cert_lib=get_cert_lib(),
+    )
+
+
+@lru_cache
+def get_assertion_service() -> AssertionService:
+    return AssertionService(
+        assertion_lib=get_assertion_lib(), cluster_repo=get_cluster_repo()
     )
 
 

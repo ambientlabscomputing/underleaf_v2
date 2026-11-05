@@ -1,0 +1,24 @@
+{
+  "comment": "Issued by Go shared/assertion Signer with a throwaway fixed-seed key; verified by cloud_api tests. Regenerate: UPDATE_ASSERTION_VECTORS=1 go test ./shared/assertion",
+  "now": 1790000000,
+  "audience": "cluster_go",
+  "subject": "acct_go",
+  "scopes": [
+    "admin"
+  ],
+  "jwks": {
+    "keys": [
+      {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "kid": "--6IM5l0OosLj9yWskISYhUA3n_3CURQkmrYMSha_ck",
+        "alg": "EdDSA",
+        "use": "sig",
+        "x": "6kpsY-KcUgq-9VB7Ey7F-ZVHdq6-vnuSQh7qaRRG0iw",
+        "not_before": 1789996400,
+        "not_after": 1790086400
+      }
+    ]
+  },
+  "token": "eyJhbGciOiJFZERTQSIsInR5cCI6InVuZGVybGVhZi1hc3NlcnRpb24rand0Iiwia2lkIjoiLS02SU01bDBPb3NMajl5V3NrSVNZaFVBM25fM0NVUlFrbXJZTVNoYV9jayJ9.eyJpc3MiOiJ1bmRlcmxlYWYtY2xvdWQiLCJzdWIiOiJhY2N0X2dvIiwiYXVkIjoiY2x1c3Rlcl9nbyIsInNjb3BlcyI6WyJhZG1pbiJdLCJpYXQiOjE3OTAwMDAwMDAsImV4cCI6MTc5MDAwMDA2MCwianRpIjoianRpLWdvLWZpeHR1cmUifQ.sqzaXm0K2zTPSRLreLix3F0_C9vT64opEbiIieDIn9hTJMkcSyynYD9vZWu44ZHOhmp4Kczz1scH863nCrL9AA"
+}
