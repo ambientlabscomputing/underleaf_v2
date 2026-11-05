@@ -9,7 +9,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 | 1 | Network isolation | not started | none | none | none | none |
 | 2 | Stream port denylist | not started | none | none | none | none |
 | 3 | One-origin UI + API | not started | none | none | none | none |
-| 4 | Cluster CA, listener, `nodes add`, join | not started | none | none | none | none |
+| 4 | Cluster CA, listener, `nodes add`, join | in progress | agent-B | rfd-5/track-b | none | 2026-11-04 |
 | 5 | Agent link | not started | none | none | 4 | none |
 | 6 | Scoped API tokens | not started | none | none | 3 | none |
 | 7a | Cloud: split signing key, publish key set | not started | none | none | none | none |
