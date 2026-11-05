@@ -355,6 +355,12 @@ Scope note: this is the **edge half**. The cloud half (forwarding endpoint, mint
 - Next: coordinator merge; cloud half (Open issues) and install/Docker wiring.
 - Blocked: none
 
+#### 2026-11-04 21:00 · agent-C · correction to the setup entry
+- Did: the setup entry above says row 7b was set to `in progress` before the work; that is not true of the commit history. I changed the row only in the final commit (straight to `in review`), so no `in progress` state was ever committed on this branch. Recorded here instead of editing the earlier entry.
+- Verified: `git log --oneline -- RFDs/RFD-5-journal.md` on `rfd-5/track-c` shows no 7b-only row change before the step 7b commit.
+- Next: none
+- Blocked: none
+
 ### Decisions and deviations
 
 - **Transport of the assertion: `X-Underleaf-Assertion` header, not `Authorization`.** `Authorization: Bearer` already means a local API token (step 6); keeping them separate means a token can never be mistaken for an assertion or vice versa, and the local listener can reject the assertion header outright. One assertion (one jti) per forwarded request, so a browser session is many assertions; the cloud must strip any client-supplied value.
