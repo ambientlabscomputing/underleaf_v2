@@ -12,7 +12,7 @@ Base: main @ 782f917 · Integration branch: rfd-5/integration · Last updated: 2
 | 4 | Cluster CA, listener, `nodes add`, join | not started | none | none | none | none |
 | 5 | Agent link | not started | none | none | 4 | none |
 | 6 | Scoped API tokens | not started | none | none | 3 | none |
-| 7a | Cloud: split signing key, publish key set | not started | none | none | none | none |
+| 7a | Cloud: split signing key, publish key set | in progress | agent-C | rfd-5/track-c | none | 2026-11-04 |
 | 7b | Edge: assertions, remote listener, `ufctl connect` | not started | none | none | 3, 6, 7a | none |
 | 8 | Retire stopgaps | not started | none | none | 5 | none |
 
