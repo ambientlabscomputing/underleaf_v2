@@ -36,6 +36,15 @@ ENV UNDERLEAF_BIND_ADDR=0.0.0.0 \
     UNDERLEAF_CONTAINER=1 \
     UNDERLEAF_UI_DIR=/usr/share/underleaf/ui
 
+# The Orchestrator keeps its state in paths relative to its working directory:
+# the database (orchestrator.db, which also holds API tokens), the cluster CA
+# and node certificates (cluster-ca/), and cloud-issued certs (certs/). Make that
+# directory a volume so the state survives `docker rm` and image upgrades.
+# install.sh mounts a named volume here; without one Docker creates an anonymous
+# volume, which also survives `docker rm` but is easy to lose track of.
+WORKDIR /data
+VOLUME /data
+
 # 9090: UI + REST API (one origin). 50100: agent gRPC.
 EXPOSE 9090 50100
 CMD ["/usr/local/bin/orch-server", "run"]

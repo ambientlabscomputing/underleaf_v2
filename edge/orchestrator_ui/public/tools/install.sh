@@ -176,24 +176,86 @@ docker pull "${DOCKER_IMAGE}:${TAG}"
 ORCH_NETWORK="underleaf-control"
 docker network inspect "$ORCH_NETWORK" >/dev/null 2>&1 || docker network create "$ORCH_NETWORK" >/dev/null
 
-if docker inspect underleaf >/dev/null 2>&1; then
-    # Existing install: move the container off the default bridge in place
-    # (keeps its data) rather than recreating it. The restart is required:
-    # without it Docker leaves the published ports bound to the old network
-    # endpoint and the host can no longer reach the container.
-    docker network connect "$ORCH_NETWORK" underleaf 2>/dev/null || true
-    docker network disconnect bridge underleaf 2>/dev/null || true
-    docker restart underleaf >/dev/null
-    echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'."
-    echo "It keeps its current image. To switch to ${DOCKER_IMAGE}:${TAG} (UI and API on one port), run: docker rm -f underleaf, then re-run this installer. Note: that discards the orchestrator's state inside the old container."
-else
+# The orchestrator's state (database, API tokens, cluster CA, certificates) lives
+# in /data inside the container. Keep it in a named volume so it survives
+# recreating the container or upgrading the image.
+DATA_VOLUME="underleaf-data"
+
+run_orchestrator() {
     echo "Starting orchestrator (HTTP :${HTTP_PORT}, gRPC :${GRPC_PORT}) ..."
+    docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1 || docker volume create "$DATA_VOLUME" >/dev/null
     docker run -d \
         --network "$ORCH_NETWORK" \
+        -v "${DATA_VOLUME}:/data" \
         -p "127.0.0.1:${HTTP_PORT}:9090" \
         -p "127.0.0.1:${GRPC_PORT}:50100" \
         --restart unless-stopped \
         --name underleaf "${DOCKER_IMAGE}:${TAG}"
+}
+
+has_data_volume() {
+    # Only our named volume counts: the image also declares VOLUME /data, so a
+    # container started by hand without -v has an anonymous volume there.
+    [ -n "$(docker inspect -f '{{range .Mounts}}{{if and (eq .Destination "/data") (eq .Name "'"$DATA_VOLUME"'")}}x{{end}}{{end}}' underleaf 2>/dev/null)" ]
+}
+
+if docker inspect underleaf >/dev/null 2>&1; then
+    if has_data_volume; then
+        # Existing install that already keeps its state in the volume: only move
+        # it onto the control network. The restart is required: without it Docker
+        # leaves the published ports bound to the old network endpoint and the
+        # host can no longer reach the container. To upgrade the image, run
+        # `docker rm -f underleaf` and re-run this installer; the volume is kept.
+        docker network connect "$ORCH_NETWORK" underleaf 2>/dev/null || true
+        docker network disconnect bridge underleaf 2>/dev/null || true
+        docker restart underleaf >/dev/null
+        echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'. Its state is in volume '${DATA_VOLUME}'."
+        echo "To switch to ${DOCKER_IMAGE}:${TAG}: docker rm -f underleaf, then re-run this installer (the state is kept)."
+    elif [ "${UNDERLEAF_MIGRATE_STATE:-}" = "1" ]; then
+        # Older container: its state is in the container's own filesystem, which
+        # is lost when the container is removed. Copy it into the volume, keep the
+        # old container (stopped, renamed) as a backup, and start the new one.
+        BACKUP="underleaf-backup-$(date +%Y%m%d%H%M%S)"
+        TMP_STATE="$(mktemp -d)"
+        echo "Stopping 'underleaf' and copying its state into volume '${DATA_VOLUME}' ..."
+        docker stop underleaf >/dev/null
+        for F in orchestrator.db orchestrator.db-wal orchestrator.db-shm certs cluster-ca; do
+            # Older images keep state in the working directory (/); a container
+            # started by hand from the new image keeps it in /data.
+            docker cp "underleaf:/${F}" "${TMP_STATE}/${F}" >/dev/null 2>&1 \
+                || docker cp "underleaf:/data/${F}" "${TMP_STATE}/${F}" >/dev/null 2>&1 || true
+        done
+        if [ ! -e "${TMP_STATE}/orchestrator.db" ]; then
+            echo "Could not find orchestrator.db in the old container; leaving it untouched (restarting it)." >&2
+            docker start underleaf >/dev/null
+            rm -rf "$TMP_STATE"
+            exit 1
+        fi
+        docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1 || docker volume create "$DATA_VOLUME" >/dev/null
+        if ! docker run --rm --entrypoint sh -v "${DATA_VOLUME}:/data" -v "${TMP_STATE}:/src:ro" \
+                "${DOCKER_IMAGE}:${TAG}" -c 'cp -a /src/. /data/'; then
+            echo "Copying state into the volume failed; restarting the old container unchanged." >&2
+            docker start underleaf >/dev/null
+            rm -rf "$TMP_STATE"
+            exit 1
+        fi
+        rm -rf "$TMP_STATE"
+        docker rename underleaf "$BACKUP"
+        docker update --restart no "$BACKUP" >/dev/null
+        run_orchestrator
+        echo "Old container kept (stopped) as '${BACKUP}'. Remove it once you have checked the new install: docker rm ${BACKUP}"
+    else
+        # Older container whose state is only in its own filesystem. Do not
+        # recreate it on our own: that would discard the state.
+        docker network connect "$ORCH_NETWORK" underleaf 2>/dev/null || true
+        docker network disconnect bridge underleaf 2>/dev/null || true
+        docker restart underleaf >/dev/null
+        echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'."
+        echo "It keeps its current image, and its state is not in the '${DATA_VOLUME}' volume (removing the container could lose it)."
+        echo "To move to ${DOCKER_IMAGE}:${TAG} and keep the state, re-run with: UNDERLEAF_MIGRATE_STATE=1 (the old container is kept as a stopped backup)."
+    fi
+else
+    run_orchestrator
 fi
 
 echo "Done! UI available at http://localhost:${HTTP_PORT}"
