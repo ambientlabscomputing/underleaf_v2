@@ -292,5 +292,5 @@ fi
 
 echo "Done! UI available at http://localhost:${HTTP_PORT}"
 if [ "$CLUSTER_PUBLISH" != "none" ]; then
-    echo "To add a worker node: docker exec underleaf orcli nodes add --advertise <this-machine's-address>:${CLUSTER_PORT}"
+    echo "To add a worker node: orcli nodes add --advertise <this-machine's-address>:${CLUSTER_PORT}"
 fi
