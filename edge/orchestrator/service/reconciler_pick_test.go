@@ -89,6 +89,9 @@ func (a *fakeAgent) GetNode(context.Context) (*agentpb.Node, error) {
 func (a *fakeAgent) NewStream(context.Context, string, string, string, int) error {
 	return a.rec("new-stream")
 }
+func (a *fakeAgent) SetRemoteConnection(_ context.Context, id string) error {
+	return a.rec("set-remote-connection " + id)
+}
 func (a *fakeAgent) CloseStream(context.Context, string) error { return a.rec("close-stream") }
 func (a *fakeAgent) GetStream(context.Context, string) (*agentpb.StreamState, error) {
 	return &agentpb.StreamState{}, a.rec("get-stream")

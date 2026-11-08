@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"os"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/link"
@@ -36,6 +37,18 @@ func NewService(config utils.Config) Service {
 		cloudClient = clients.NewCloudClient()
 	}
 	nodes := NewNodeService(repo)
+
+	// The standing remote-access connection: when a manager-local agent links
+	// in, make sure the cloud has a "remote-access" connection for its node and
+	// tell the agent to hold it. Does nothing unless the remote listener is
+	// enabled and the cluster is registered with the cloud.
+	remoteConn := NewRemoteConnectionEnsurer(context.Background(), RemoteConnectionConfig{
+		Enabled: RemoteAccessEnabled,
+		Cloud:   CloudConnectionsFromCerts(config),
+		Agents:  hub,
+		Linked:  hub.Linked,
+	})
+	hub.OnLinked(remoteConn.NodeLinked)
 
 	return &AppService{
 		Repository:   repo,

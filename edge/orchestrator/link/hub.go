@@ -32,6 +32,19 @@ type Hub struct {
 	mu       sync.Mutex
 	sessions map[string]*session // node id -> live link
 	streams  map[string]*logStream
+	onLinked func(LinkInfo)
+}
+
+// LinkInfo describes one live link: who it is and what its agent said about
+// itself in the hello.
+type LinkInfo struct {
+	NodeID string
+	// Transport is "local" (the manager's own agent, on the loopback listener)
+	// or "cluster" (a worker, over mTLS).
+	Transport string
+	// RemoteTarget is true when the agent has a remote-access target
+	// configured, i.e. it can reach the Orchestrator's remote listener.
+	RemoteTarget bool
 }
 
 // NewHub returns an empty hub.
@@ -45,6 +58,7 @@ var _ clients.AgentDirectory = (*Hub)(nil)
 type session struct {
 	nodeID    string
 	transport string
+	remote    bool // the agent reported a remote-access target in its hello
 	send      func(*agentpb.OrchestratorMessage) error
 	sendMu    sync.Mutex
 
@@ -162,6 +176,36 @@ func (h *Hub) Drop(nodeID string) {
 	if s != nil {
 		s.close(errors.New("link dropped by the Orchestrator"))
 	}
+}
+
+// OnLinked registers fn to be called (in its own goroutine) each time a link
+// has been accepted and welcomed. There is at most one observer; a later call
+// replaces it. Call it before the listeners start.
+func (h *Hub) OnLinked(fn func(LinkInfo)) {
+	h.mu.Lock()
+	h.onLinked = fn
+	h.mu.Unlock()
+}
+
+func (h *Hub) notifyLinked(s *session) {
+	h.mu.Lock()
+	fn := h.onLinked
+	h.mu.Unlock()
+	if fn != nil {
+		go fn(LinkInfo{NodeID: s.nodeID, Transport: s.transport, RemoteTarget: s.remote})
+	}
+}
+
+// Links describes every live link, sorted by node id.
+func (h *Hub) Links() []LinkInfo {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	out := make([]LinkInfo, 0, len(h.sessions))
+	for _, s := range h.sessions {
+		out = append(out, LinkInfo{NodeID: s.nodeID, Transport: s.transport, RemoteTarget: s.remote})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].NodeID < out[j].NodeID })
+	return out
 }
 
 // Linked reports whether nodeID has a live link.

@@ -5,8 +5,9 @@ Assertion key set (RFD 5, "Assertion keys are fetched and cached").
 
 Unauthenticated on purpose: it publishes public keys only. Each key carries its
 `kid` and `not_before`/`not_after` so verifiers can keep a rotated-out key
-until it expires. There is intentionally no endpoint here that mints an
-assertion; attaching one to a tunnelled request is step 7b.
+until it expires. Nothing here mints an assertion: that happens only in
+GET /internal/remote-auth (interface/internal/remote_auth.py), behind nginx's
+auth_request, after the caller is authenticated and shown to own the cluster.
 """
 
 from fastapi import APIRouter, Depends, Response

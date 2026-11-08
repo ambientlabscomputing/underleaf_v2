@@ -57,7 +57,7 @@ fmt:
 install.sh:
 	./orchestrator_ui/public/tools/install.sh
 
-## install.sh-dev: run the Install script in development mode
+## install.sh-dev: run the Install script in development mode (it enables remote access on loopback, like a normal manager install)
 install.sh-dev: dev-clean
 	./orchestrator_ui/public/tools/install.sh develop
 
@@ -72,7 +72,7 @@ dev-clean:
 ui-run:
 	cd orchestrator_ui && npm run dev &
 
-## run: Run all services via overmind (ui→5183)
+## run: Run all services via overmind (ui→5183); the Procfile also turns on remote access on loopback (UNDERLEAF_REMOTE_ADDR / UNDERLEAF_REMOTE_TARGET = 127.0.0.1:50110)
 run: stop install-dev
 	overmind start
 

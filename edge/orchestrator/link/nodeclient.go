@@ -131,6 +131,12 @@ func (c *nodeClient) NewStream(ctx context.Context, connectionID, streamID, stre
 	}}})
 }
 
+func (c *nodeClient) SetRemoteConnection(ctx context.Context, connectionID string) error {
+	return c.okCall(ctx, "set_remote_connection", &agentpb.Command{Cmd: &agentpb.Command_SetRemoteConnection{SetRemoteConnection: &agentpb.SetRemoteConnection{
+		ConnectionId: connectionID,
+	}}})
+}
+
 func (c *nodeClient) CloseStream(ctx context.Context, streamID string) error {
 	return c.okCall(ctx, "close_stream", &agentpb.Command{Cmd: &agentpb.Command_CloseStream{CloseStream: &agentpb.CloseStreamRequest{StreamId: streamID}}})
 }

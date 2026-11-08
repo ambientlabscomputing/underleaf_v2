@@ -199,8 +199,22 @@ func (cc *ConnClient) establish(ctx context.Context, connectionID string) (*Live
 		return nil, fmt.Errorf("yamux client: %w", err)
 	}
 
-	if err := connWorkerHandshake(ctx, rawConn, connectionID); err != nil {
+	liveConn, err := cc.adopt(ctx, connectionID, rawConn, yam)
+	if err != nil {
 		yam.Close()
+		return nil, err
+	}
+	logger.Info("connection established successfully")
+	return liveConn, nil
+}
+
+// adopt identifies the dialed connection to the connection worker, records it
+// as the client's active connection and starts accepting the streams the cloud
+// opens on it. The accept loop is always started, but a client without a
+// remote target (the gateway client) closes every such stream unread, so only
+// the dedicated remote client ever reaches the Orchestrator's remote listener.
+func (cc *ConnClient) adopt(ctx context.Context, connectionID string, rawConn net.Conn, yam *yamux.Session) (*LiveConnection, error) {
+	if err := connWorkerHandshake(ctx, rawConn, connectionID); err != nil {
 		return nil, fmt.Errorf("handshake: %w", err)
 	}
 
@@ -214,10 +228,7 @@ func (cc *ConnClient) establish(ctx context.Context, connectionID string) (*Live
 	cc.connection = liveConn
 	cc.mu.Unlock()
 
-	// Accept remote-access streams the cloud opens on this connection.
 	go ServeRemoteStreams(ctx, yam, cc.remoteTargetAddr)
-
-	logger.Info("connection established successfully")
 	return liveConn, nil
 }
 

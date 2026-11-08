@@ -14,6 +14,7 @@ from cloud_api.interface.connections.connections import router as connections_ro
 from cloud_api.interface.deps import (
     x_subject_id_token_middleware_,
 )
+from cloud_api.interface.internal.remote_auth import router as remote_auth_router
 from cloud_api.interface.oauth.oauth import router as oauth_router
 from cloud_api.interface.plan_prices.plan_prices import router as plan_prices_router
 from cloud_api.interface.plans.plans import router as plans_router
@@ -25,6 +26,7 @@ from cloud_api.interface.stripe_webhooks.stripe_webhooks import (
 from cloud_api.interface.subscriptions.subscriptions import (
     router as subscriptions_router,
 )
+from cloud_api.interface.ufctl.ufctl import router as ufctl_router
 from cloud_api.lib.tls_lib import ensure_server_cert
 from cloud_api.service.usage_sync_loop import run_usage_sync_loop
 from cloud_api.service_manager import (
@@ -95,6 +97,8 @@ router.include_router(stream_router)
 router.include_router(registration_router)
 router.include_router(oauth_router)
 router.include_router(assertion_router)
+router.include_router(ufctl_router)
+router.include_router(remote_auth_router)
 router.include_router(stripe_webhooks_router)
 
 

@@ -52,6 +52,15 @@ export {
 } from './registration';
 
 export {
+  ufctlKeys,
+  useDeviceLoginRequest,
+  useApproveDeviceLogin,
+  useDenyDeviceLogin,
+  useDeviceKeys,
+  useRevokeDeviceKey,
+} from './ufctl';
+
+export {
   planKeys,
   planPriceKeys,
   usePlans,

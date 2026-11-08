@@ -109,10 +109,15 @@ type LinkHello struct {
 	// On the cluster listener the node id is the one in the client certificate
 	// and this field must be empty or equal to it. On the local listener (no
 	// certificate) it names the node and must be a local-transport node.
-	NodeId        string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	AgentVersion  string `protobuf:"bytes,2,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	NodeId       string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	AgentVersion string `protobuf:"bytes,2,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
+	// True when this agent has a remote-access target configured
+	// (UNDERLEAF_REMOTE_TARGET), i.e. it can reach the Orchestrator's remote
+	// listener. The Orchestrator only asks such an agent to hold the cluster's
+	// standing remote-access connection (SetRemoteConnection).
+	RemoteTargetConfigured bool `protobuf:"varint,3,opt,name=remote_target_configured,json=remoteTargetConfigured,proto3" json:"remote_target_configured,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *LinkHello) Reset() {
@@ -157,6 +162,13 @@ func (x *LinkHello) GetAgentVersion() string {
 		return x.AgentVersion
 	}
 	return ""
+}
+
+func (x *LinkHello) GetRemoteTargetConfigured() bool {
+	if x != nil {
+		return x.RemoteTargetConfigured
+	}
+	return false
 }
 
 type OrchestratorMessage struct {
@@ -381,6 +393,7 @@ type Command struct {
 	//	*Command_StopContainer
 	//	*Command_RemoveContainer
 	//	*Command_OpenLogStream
+	//	*Command_SetRemoteConnection
 	Cmd           isCommand_Cmd `protobuf_oneof:"cmd"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -574,6 +587,15 @@ func (x *Command) GetOpenLogStream() *OpenLogStream {
 	return nil
 }
 
+func (x *Command) GetSetRemoteConnection() *SetRemoteConnection {
+	if x != nil {
+		if x, ok := x.Cmd.(*Command_SetRemoteConnection); ok {
+			return x.SetRemoteConnection
+		}
+	}
+	return nil
+}
+
 type isCommand_Cmd interface {
 	isCommand_Cmd()
 }
@@ -642,6 +664,10 @@ type Command_OpenLogStream struct {
 	OpenLogStream *OpenLogStream `protobuf:"bytes,25,opt,name=open_log_stream,json=openLogStream,proto3,oneof"`
 }
 
+type Command_SetRemoteConnection struct {
+	SetRemoteConnection *SetRemoteConnection `protobuf:"bytes,26,opt,name=set_remote_connection,json=setRemoteConnection,proto3,oneof"`
+}
+
 func (*Command_Ping) isCommand_Cmd() {}
 
 func (*Command_GetStatus) isCommand_Cmd() {}
@@ -674,6 +700,57 @@ func (*Command_RemoveContainer) isCommand_Cmd() {}
 
 func (*Command_OpenLogStream) isCommand_Cmd() {}
 
+func (*Command_SetRemoteConnection) isCommand_Cmd() {}
+
+// SetRemoteConnection tells the agent which cloud connection is the cluster's
+// standing remote-access connection (RFD 5, Remote access). The agent keeps
+// that connection open (re-dialing on loss) on a client dedicated to it, so the
+// cloud can open a stream toward the agent at any time. Idempotent for the same
+// id; a different id switches to it and drops the old one. Answered with ok.
+type SetRemoteConnection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConnectionId  string                 `protobuf:"bytes,1,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetRemoteConnection) Reset() {
+	*x = SetRemoteConnection{}
+	mi := &file_agent_link_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetRemoteConnection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetRemoteConnection) ProtoMessage() {}
+
+func (x *SetRemoteConnection) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_link_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetRemoteConnection.ProtoReflect.Descriptor instead.
+func (*SetRemoteConnection) Descriptor() ([]byte, []int) {
+	return file_agent_link_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SetRemoteConnection) GetConnectionId() string {
+	if x != nil {
+		return x.ConnectionId
+	}
+	return ""
+}
+
 type OpenLogStream struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	StreamToken   string                 `protobuf:"bytes,1,opt,name=stream_token,json=streamToken,proto3" json:"stream_token,omitempty"` // capability for the LogStream sub-stream
@@ -685,7 +762,7 @@ type OpenLogStream struct {
 
 func (x *OpenLogStream) Reset() {
 	*x = OpenLogStream{}
-	mi := &file_agent_link_proto_msgTypes[6]
+	mi := &file_agent_link_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -697,7 +774,7 @@ func (x *OpenLogStream) String() string {
 func (*OpenLogStream) ProtoMessage() {}
 
 func (x *OpenLogStream) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_link_proto_msgTypes[6]
+	mi := &file_agent_link_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -710,7 +787,7 @@ func (x *OpenLogStream) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenLogStream.ProtoReflect.Descriptor instead.
 func (*OpenLogStream) Descriptor() ([]byte, []int) {
-	return file_agent_link_proto_rawDescGZIP(), []int{6}
+	return file_agent_link_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *OpenLogStream) GetStreamToken() string {
@@ -744,7 +821,7 @@ type CommandError struct {
 
 func (x *CommandError) Reset() {
 	*x = CommandError{}
-	mi := &file_agent_link_proto_msgTypes[7]
+	mi := &file_agent_link_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -756,7 +833,7 @@ func (x *CommandError) String() string {
 func (*CommandError) ProtoMessage() {}
 
 func (x *CommandError) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_link_proto_msgTypes[7]
+	mi := &file_agent_link_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -769,7 +846,7 @@ func (x *CommandError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandError.ProtoReflect.Descriptor instead.
 func (*CommandError) Descriptor() ([]byte, []int) {
-	return file_agent_link_proto_rawDescGZIP(), []int{7}
+	return file_agent_link_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CommandError) GetCode() int32 {
@@ -795,7 +872,7 @@ type ListStreamsResult struct {
 
 func (x *ListStreamsResult) Reset() {
 	*x = ListStreamsResult{}
-	mi := &file_agent_link_proto_msgTypes[8]
+	mi := &file_agent_link_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -807,7 +884,7 @@ func (x *ListStreamsResult) String() string {
 func (*ListStreamsResult) ProtoMessage() {}
 
 func (x *ListStreamsResult) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_link_proto_msgTypes[8]
+	mi := &file_agent_link_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -820,7 +897,7 @@ func (x *ListStreamsResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStreamsResult.ProtoReflect.Descriptor instead.
 func (*ListStreamsResult) Descriptor() ([]byte, []int) {
-	return file_agent_link_proto_rawDescGZIP(), []int{8}
+	return file_agent_link_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListStreamsResult) GetStreams() []*StreamState {
@@ -855,7 +932,7 @@ type CommandResult struct {
 
 func (x *CommandResult) Reset() {
 	*x = CommandResult{}
-	mi := &file_agent_link_proto_msgTypes[9]
+	mi := &file_agent_link_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -867,7 +944,7 @@ func (x *CommandResult) String() string {
 func (*CommandResult) ProtoMessage() {}
 
 func (x *CommandResult) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_link_proto_msgTypes[9]
+	mi := &file_agent_link_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -880,7 +957,7 @@ func (x *CommandResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandResult.ProtoReflect.Descriptor instead.
 func (*CommandResult) Descriptor() ([]byte, []int) {
-	return file_agent_link_proto_rawDescGZIP(), []int{9}
+	return file_agent_link_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CommandResult) GetRequestId() string {
@@ -1081,10 +1158,11 @@ const file_agent_link_proto_rawDesc = "" +
 	"\fAgentMessage\x122\n" +
 	"\x05hello\x18\x01 \x01(\v2\x1a.agent.public.v1.LinkHelloH\x00R\x05hello\x128\n" +
 	"\x06result\x18\x02 \x01(\v2\x1e.agent.public.v1.CommandResultH\x00R\x06resultB\x05\n" +
-	"\x03msg\"I\n" +
+	"\x03msg\"\x83\x01\n" +
 	"\tLinkHello\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
-	"\ragent_version\x18\x02 \x01(\tR\fagentVersion\"\xbf\x01\n" +
+	"\ragent_version\x18\x02 \x01(\tR\fagentVersion\x128\n" +
+	"\x18remote_target_configured\x18\x03 \x01(\bR\x16remoteTargetConfigured\"\xbf\x01\n" +
 	"\x13OrchestratorMessage\x128\n" +
 	"\awelcome\x18\x01 \x01(\v2\x1c.agent.public.v1.LinkWelcomeH\x00R\awelcome\x124\n" +
 	"\acommand\x18\x02 \x01(\v2\x18.agent.public.v1.CommandH\x00R\acommand\x121\n" +
@@ -1095,7 +1173,8 @@ const file_agent_link_proto_rawDesc = "" +
 	"\ttransport\x18\x02 \x01(\tR\ttransport\"'\n" +
 	"\x06Cancel\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"\xcb\t\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\xa7\n" +
+	"\n" +
 	"\aCommand\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x122\n" +
@@ -1118,8 +1197,11 @@ const file_agent_link_proto_rawDesc = "" +
 	"\x0fstart_container\x18\x16 \x01(\v2%.agent.public.v1.ContainerNameRequestH\x00R\x0estartContainer\x12N\n" +
 	"\x0estop_container\x18\x17 \x01(\v2%.agent.public.v1.ContainerNameRequestH\x00R\rstopContainer\x12R\n" +
 	"\x10remove_container\x18\x18 \x01(\v2%.agent.public.v1.ContainerNameRequestH\x00R\x0fremoveContainer\x12H\n" +
-	"\x0fopen_log_stream\x18\x19 \x01(\v2\x1e.agent.public.v1.OpenLogStreamH\x00R\ropenLogStreamB\x05\n" +
-	"\x03cmd\"j\n" +
+	"\x0fopen_log_stream\x18\x19 \x01(\v2\x1e.agent.public.v1.OpenLogStreamH\x00R\ropenLogStream\x12Z\n" +
+	"\x15set_remote_connection\x18\x1a \x01(\v2$.agent.public.v1.SetRemoteConnectionH\x00R\x13setRemoteConnectionB\x05\n" +
+	"\x03cmd\":\n" +
+	"\x13SetRemoteConnection\x12#\n" +
+	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\"j\n" +
 	"\rOpenLogStream\x12!\n" +
 	"\fstream_token\x18\x01 \x01(\tR\vstreamToken\x12\x1b\n" +
 	"\tdocker_id\x18\x02 \x01(\tR\bdockerId\x12\x19\n" +
@@ -1163,7 +1245,7 @@ func file_agent_link_proto_rawDescGZIP() []byte {
 	return file_agent_link_proto_rawDescData
 }
 
-var file_agent_link_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_agent_link_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_agent_link_proto_goTypes = []any{
 	(*AgentMessage)(nil),             // 0: agent.public.v1.AgentMessage
 	(*LinkHello)(nil),                // 1: agent.public.v1.LinkHello
@@ -1171,77 +1253,79 @@ var file_agent_link_proto_goTypes = []any{
 	(*LinkWelcome)(nil),              // 3: agent.public.v1.LinkWelcome
 	(*Cancel)(nil),                   // 4: agent.public.v1.Cancel
 	(*Command)(nil),                  // 5: agent.public.v1.Command
-	(*OpenLogStream)(nil),            // 6: agent.public.v1.OpenLogStream
-	(*CommandError)(nil),             // 7: agent.public.v1.CommandError
-	(*ListStreamsResult)(nil),        // 8: agent.public.v1.ListStreamsResult
-	(*CommandResult)(nil),            // 9: agent.public.v1.CommandResult
-	(*PingRequest)(nil),              // 10: agent.public.v1.PingRequest
-	(*GetStatusRequest)(nil),         // 11: agent.public.v1.GetStatusRequest
-	(*IngestContainersRequest)(nil),  // 12: agent.public.v1.IngestContainersRequest
-	(*emptypb.Empty)(nil),            // 13: google.protobuf.Empty
-	(*NewStreamRequest)(nil),         // 14: agent.public.v1.NewStreamRequest
-	(*CloseStreamRequest)(nil),       // 15: agent.public.v1.CloseStreamRequest
-	(*GetStreamRequest)(nil),         // 16: agent.public.v1.GetStreamRequest
-	(*GetContainerLogsRequest)(nil),  // 17: agent.public.v1.GetContainerLogsRequest
-	(*CreateVolumeRequest)(nil),      // 18: agent.public.v1.CreateVolumeRequest
-	(*ListVolumesRequest)(nil),       // 19: agent.public.v1.ListVolumesRequest
-	(*CreateContainerRequest)(nil),   // 20: agent.public.v1.CreateContainerRequest
-	(*ContainerNameRequest)(nil),     // 21: agent.public.v1.ContainerNameRequest
-	(*StreamState)(nil),              // 22: agent.public.v1.StreamState
-	(*PingResponse)(nil),             // 23: agent.public.v1.PingResponse
-	(*GetStatusResponse)(nil),        // 24: agent.public.v1.GetStatusResponse
-	(*IngestContainersResponse)(nil), // 25: agent.public.v1.IngestContainersResponse
-	(*Node)(nil),                     // 26: agent.public.v1.Node
-	(*GetContainerLogsResponse)(nil), // 27: agent.public.v1.GetContainerLogsResponse
-	(*CreateVolumeResponse)(nil),     // 28: agent.public.v1.CreateVolumeResponse
-	(*ListVolumesResponse)(nil),      // 29: agent.public.v1.ListVolumesResponse
-	(*CreateContainerResponse)(nil),  // 30: agent.public.v1.CreateContainerResponse
-	(*LogLine)(nil),                  // 31: agent.public.v1.LogLine
+	(*SetRemoteConnection)(nil),      // 6: agent.public.v1.SetRemoteConnection
+	(*OpenLogStream)(nil),            // 7: agent.public.v1.OpenLogStream
+	(*CommandError)(nil),             // 8: agent.public.v1.CommandError
+	(*ListStreamsResult)(nil),        // 9: agent.public.v1.ListStreamsResult
+	(*CommandResult)(nil),            // 10: agent.public.v1.CommandResult
+	(*PingRequest)(nil),              // 11: agent.public.v1.PingRequest
+	(*GetStatusRequest)(nil),         // 12: agent.public.v1.GetStatusRequest
+	(*IngestContainersRequest)(nil),  // 13: agent.public.v1.IngestContainersRequest
+	(*emptypb.Empty)(nil),            // 14: google.protobuf.Empty
+	(*NewStreamRequest)(nil),         // 15: agent.public.v1.NewStreamRequest
+	(*CloseStreamRequest)(nil),       // 16: agent.public.v1.CloseStreamRequest
+	(*GetStreamRequest)(nil),         // 17: agent.public.v1.GetStreamRequest
+	(*GetContainerLogsRequest)(nil),  // 18: agent.public.v1.GetContainerLogsRequest
+	(*CreateVolumeRequest)(nil),      // 19: agent.public.v1.CreateVolumeRequest
+	(*ListVolumesRequest)(nil),       // 20: agent.public.v1.ListVolumesRequest
+	(*CreateContainerRequest)(nil),   // 21: agent.public.v1.CreateContainerRequest
+	(*ContainerNameRequest)(nil),     // 22: agent.public.v1.ContainerNameRequest
+	(*StreamState)(nil),              // 23: agent.public.v1.StreamState
+	(*PingResponse)(nil),             // 24: agent.public.v1.PingResponse
+	(*GetStatusResponse)(nil),        // 25: agent.public.v1.GetStatusResponse
+	(*IngestContainersResponse)(nil), // 26: agent.public.v1.IngestContainersResponse
+	(*Node)(nil),                     // 27: agent.public.v1.Node
+	(*GetContainerLogsResponse)(nil), // 28: agent.public.v1.GetContainerLogsResponse
+	(*CreateVolumeResponse)(nil),     // 29: agent.public.v1.CreateVolumeResponse
+	(*ListVolumesResponse)(nil),      // 30: agent.public.v1.ListVolumesResponse
+	(*CreateContainerResponse)(nil),  // 31: agent.public.v1.CreateContainerResponse
+	(*LogLine)(nil),                  // 32: agent.public.v1.LogLine
 }
 var file_agent_link_proto_depIdxs = []int32{
 	1,  // 0: agent.public.v1.AgentMessage.hello:type_name -> agent.public.v1.LinkHello
-	9,  // 1: agent.public.v1.AgentMessage.result:type_name -> agent.public.v1.CommandResult
+	10, // 1: agent.public.v1.AgentMessage.result:type_name -> agent.public.v1.CommandResult
 	3,  // 2: agent.public.v1.OrchestratorMessage.welcome:type_name -> agent.public.v1.LinkWelcome
 	5,  // 3: agent.public.v1.OrchestratorMessage.command:type_name -> agent.public.v1.Command
 	4,  // 4: agent.public.v1.OrchestratorMessage.cancel:type_name -> agent.public.v1.Cancel
-	10, // 5: agent.public.v1.Command.ping:type_name -> agent.public.v1.PingRequest
-	11, // 6: agent.public.v1.Command.get_status:type_name -> agent.public.v1.GetStatusRequest
-	12, // 7: agent.public.v1.Command.ingest_containers:type_name -> agent.public.v1.IngestContainersRequest
-	13, // 8: agent.public.v1.Command.get_node:type_name -> google.protobuf.Empty
-	14, // 9: agent.public.v1.Command.new_stream:type_name -> agent.public.v1.NewStreamRequest
-	15, // 10: agent.public.v1.Command.close_stream:type_name -> agent.public.v1.CloseStreamRequest
-	16, // 11: agent.public.v1.Command.get_stream:type_name -> agent.public.v1.GetStreamRequest
-	13, // 12: agent.public.v1.Command.list_streams:type_name -> google.protobuf.Empty
-	17, // 13: agent.public.v1.Command.get_container_logs:type_name -> agent.public.v1.GetContainerLogsRequest
-	18, // 14: agent.public.v1.Command.create_volume:type_name -> agent.public.v1.CreateVolumeRequest
-	19, // 15: agent.public.v1.Command.list_volumes:type_name -> agent.public.v1.ListVolumesRequest
-	20, // 16: agent.public.v1.Command.create_container:type_name -> agent.public.v1.CreateContainerRequest
-	21, // 17: agent.public.v1.Command.start_container:type_name -> agent.public.v1.ContainerNameRequest
-	21, // 18: agent.public.v1.Command.stop_container:type_name -> agent.public.v1.ContainerNameRequest
-	21, // 19: agent.public.v1.Command.remove_container:type_name -> agent.public.v1.ContainerNameRequest
-	6,  // 20: agent.public.v1.Command.open_log_stream:type_name -> agent.public.v1.OpenLogStream
-	22, // 21: agent.public.v1.ListStreamsResult.streams:type_name -> agent.public.v1.StreamState
-	7,  // 22: agent.public.v1.CommandResult.error:type_name -> agent.public.v1.CommandError
-	23, // 23: agent.public.v1.CommandResult.ping:type_name -> agent.public.v1.PingResponse
-	24, // 24: agent.public.v1.CommandResult.get_status:type_name -> agent.public.v1.GetStatusResponse
-	25, // 25: agent.public.v1.CommandResult.ingest_containers:type_name -> agent.public.v1.IngestContainersResponse
-	26, // 26: agent.public.v1.CommandResult.node:type_name -> agent.public.v1.Node
-	13, // 27: agent.public.v1.CommandResult.ok:type_name -> google.protobuf.Empty
-	22, // 28: agent.public.v1.CommandResult.stream:type_name -> agent.public.v1.StreamState
-	8,  // 29: agent.public.v1.CommandResult.streams:type_name -> agent.public.v1.ListStreamsResult
-	27, // 30: agent.public.v1.CommandResult.container_logs:type_name -> agent.public.v1.GetContainerLogsResponse
-	28, // 31: agent.public.v1.CommandResult.create_volume:type_name -> agent.public.v1.CreateVolumeResponse
-	29, // 32: agent.public.v1.CommandResult.volumes:type_name -> agent.public.v1.ListVolumesResponse
-	30, // 33: agent.public.v1.CommandResult.create_container:type_name -> agent.public.v1.CreateContainerResponse
-	0,  // 34: agent.public.v1.AgentLink.Link:input_type -> agent.public.v1.AgentMessage
-	31, // 35: agent.public.v1.AgentLink.LogStream:input_type -> agent.public.v1.LogLine
-	2,  // 36: agent.public.v1.AgentLink.Link:output_type -> agent.public.v1.OrchestratorMessage
-	13, // 37: agent.public.v1.AgentLink.LogStream:output_type -> google.protobuf.Empty
-	36, // [36:38] is the sub-list for method output_type
-	34, // [34:36] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	11, // 5: agent.public.v1.Command.ping:type_name -> agent.public.v1.PingRequest
+	12, // 6: agent.public.v1.Command.get_status:type_name -> agent.public.v1.GetStatusRequest
+	13, // 7: agent.public.v1.Command.ingest_containers:type_name -> agent.public.v1.IngestContainersRequest
+	14, // 8: agent.public.v1.Command.get_node:type_name -> google.protobuf.Empty
+	15, // 9: agent.public.v1.Command.new_stream:type_name -> agent.public.v1.NewStreamRequest
+	16, // 10: agent.public.v1.Command.close_stream:type_name -> agent.public.v1.CloseStreamRequest
+	17, // 11: agent.public.v1.Command.get_stream:type_name -> agent.public.v1.GetStreamRequest
+	14, // 12: agent.public.v1.Command.list_streams:type_name -> google.protobuf.Empty
+	18, // 13: agent.public.v1.Command.get_container_logs:type_name -> agent.public.v1.GetContainerLogsRequest
+	19, // 14: agent.public.v1.Command.create_volume:type_name -> agent.public.v1.CreateVolumeRequest
+	20, // 15: agent.public.v1.Command.list_volumes:type_name -> agent.public.v1.ListVolumesRequest
+	21, // 16: agent.public.v1.Command.create_container:type_name -> agent.public.v1.CreateContainerRequest
+	22, // 17: agent.public.v1.Command.start_container:type_name -> agent.public.v1.ContainerNameRequest
+	22, // 18: agent.public.v1.Command.stop_container:type_name -> agent.public.v1.ContainerNameRequest
+	22, // 19: agent.public.v1.Command.remove_container:type_name -> agent.public.v1.ContainerNameRequest
+	7,  // 20: agent.public.v1.Command.open_log_stream:type_name -> agent.public.v1.OpenLogStream
+	6,  // 21: agent.public.v1.Command.set_remote_connection:type_name -> agent.public.v1.SetRemoteConnection
+	23, // 22: agent.public.v1.ListStreamsResult.streams:type_name -> agent.public.v1.StreamState
+	8,  // 23: agent.public.v1.CommandResult.error:type_name -> agent.public.v1.CommandError
+	24, // 24: agent.public.v1.CommandResult.ping:type_name -> agent.public.v1.PingResponse
+	25, // 25: agent.public.v1.CommandResult.get_status:type_name -> agent.public.v1.GetStatusResponse
+	26, // 26: agent.public.v1.CommandResult.ingest_containers:type_name -> agent.public.v1.IngestContainersResponse
+	27, // 27: agent.public.v1.CommandResult.node:type_name -> agent.public.v1.Node
+	14, // 28: agent.public.v1.CommandResult.ok:type_name -> google.protobuf.Empty
+	23, // 29: agent.public.v1.CommandResult.stream:type_name -> agent.public.v1.StreamState
+	9,  // 30: agent.public.v1.CommandResult.streams:type_name -> agent.public.v1.ListStreamsResult
+	28, // 31: agent.public.v1.CommandResult.container_logs:type_name -> agent.public.v1.GetContainerLogsResponse
+	29, // 32: agent.public.v1.CommandResult.create_volume:type_name -> agent.public.v1.CreateVolumeResponse
+	30, // 33: agent.public.v1.CommandResult.volumes:type_name -> agent.public.v1.ListVolumesResponse
+	31, // 34: agent.public.v1.CommandResult.create_container:type_name -> agent.public.v1.CreateContainerResponse
+	0,  // 35: agent.public.v1.AgentLink.Link:input_type -> agent.public.v1.AgentMessage
+	32, // 36: agent.public.v1.AgentLink.LogStream:input_type -> agent.public.v1.LogLine
+	2,  // 37: agent.public.v1.AgentLink.Link:output_type -> agent.public.v1.OrchestratorMessage
+	14, // 38: agent.public.v1.AgentLink.LogStream:output_type -> google.protobuf.Empty
+	37, // [37:39] is the sub-list for method output_type
+	35, // [35:37] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_agent_link_proto_init() }
@@ -1276,8 +1360,9 @@ func file_agent_link_proto_init() {
 		(*Command_StopContainer)(nil),
 		(*Command_RemoveContainer)(nil),
 		(*Command_OpenLogStream)(nil),
+		(*Command_SetRemoteConnection)(nil),
 	}
-	file_agent_link_proto_msgTypes[9].OneofWrappers = []any{
+	file_agent_link_proto_msgTypes[10].OneofWrappers = []any{
 		(*CommandResult_Ping)(nil),
 		(*CommandResult_GetStatus)(nil),
 		(*CommandResult_IngestContainers)(nil),
@@ -1296,7 +1381,7 @@ func file_agent_link_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_link_proto_rawDesc), len(file_agent_link_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

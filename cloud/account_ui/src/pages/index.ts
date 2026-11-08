@@ -3,6 +3,7 @@ export { Signup } from './Signup';
 export { BillingAccounts } from './BillingAccounts';
 export { Clusters } from './Clusters';
 export { ClusterRegistration } from './ClusterRegistration';
+export { UfctlActivate } from './UfctlActivate';
 export { Streams } from './Streams';
 export { Connections } from './Connections';
 export { Subscriptions } from './Subscriptions';

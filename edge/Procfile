@@ -1,3 +1,7 @@
-server: ./bin/orch-server run
-agent:  ./bin/ufagentd run
+# Remote access (RFD 5, step 7b) is on for `make run`, on loopback only: the
+# server binds the remote listener and the agent splices cloud-opened streams to
+# it. It does nothing until the dev cluster is registered with the cloud. Any
+# other way of launching these binaries leaves it off.
+server: UNDERLEAF_REMOTE_ADDR=127.0.0.1:50110 ./bin/orch-server run
+agent:  UNDERLEAF_REMOTE_TARGET=127.0.0.1:50110 ./bin/ufagentd run
 ui:     cd orchestrator_ui && npm run dev

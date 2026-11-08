@@ -29,6 +29,10 @@ const (
 	ConnWorkerGRPCPort     NamedPort = 50102
 	ConnectionsGatewayPort NamedPort = 9020
 	ConnectionsNodePort    NamedPort = 9021
+	// ConnWorkerRemoteRelayPort is the conn_worker's internal remote-access
+	// relay (RFD 5 step 7b). Plain HTTP, reachable by nginx only: it must never
+	// be published or load-balanced to the internet.
+	ConnWorkerRemoteRelayPort NamedPort = 9071
 
 	// Edge. The agent listens on no TCP port: it dials out to the Orchestrator
 	// (RFD 5). The Orchestrator's gRPC ports are in endpoints.go.
@@ -66,6 +70,9 @@ type ConnectionsConfig struct {
 	WriteTimeout        string    `yaml:"write_timeout"`
 	IdleTimeout         string    `yaml:"idle_timeout"`
 	Domain              string    `yaml:"domain"` // Domain for the gateway server (e.g., "underleafapp.com")
+	// RemoteRelayPort is the internal listener nginx proxies remote-access
+	// requests to (default 9071). Internal only: do not publish it.
+	RemoteRelayPort NamedPort `yaml:"remote_relay_port"`
 }
 
 type RedisConfig struct {
@@ -146,6 +153,7 @@ func init() {
 		Connections: &ConnectionsConfig{
 			NodeConnectionsPort: ConnectionsNodePort,
 			GatewayPort:         ConnectionsGatewayPort,
+			RemoteRelayPort:     ConnWorkerRemoteRelayPort,
 			ReadTimeout:         "5s",
 			WriteTimeout:        "10s",
 			IdleTimeout:         "15s",
@@ -225,6 +233,10 @@ func mergeConfig(defaultConfig Config) Config {
 		defaultConfig.Http.BasePath = fileConfig.Http.BasePath
 	}
 	if fileConfig.Connections != nil {
+		// A file written before a field existed must not zero it out.
+		if fileConfig.Connections.RemoteRelayPort == 0 && defaultConfig.Connections != nil {
+			fileConfig.Connections.RemoteRelayPort = defaultConfig.Connections.RemoteRelayPort
+		}
 		defaultConfig.Connections = fileConfig.Connections
 	}
 	if fileConfig.ConnectionsClient != nil {

@@ -55,6 +55,11 @@ type Client struct {
 	Dial    func(ctx context.Context) (*Target, error)
 	Handler Handler
 	Version string
+	// RemoteTarget reports whether this agent has a remote-access target
+	// (UNDERLEAF_REMOTE_TARGET) configured; it is sent in the hello so the
+	// Orchestrator knows which agent can hold the standing remote connection.
+	// Optional (nil = false).
+	RemoteTarget func() bool
 
 	MinBackoff  time.Duration // default 500ms
 	MaxBackoff  time.Duration // default 15s
@@ -151,6 +156,9 @@ func (c *Client) runOnce(ctx context.Context) (err error) {
 		return err
 	}
 	hello := &agentpb.LinkHello{AgentVersion: c.Version}
+	if c.RemoteTarget != nil {
+		hello.RemoteTargetConfigured = c.RemoteTarget()
+	}
 	if t.Local {
 		hello.NodeId = t.NodeID
 	}

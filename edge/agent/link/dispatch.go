@@ -194,6 +194,16 @@ func (d *Dispatcher) handle(ctx context.Context, cmd *agentpb.Command, env Env) 
 		}
 		return okResult(), nil
 
+	case *agentpb.Command_SetRemoteConnection:
+		conns := svc.Connections()
+		if conns == nil {
+			return nil, noConnections()
+		}
+		if err := conns.SetRemoteConnection(c.SetRemoteConnection.GetConnectionId()); err != nil {
+			return nil, err
+		}
+		return okResult(), nil
+
 	case *agentpb.Command_OpenLogStream:
 		r := c.OpenLogStream
 		if r.GetStreamToken() == "" || r.GetDockerId() == "" {

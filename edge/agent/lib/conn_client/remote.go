@@ -30,6 +30,14 @@ import (
 //     its port is on the gateway stream denylist (utils.CheckStreamPort), so a
 //     public gateway stream cannot be pointed at it either;
 //   - with no target configured the agent closes every cloud-opened stream.
+//
+// Which connection carries them: the agent runs TWO ConnClients. The gateway
+// client (NewConnClient without WithRemoteTarget) has no remote target, so a
+// stream the cloud opens on one of its connections is closed unread. The
+// remote client (WithRemoteTarget) holds the cluster's one standing
+// "remote-access" connection (SetConnection) and has no gateway streams, so the
+// cloud can open a stream toward the agent at any time without fighting
+// gateway streams over a connection.
 
 // preambleTimeout is how long a cloud-opened stream may take to send its
 // preamble before the agent drops it (a variable only so tests can shorten it).

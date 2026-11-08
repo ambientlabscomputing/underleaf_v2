@@ -51,6 +51,11 @@ message LinkHello {
   // certificate) it names the node and must be a local-transport node.
   string node_id       = 1;
   string agent_version = 2;
+  // True when this agent has a remote-access target configured
+  // (UNDERLEAF_REMOTE_TARGET), i.e. it can reach the Orchestrator's remote
+  // listener. The Orchestrator only asks such an agent to hold the cluster's
+  // standing remote-access connection (SetRemoteConnection).
+  bool   remote_target_configured = 3;
 }
 
 // ── orchestrator -> agent ────────────────────────────────────────────────────
@@ -98,7 +103,17 @@ message Command {
     ContainerNameRequest    stop_container     = 23;
     ContainerNameRequest    remove_container   = 24;
     OpenLogStream           open_log_stream    = 25;
+    SetRemoteConnection     set_remote_connection = 26;
   }
+}
+
+// SetRemoteConnection tells the agent which cloud connection is the cluster's
+// standing remote-access connection (RFD 5, Remote access). The agent keeps
+// that connection open (re-dialing on loss) on a client dedicated to it, so the
+// cloud can open a stream toward the agent at any time. Idempotent for the same
+// id; a different id switches to it and drops the old one. Answered with ok.
+message SetRemoteConnection {
+  string connection_id = 1;
 }
 
 message OpenLogStream {

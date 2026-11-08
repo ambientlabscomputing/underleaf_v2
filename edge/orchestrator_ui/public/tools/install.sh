@@ -9,6 +9,15 @@
 # (orch-server) and the agent (ufagentd) are launchd agents on macOS and systemd
 # user services on Linux, and orcli is a plain command. Docker is only used by the
 # agent, to run your workloads.
+#
+# Remote access (Cockpit, `ufctl connect`) is switched on for a manager install:
+# orch-server gets UNDERLEAF_REMOTE_ADDR=127.0.0.1:50110 (a second listener that
+# serves nothing without a cloud-signed assertion, loopback only) and ufagentd
+# gets UNDERLEAF_REMOTE_TARGET=127.0.0.1:50110 (the one address it will splice
+# cloud-opened streams to). It does nothing until the cluster is registered with
+# the cloud (`orcli cloud register`). A worker (`join`) gets no target: its
+# loopback has no remote listener. Set UNDERLEAF_INSTALL_NO_REMOTE=1 to leave
+# remote access off.
 MODE="install"
 if [ "$1" = "join" ]; then
     MODE="join"
@@ -32,12 +41,16 @@ fi
 
 REPO="ambientlabscomputing/underleaf_v2"
 HTTP_PORT="9090"
+# Where the Orchestrator's remote listener binds, and where the manager's agent
+# reaches it: the same loopback address.
+REMOTE_ADDR="127.0.0.1:50110"
 # These can be overridden for a mirror or a local test; the defaults are the
 # public release.
 #   UNDERLEAF_RELEASE_BASE  where ufagent/ufagentd/orcli/orch-server-<os>-<arch> and
 #                           underleaf-ui.tar.gz are downloaded from
 #   UNDERLEAF_INSTALL_DIR   where the binaries go
 #   UNDERLEAF_DATA_DIR      where the Orchestrator keeps its state
+#   UNDERLEAF_INSTALL_NO_REMOTE  =1 leaves remote access off (see above)
 INSTALL_DIR="${UNDERLEAF_INSTALL_DIR:-${HOME}/.local/bin}"
 RELEASE_BASE="${UNDERLEAF_RELEASE_BASE:-https://github.com/${REPO}/releases/download/${TAG}}"
 
@@ -109,13 +122,18 @@ done
 echo "Binaries installed. Make sure ${INSTALL_DIR} is in your PATH."
 
 # ── Run a binary as a user service ────────────────────────────────────────────
-# install_service <name> <description> [<workdir> <ui-dir>]
-# The binary is ${INSTALL_DIR}/<name>, started as `<name> run`.
+# install_service <name> <description> [<workdir> [<ui-dir> [KEY=VALUE ...]]]
+# The binary is ${INSTALL_DIR}/<name>, started as `<name> run`. Each KEY=VALUE
+# becomes an environment variable of the service (the values must not contain
+# spaces or XML special characters). Running it again rewrites the unit/plist
+# identically and restarts the service, so a re-run is safe.
 install_service() {
     SVC_NAME="$1"
     SVC_DESC="$2"
     SVC_WORKDIR="$3"
     SVC_UIDIR="$4"
+    if [ "$#" -ge 4 ]; then shift 4; else shift "$#"; fi
+    # What is left in "$@" is the extra environment.
     SVC_BIN="${INSTALL_DIR}/${SVC_NAME}"
 
     case "$GOOS" in
@@ -132,6 +150,9 @@ install_service() {
                 echo "ExecStart=\"${SVC_BIN}\" run"
                 [ -n "$SVC_WORKDIR" ] && echo "WorkingDirectory=${SVC_WORKDIR}"
                 [ -n "$SVC_UIDIR" ] && echo "Environment=\"UNDERLEAF_UI_DIR=${SVC_UIDIR}\""
+                for KV in "$@"; do
+                    echo "Environment=\"${KV}\""
+                done
                 echo "Restart=on-failure"
                 echo "RestartSec=5"
                 echo ""
@@ -171,11 +192,17 @@ install_service() {
                     echo '    <key>WorkingDirectory</key>'
                     echo "    <string>${SVC_WORKDIR}</string>"
                 fi
-                if [ -n "$SVC_UIDIR" ]; then
+                if [ -n "$SVC_UIDIR" ] || [ "$#" -gt 0 ]; then
                     echo '    <key>EnvironmentVariables</key>'
                     echo '    <dict>'
-                    echo '        <key>UNDERLEAF_UI_DIR</key>'
-                    echo "        <string>${SVC_UIDIR}</string>"
+                    if [ -n "$SVC_UIDIR" ]; then
+                        echo '        <key>UNDERLEAF_UI_DIR</key>'
+                        echo "        <string>${SVC_UIDIR}</string>"
+                    fi
+                    for KV in "$@"; do
+                        echo "        <key>${KV%%=*}</key>"
+                        echo "        <string>${KV#*=}</string>"
+                    done
                     echo '    </dict>'
                 fi
                 echo '    <key>KeepAlive</key>'
@@ -200,10 +227,11 @@ install_service() {
     esac
 }
 
+# install_agent [KEY=VALUE ...]  (extra environment for ufagentd)
 install_agent() {
     mkdir -p "$AGENT_DIR"
     chmod 700 "$AGENT_DIR"
-    install_service ufagentd "Underleaf Edge Agent Daemon" "$AGENT_DIR"
+    install_service ufagentd "Underleaf Edge Agent Daemon" "$AGENT_DIR" "" "$@"
 }
 
 # A joining node enrolls before its service starts, so the daemon comes up as a
@@ -262,8 +290,19 @@ if command -v docker >/dev/null 2>&1 \
     echo "Once you have checked the new install: docker rm ${BACKUP} && docker volume rm underleaf-data"
 fi
 
+# Remote access: on by default for a manager (see the header).
+if [ -z "$UNDERLEAF_INSTALL_NO_REMOTE" ]; then
+    ORCH_REMOTE_ENV="UNDERLEAF_REMOTE_ADDR=${REMOTE_ADDR}"
+    AGENT_REMOTE_ENV="UNDERLEAF_REMOTE_TARGET=${REMOTE_ADDR}"
+else
+    ORCH_REMOTE_ENV=""
+    AGENT_REMOTE_ENV=""
+fi
+
 echo "Starting the Orchestrator ..."
-install_service orch-server "Underleaf Orchestrator" "$DATA_DIR" "$UI_DIR"
+# ${ORCH_REMOTE_ENV} is deliberately unquoted: empty means no extra variable.
+# shellcheck disable=SC2086
+install_service orch-server "Underleaf Orchestrator" "$DATA_DIR" "$UI_DIR" $ORCH_REMOTE_ENV
 
 # Wait until it answers before starting the agent that links to it.
 READY=""
@@ -281,7 +320,11 @@ if [ -z "$READY" ]; then
     exit 1
 fi
 
-install_agent
+# shellcheck disable=SC2086
+install_agent $AGENT_REMOTE_ENV
 
 echo "Done! UI available at http://localhost:${HTTP_PORT}"
+if [ -z "$UNDERLEAF_INSTALL_NO_REMOTE" ]; then
+    echo "Remote access is enabled (loopback listener ${REMOTE_ADDR}); it is used once this cluster is registered with the cloud (orcli cloud register)."
+fi
 echo "To add a worker node: orcli nodes add --advertise <this-machine's-address>:50104"

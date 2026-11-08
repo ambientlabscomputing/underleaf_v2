@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"google.golang.org/grpc/codes"
@@ -14,10 +13,30 @@ import (
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
+// StandingConnection is the dedicated remote-access client: it holds one cloud
+// connection open and serves the streams the cloud opens on it. *ConnClient
+// implements it; tests use a fake.
+type StandingConnection interface {
+	Start()
+	// SetConnection (re)starts the reconnect loop for id; false means id was
+	// already the standing connection.
+	SetConnection(id string) (changed bool)
+}
+
 // ConnectionService is the agent's entrypoint for interacting with the cloud connection service.
+//
+// It owns two clients that never share a connection: connClient carries the
+// gateway streams the agent opens, remote carries the cluster's standing
+// remote-access connection (see SetRemoteConnection).
 type ConnectionService struct {
 	connClient *conn_client.ConnClient
 	config     utils.Config
+
+	remote       StandingConnection // nil: remote access is not available
+	remoteTarget string             // UNDERLEAF_REMOTE_TARGET; "" refuses SetRemoteConnection
+	// overrideID, when set (UNDERLEAF_REMOTE_CONNECTION_ID), pins the standing
+	// connection: commands from the Orchestrator do not move it.
+	overrideID string
 }
 
 func NewConnectionService(config utils.Config, cc *conn_client.ConnClient) *ConnectionService {
@@ -27,14 +46,55 @@ func NewConnectionService(config utils.Config, cc *conn_client.ConnClient) *Conn
 	}
 }
 
+// WithRemote attaches the dedicated remote-access client. target is where it
+// splices cloud-opened streams (the client must have been built with the same
+// conn_client.WithRemoteTarget); override is the optional manual connection id
+// (UNDERLEAF_REMOTE_CONNECTION_ID).
+func (s *ConnectionService) WithRemote(remote StandingConnection, target, override string) *ConnectionService {
+	s.remote = remote
+	s.remoteTarget = strings.TrimSpace(target)
+	s.overrideID = strings.TrimSpace(override)
+	return s
+}
+
 func (s *ConnectionService) Start() {
-	s.connClient.Start()
-	// Remote access: keep one cloud connection open so the cloud can open
-	// remote-access streams toward this agent even when no gateway stream
-	// exists. Off unless both the connection id and the target are configured.
-	if id := strings.TrimSpace(os.Getenv(utils.EnvRemoteConnectionID)); id != "" && strings.TrimSpace(os.Getenv(utils.EnvRemoteTarget)) != "" {
-		s.connClient.Connect(context.Background(), id)
+	if s.connClient != nil {
+		s.connClient.Start()
 	}
+	if s.remote == nil {
+		return
+	}
+	s.remote.Start()
+	// Manual override: pin the standing connection to a configured id. Without
+	// it, the Orchestrator tells the agent which connection to hold
+	// (SetRemoteConnection). Needs the target, else the connection would be
+	// open for nothing.
+	if s.overrideID != "" && s.remoteTarget != "" {
+		s.remote.SetConnection(s.overrideID)
+	}
+}
+
+// SetRemoteConnection makes connectionID the cluster's standing remote-access
+// connection: the remote client keeps it open (re-dialing on loss) so the cloud
+// can open remote-access streams toward this agent at any time. Idempotent for
+// the same id; a new id switches cleanly (the old connection is closed first).
+func (s *ConnectionService) SetRemoteConnection(connectionID string) error {
+	connectionID = strings.TrimSpace(connectionID)
+	if connectionID == "" {
+		return status.Error(codes.InvalidArgument, "a remote connection needs a connection id")
+	}
+	if s.remote == nil || s.remoteTarget == "" {
+		return status.Error(codes.FailedPrecondition, "remote access is not configured on this agent ("+utils.EnvRemoteTarget+" is not set)")
+	}
+	if s.overrideID != "" {
+		utils.Logger.Info("remote access: ignoring the Orchestrator's connection; the connection id is pinned by "+utils.EnvRemoteConnectionID,
+			"offered", connectionID, "pinned", s.overrideID)
+		return nil
+	}
+	if s.remote.SetConnection(connectionID) {
+		utils.Logger.Info("remote access: standing connection set", "connection_id", connectionID)
+	}
+	return nil
 }
 
 func (s *ConnectionService) ConnectToCloud(ctx context.Context, connectionID string) {

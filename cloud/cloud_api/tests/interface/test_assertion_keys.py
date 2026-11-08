@@ -67,7 +67,8 @@ def test_rotation_is_visible_in_the_published_set(client, lib):
 
 
 def test_no_assertion_minting_endpoint_is_exposed():
-    """Minting stays an internal call until step 7b wires it to the tunnel."""
+    """No public route mints an assertion: the key set is the only route with
+    "assertion" in its path, and minting lives behind /internal/remote-auth."""
     routes = {
         (m, r.path) for r in app.routes if hasattr(r, "methods") for m in r.methods
     }

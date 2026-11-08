@@ -21,6 +21,8 @@ from cloud_api.lib.conn_worker_client import ConnWorkerClient
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.cluster_repository import ClusterRepository
 from cloud_api.repository.connection_repository import ConnectionRepository
+from cloud_api.repository.device_key_repository import DeviceKeyRepository
+from cloud_api.repository.device_login_repository import DeviceLoginRepository
 from cloud_api.repository.entitlements_bucket_repository import (
     EntitlementsBucketRepository,
 )
@@ -46,10 +48,13 @@ from cloud_api.service.auth_service import AuthService
 from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
 from cloud_api.service.connection_service import ConnectionService
+from cloud_api.service.device_key_service import DeviceKeyService
+from cloud_api.service.device_login_service import DeviceLoginService
 from cloud_api.service.entitlements_bucket_service import EntitlementsBucketService
 from cloud_api.service.invoice_service import InvoiceService
 from cloud_api.service.plan_service import PlanService
 from cloud_api.service.registration_service import RegistrationService
+from cloud_api.service.remote_auth_service import RemoteAuthService
 from cloud_api.service.stream_service import StreamService
 from cloud_api.service.stripe_checkout_service import StripeCheckoutService
 from cloud_api.service.stripe_webhook_service import StripeWebhookService
@@ -369,6 +374,39 @@ def get_registration_service() -> RegistrationService:
 def get_assertion_service() -> AssertionService:
     return AssertionService(
         assertion_lib=get_assertion_lib(), cluster_repo=get_cluster_repo()
+    )
+
+
+@lru_cache
+def get_device_key_repo() -> DeviceKeyRepository:
+    return DeviceKeyRepository()
+
+
+@lru_cache
+def get_device_login_repo() -> DeviceLoginRepository:
+    return DeviceLoginRepository()
+
+
+@lru_cache
+def get_device_key_service() -> DeviceKeyService:
+    return DeviceKeyService(device_key_repo=get_device_key_repo())
+
+
+@lru_cache
+def get_device_login_service() -> DeviceLoginService:
+    return DeviceLoginService(
+        device_login_repo=get_device_login_repo(),
+        device_key_service=get_device_key_service(),
+    )
+
+
+@lru_cache
+def get_remote_auth_service() -> RemoteAuthService:
+    return RemoteAuthService(
+        auth_lib=get_auth_lib(),
+        device_key_service=get_device_key_service(),
+        assertion_service=get_assertion_service(),
+        conn_repo=get_conn_repo(),
     )
 
 

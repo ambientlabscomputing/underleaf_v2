@@ -74,7 +74,10 @@ func Run() {
 		}),
 		Handler: &link.Dispatcher{Service: svc},
 		Version: Version,
-		Logf:    func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+		// Tell the Orchestrator whether this agent can serve remote access
+		// (a worker's cannot: its loopback has no remote listener).
+		RemoteTarget: func() bool { return utils.RemoteTargetFromEnv() != "" },
+		Logf:         func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	}
 	go linkClient.Run(context.Background())
 

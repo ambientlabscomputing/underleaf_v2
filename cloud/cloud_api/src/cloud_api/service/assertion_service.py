@@ -1,8 +1,10 @@
 # AssertionService
 #   issue_for_cluster(account_id, cluster_id, scopes) returns (assertion token);
 #
-# The only place that decides *whether* an assertion may be minted. The
-# transport that attaches it to a tunnelled request is RFD 5 step 7b.
+# The only place that decides *whether* an assertion may be minted. Its one
+# caller is RemoteAuthService (GET /internal/remote-auth, RFD 5 step 7b), which
+# authenticates the caller first; the transport that attaches the assertion to a
+# tunnelled request is nginx plus the forwarder.
 
 from cloud_api import logger
 from cloud_api.lib.assertion_lib import AssertionLib

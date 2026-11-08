@@ -50,6 +50,13 @@ func (s *AppService) GetNode() (*types.Node, error) {
 func (s *AppService) Start() error { return nil }
 func (s *AppService) Stop() error  { return nil }
 
+// NewAppServiceWith returns an AppService that has only a connection service:
+// no repository, Docker or log collector. It exists so the agent link's
+// dispatcher can be exercised without a Docker daemon; the daemon uses NewService.
+func NewAppServiceWith(connections *ConnectionService) *AppService {
+	return &AppService{connections: connections}
+}
+
 func NewService() Service {
 	peer, err := clients.NewOrchestratorClient()
 	if err != nil {
@@ -87,7 +94,16 @@ func NewService() Service {
 		if err != nil {
 			panic("agent: failed to create connection client: " + err.Error())
 		}
-		connections = NewConnectionService(cfg, connClient)
+		// The remote-access connection gets a client of its own, so it never
+		// shares a connection with gateway streams (which the cloud opens a
+		// new connection for each). Only this one serves cloud-opened streams.
+		remoteTarget := utils.RemoteTargetFromEnv()
+		remoteClient, err := conn_client.NewConnClient(cfg, make(chan struct{}), conn_client.WithRemoteTarget(remoteTarget))
+		if err != nil {
+			panic("agent: failed to create remote connection client: " + err.Error())
+		}
+		connections = NewConnectionService(cfg, connClient).
+			WithRemote(remoteClient, remoteTarget, os.Getenv(utils.EnvRemoteConnectionID))
 		connections.Start()
 	}
 

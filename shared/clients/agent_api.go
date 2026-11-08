@@ -25,6 +25,10 @@ type AgentAPI interface {
 	GetNode(ctx context.Context) (*agentpb.Node, error)
 	// NewStream tells the agent to create a new gateway stream for a connection.
 	NewStream(ctx context.Context, connectionID, streamID, streamType string, port int) error
+	// SetRemoteConnection tells the agent which cloud connection is the
+	// cluster's standing remote-access connection, so it keeps it open and the
+	// cloud can open streams toward it. Idempotent for the same id.
+	SetRemoteConnection(ctx context.Context, connectionID string) error
 	CloseStream(ctx context.Context, streamID string) error
 	GetStream(ctx context.Context, streamID string) (*agentpb.StreamState, error)
 	ListStreams(ctx context.Context) ([]*agentpb.StreamState, error)

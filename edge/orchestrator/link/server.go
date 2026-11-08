@@ -158,6 +158,7 @@ func (s *Server) Link(stream agentpb.AgentLink_LinkServer) error {
 	}
 
 	sess := newSession(nodeID, transport, stream.Send)
+	sess.remote = hello.GetRemoteTargetConfigured()
 	s.Hub.register(sess)
 	defer s.Hub.unregister(sess)
 	if err := sess.sendMsg(&agentpb.OrchestratorMessage{Msg: &agentpb.OrchestratorMessage_Welcome{
@@ -166,6 +167,7 @@ func (s *Server) Link(stream agentpb.AgentLink_LinkServer) error {
 		return err
 	}
 	fmt.Printf("[link] node %s linked (%s listener)\n", nodeID, transport)
+	s.Hub.notifyLinked(sess)
 	defer fmt.Printf("[link] node %s link closed\n", nodeID)
 
 	for {
