@@ -78,8 +78,10 @@ run: stop install-dev
 stop:
 	-overmind kill
 
+## clean-db: Delete the dev Orchestrator/agent databases and the dev cluster CA and node credentials
 clean-db:
-	rm -f orchestrator.db
+	rm -rf cluster-ca cluster-agent certs
+	rm -f orchestrator.db orchestrator.db-shm orchestrator.db-wal
 	rm -f agent.db
 	rm -f agent.db-shm
 	rm -f agent.db-wal

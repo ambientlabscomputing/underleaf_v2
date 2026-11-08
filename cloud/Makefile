@@ -27,3 +27,4 @@ stop:
 	-overmind kill
 	-docker stop redis
 	-docker rm redis
+	-docker stop cloud-api-db

@@ -2,14 +2,25 @@ install:
 	pip install -e ".[dev]"
 	source .venv/bin/activate && pip install -e .
 
+# Start the dev database: reuse the container if it exists (its data is kept),
+# otherwise create it. A plain `docker run` fails once the container exists.
 db-up:
-	docker run -d \
-		--name cloud-api-db \
-		-e POSTGRES_USER=postgres \
-		-e POSTGRES_PASSWORD=postgres \
-		-e POSTGRES_DB=postgres \
-		-p 5432:5432 \
-		postgres:18
+	@if docker inspect cloud-api-db >/dev/null 2>&1; then \
+		docker start cloud-api-db >/dev/null && echo "cloud-api-db started"; \
+	else \
+		docker run -d \
+			--name cloud-api-db \
+			-e POSTGRES_USER=postgres \
+			-e POSTGRES_PASSWORD=postgres \
+			-e POSTGRES_DB=postgres \
+			-p 5432:5432 \
+			postgres:18; \
+	fi
+
+# Wait until Postgres accepts TCP connections (the image's init phase listens on
+# a unix socket only, so this does not return early).
+db-wait:
+	@until docker exec cloud-api-db pg_isready -q -h 127.0.0.1 -U postgres; do sleep 1; done
 
 db-down:
 	-docker stop cloud-api-db
@@ -17,8 +28,11 @@ db-down:
 
 env-up: db-up
 
-run:
-	-make db-up
+# Migration failure is a warning, not fatal: a dev database migrated by another
+# branch is ahead of this code ("Can't locate revision"), and killing the whole
+# stack over that is worse than starting with the schema it has.
+run: db-up db-wait
+	-@$(MAKE) migrate || echo "WARNING: alembic upgrade failed; starting with the database as it is"
 	PYTHONPATH=src .venv/bin/python -m cloud_api.main
 
 proto:

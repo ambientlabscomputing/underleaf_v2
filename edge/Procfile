@@ -1,3 +1,3 @@
-server: orch-server run
-agent:  ufagentd run
+server: ./bin/orch-server run
+agent:  ./bin/ufagentd run
 ui:     cd orchestrator_ui && npm run dev

@@ -2,9 +2,9 @@
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## //' | awk -F': ' '{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-## build-orchestrator: Build the orchestrator
+## build-orc: Build the edge binaries (orcli, orch-server, ufagent, ufagentd, ufctl) into edge/bin
 build-orc:
-	cd edge/orchestrator && make build
+	cd edge && make build
 
 ## go-lint: Run go fmt and go vet
 go-lint:
@@ -45,9 +45,12 @@ stop: stop-cloud stop-edge
 	-overmind kill -s cloud/.overmind.sock 2>/dev/null || true
 	-overmind kill -s edge/.overmind.sock  2>/dev/null || true
 	-rm -f cloud/.overmind.sock edge/.overmind.sock
-	-pkill node 2>/dev/null || true
 	-pkill conn-worker 2>/dev/null || true
-	-./scripts/kill_by_port.sh 8080 2>/dev/null || true
+	# Leftovers that hold a dev port: the UI dev servers (accounts 5181, cockpit
+	# 5182, Orchestrator UI 5183), cloud_api (8080) and a stray Orchestrator
+	# (REST 9090, local gRPC 50100). Killed by port, not by process name, so
+	# unrelated node processes are left alone.
+	-for p in 5181 5182 5183 8080 9090 50100; do ./scripts/kill_by_port.sh $$p 2>/dev/null; done; true
 
 ## clean: Remove Docker containers for cloud-api-db and redis
 clean:
