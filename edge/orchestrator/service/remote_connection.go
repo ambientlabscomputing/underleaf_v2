@@ -33,11 +33,15 @@ import (
 //     remote listener. A worker (transport "cluster", no target) never
 //     qualifies, and on a cluster with several local-transport agents the first
 //     to link holds the connection until it unlinks.
-//  3. Ensure. List that node's connections named utils.RemoteConnectionName,
+//  3. The cloud knows the node. A connection can be created only for a node the
+//     cloud has, and the cloud learns a cluster's nodes only from the cluster,
+//     so every round first syncs the Orchestrator's node registry to the cloud
+//     (replace-reconcile, idempotent).
+//  4. Ensure. List that node's connections named utils.RemoteConnectionName,
 //     reuse a non-closed one, create one only when there is none, then tell the
 //     node's agent its id (SetRemoteConnection). A reconnecting agent finds the
 //     existing connection, so reconnects never pile up duplicates.
-//  4. Resilience. A cloud outage, an agent that answers "not yet" and a cluster
+//  5. Resilience. A cloud outage, an agent that answers "not yet" and a cluster
 //     that registers later are retried (backoff, or a slow poll for the
 //     registration, which costs a file stat). A new link for the node retries
 //     at once. A successful ensure is repeated every Refresh, which also heals
@@ -53,9 +57,22 @@ var ErrNotRegistered = errors.New("the cluster is not registered with the cloud"
 type CloudConnections interface {
 	ListConnections(ctx context.Context, query types.QueryConnectionsRequest) ([]types.Connection, error)
 	CreateConnection(ctx context.Context, req types.CreateConnectionRequest) (*types.Connection, error)
+	// SyncNodes tells the cloud which nodes the cluster has.
+	SyncNodes(ctx context.Context, nodes []types.Node) error
 }
 
-var _ CloudConnections = (*clients.CloudClient)(nil)
+// clusterCloud is the production CloudConnections: the cluster's cloud client
+// plus the cluster id its node set is synced under.
+type clusterCloud struct {
+	*clients.CloudClient
+	clusterID string
+}
+
+func (c clusterCloud) SyncNodes(ctx context.Context, nodes []types.Node) error {
+	return c.CloudClient.SyncNodes(ctx, c.clusterID, nodes)
+}
+
+var _ CloudConnections = clusterCloud{}
 
 // RemoteConnectionConfig wires a RemoteConnectionEnsurer. Zero durations take
 // production defaults.
@@ -66,6 +83,9 @@ type RemoteConnectionConfig struct {
 	// ErrNotRegistered. It is called for every attempt, so a registration made
 	// (or a certificate renewed) after the Orchestrator started is picked up.
 	Cloud func() (CloudConnections, error)
+	// Nodes lists the nodes to sync to the cloud before each round (the
+	// Orchestrator's whole registry). Nil skips the sync.
+	Nodes func() ([]types.Node, error)
 	// Agents reaches the node's agent.
 	Agents clients.AgentDirectory
 	// Linked reports whether nodeID has a live link right now.
@@ -137,7 +157,11 @@ func CloudConnectionsFromCerts(cfg utils.Config) func() (CloudConnections, error
 		if err != nil {
 			return nil, err
 		}
-		return cc, nil
+		id, err := clients.ClusterIDFromCertDir(cfg.CertDir)
+		if err != nil {
+			return nil, err
+		}
+		return clusterCloud{CloudClient: cc, clusterID: id}, nil
 	}
 }
 
@@ -244,6 +268,16 @@ func (e *RemoteConnectionEnsurer) attempt(nodeID string) (string, error) {
 	}
 	ctx, cancel := context.WithTimeout(e.ctx, e.cfg.AttemptTimeout)
 	defer cancel()
+
+	if e.cfg.Nodes != nil {
+		nodes, err := e.cfg.Nodes()
+		if err != nil {
+			return "", fmt.Errorf("list nodes to sync: %w", err)
+		}
+		if err := cloud.SyncNodes(ctx, nodes); err != nil {
+			return "", err
+		}
+	}
 
 	conn, err := findOrCreateRemoteConnection(ctx, cloud, nodeID)
 	if err != nil {

@@ -1,16 +1,10 @@
 package remote
 
 import (
-	"crypto/x509"
-	"encoding/pem"
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
 )
 
 // ClusterIDFromCertDir returns this cluster's id: the subject common name of
@@ -19,22 +13,7 @@ import (
 // audience). An unregistered cluster has no such file and so no identity; the
 // Verifier then rejects everything.
 func ClusterIDFromCertDir(certDir string) (string, error) {
-	raw, err := os.ReadFile(filepath.Join(certDir, string(types.CertFileNameClusterCert)))
-	if err != nil {
-		return "", fmt.Errorf("read cluster certificate: %w", err)
-	}
-	block, _ := pem.Decode(raw)
-	if block == nil {
-		return "", errors.New("cluster certificate is not PEM")
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return "", fmt.Errorf("parse cluster certificate: %w", err)
-	}
-	if cert.Subject.CommonName == "" {
-		return "", errors.New("cluster certificate has no common name")
-	}
-	return cert.Subject.CommonName, nil
+	return clients.ClusterIDFromCertDir(certDir)
 }
 
 // ClusterIDProvider returns a function suitable for VerifierConfig.Audience

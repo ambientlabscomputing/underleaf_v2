@@ -32,6 +32,30 @@ type fakeCloud struct {
 	creates   int
 	nextID    int
 	queries   []types.QueryConnectionsRequest
+
+	// The real cloud refuses a connection for a node it was never told about
+	// ("Node not found", 404); known is the node set the last SyncNodes left.
+	known   map[string]bool
+	syncErr error // returned by SyncNodes while set
+	syncs   int
+	synced  [][]string // node ids of each sync, in order
+}
+
+func (f *fakeCloud) SyncNodes(_ context.Context, nodes []types.Node) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.syncs++
+	if f.syncErr != nil {
+		return f.syncErr
+	}
+	f.known = map[string]bool{}
+	var ids []string
+	for _, n := range nodes {
+		f.known[n.ID] = true
+		ids = append(ids, n.ID)
+	}
+	f.synced = append(f.synced, ids)
+	return nil
 }
 
 func (f *fakeCloud) ListConnections(_ context.Context, q types.QueryConnectionsRequest) ([]types.Connection, error) {
@@ -60,6 +84,9 @@ func (f *fakeCloud) CreateConnection(_ context.Context, r types.CreateConnection
 	f.creates++
 	if f.createErr != nil {
 		return nil, f.createErr
+	}
+	if !f.known[r.NodeID] {
+		return nil, errors.New(`status 404: {"detail":"Node not found"}`)
 	}
 	f.nextID++
 	c := types.Connection{ID: fmt.Sprintf("conn_new%d", f.nextID), NodeID: types.ForeignKey(r.NodeID), Name: r.Name, State: types.ConnectionStateProvisioned}
@@ -187,6 +214,13 @@ func newEnsureEnv(t *testing.T, linked ...string) *ensureEnv {
 			}
 			return v.cloud, nil
 		},
+		Nodes: func() ([]types.Node, error) {
+			var nodes []types.Node
+			for _, id := range linked {
+				nodes = append(nodes, types.Node{ID: id, Name: id})
+			}
+			return nodes, nil
+		},
 		Agents: v.agents,
 		Linked: v.agents.isLinked,
 		Logf:   v.logs.logf,
@@ -246,6 +280,31 @@ func TestEnsureCreatesTheConnectionWhenTheCloudHasNone(t *testing.T) {
 	if v.cloud.conns[0].Name != "remote-access" || string(v.cloud.conns[0].NodeID) != "node_mgr" {
 		t.Fatalf("created %+v", v.cloud.conns[0])
 	}
+}
+
+func TestEnsureSyncsTheNodesBeforeCreatingTheConnection(t *testing.T) {
+	// The cloud knows a cluster's nodes only from the cluster: without the sync
+	// the create is a 404 "Node not found" and remote access never comes up.
+	v := newEnsureEnv(t, "node_mgr", "node_w1")
+	v.e.NodeLinked(managerLink)
+	eventually(t, "the agent to be told", func() bool { return len(v.agents.received("node_mgr")) == 1 })
+	v.cloud.mu.Lock()
+	defer v.cloud.mu.Unlock()
+	if len(v.cloud.synced) == 0 || len(v.cloud.synced[0]) != 2 {
+		t.Fatalf("synced %v, want the whole registry (both nodes)", v.cloud.synced)
+	}
+}
+
+func TestEnsureRetriesWhileTheNodeSyncFailsAndNeverCreatesWithoutIt(t *testing.T) {
+	v := newEnsureEnv(t, "node_mgr")
+	v.cloud.syncErr = errors.New("status 503")
+	v.e.NodeLinked(managerLink)
+	eventually(t, "a few failed syncs", func() bool { v.cloud.mu.Lock(); defer v.cloud.mu.Unlock(); return v.cloud.syncs >= 3 })
+	if lists, creates := v.cloud.counts(); lists+creates != 0 {
+		t.Fatalf("touched connections (%d lists, %d creates) although the node sync failed", lists, creates)
+	}
+	v.cloud.set(func(f *fakeCloud) { f.syncErr = nil })
+	eventually(t, "ensure", func() bool { return len(v.agents.received("node_mgr")) >= 1 })
 }
 
 func TestEnsureReusesAnExistingNonClosedConnection(t *testing.T) {

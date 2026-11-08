@@ -45,8 +45,16 @@ func NewService(config utils.Config) Service {
 	remoteConn := NewRemoteConnectionEnsurer(context.Background(), RemoteConnectionConfig{
 		Enabled: RemoteAccessEnabled,
 		Cloud:   CloudConnectionsFromCerts(config),
-		Agents:  hub,
-		Linked:  hub.Linked,
+		Nodes: func() ([]types.Node, error) {
+			rows, _, err := repo.Nodes.ListNodes(types.QueryNodesRequest{})
+			nodes := make([]types.Node, 0, len(rows))
+			for _, n := range rows {
+				nodes = append(nodes, *n)
+			}
+			return nodes, err
+		},
+		Agents: hub,
+		Linked: hub.Linked,
 	})
 	hub.OnLinked(remoteConn.NodeLinked)
 
