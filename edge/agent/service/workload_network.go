@@ -15,21 +15,17 @@ import (
 
 // Network isolation (RFD 5, step 1).
 //
-// The Orchestrator container runs on its own user-defined Docker network
-// (ControlNetworkName, created by install.sh). Workloads must NOT share it, and
-// must not land on Docker's default bridge either, because the default bridge
-// is where the Orchestrator used to live and where any other container can
-// reach it. Every workload the agent creates is therefore attached to a
-// separate user-defined network that the agent creates on demand. Distinct
+// The Orchestrator is a native host process, not a container, so workloads have
+// no Orchestrator network to share. They must not land on Docker's default
+// bridge (where any other container can reach them and each other) or on the
+// host network either. Every workload the agent creates is therefore attached
+// to a separate user-defined network that the agent creates on demand. Distinct
 // user-defined bridge networks are isolated from each other by Docker.
 const (
 	// EnvWorkloadNetwork overrides the workload network name.
 	EnvWorkloadNetwork = "UNDERLEAF_WORKLOAD_NETWORK"
 	// DefaultWorkloadNetwork is the user-defined network workloads run on.
 	DefaultWorkloadNetwork = "underleaf-workloads"
-	// ControlNetworkName is the network install.sh puts the Orchestrator on.
-	// The agent refuses to put workloads on it.
-	ControlNetworkName = "underleaf-control"
 
 	managedNetworkLabel = "com.ambientlabs.underleaf.managed"
 )
@@ -43,9 +39,9 @@ func workloadNetworkName() (string, error) {
 		name = DefaultWorkloadNetwork
 	}
 	switch name {
-	case "bridge", "host", "none", "default", ControlNetworkName:
+	case "bridge", "host", "none", "default":
 		return "", fmt.Errorf("docker: %s=%q is not allowed: workloads must not share the default bridge, "+
-			"the host network, or the Orchestrator's network (%s)", EnvWorkloadNetwork, name, ControlNetworkName)
+			"or the host network", EnvWorkloadNetwork, name)
 	}
 	if strings.HasPrefix(name, "container:") {
 		return "", fmt.Errorf("docker: %s=%q is not allowed: workloads need their own network", EnvWorkloadNetwork, name)

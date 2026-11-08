@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/cli/commands"
@@ -41,10 +39,5 @@ func init() {
 }
 
 func (o *OrchestratorCLI) Execute() {
-	// A Docker-installed Orchestrator has its socket inside the container:
-	// run the command there instead (see docker_delegate.go).
-	if code, ok := delegateToContainer(os.Args[1:], realRunner()); ok {
-		os.Exit(code)
-	}
 	RootCmd.Execute()
 }

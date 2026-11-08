@@ -102,7 +102,7 @@ func TestEnsureNetworkToleratesCreateRace(t *testing.T) {
 }
 
 func TestWorkloadNetworkNameRejectsIsolationDefeatingNames(t *testing.T) {
-	for _, bad := range []string{"bridge", "host", "none", "default", ControlNetworkName, "container:abc123"} {
+	for _, bad := range []string{"bridge", "host", "none", "default", "container:abc123"} {
 		t.Setenv(EnvWorkloadNetwork, bad)
 		if name, err := workloadNetworkName(); err == nil {
 			t.Fatalf("%q must be rejected, got %q", bad, name)

@@ -106,7 +106,7 @@ Interfaces
 
 #### Orchestrator UI
 
-Operator UI for managing your cluster. The orchestrator process serves the built UI and the REST API from one listener (`UNDERLEAF_UI_DIR`; the Docker image sets it), so the browser sees a single origin. In development, a Vite dev server proxies `/api` to the orchestrator.
+Operator UI for managing your cluster. The orchestrator process serves the built UI and the REST API from one listener (`UNDERLEAF_UI_DIR`; `install.sh` sets it), so the browser sees a single origin. In development, a Vite dev server proxies `/api` to the orchestrator.
 
 | Info | Value |
 | ---- | ----- |
@@ -267,20 +267,12 @@ On push to develop:
     - build new binaries (ufagent, ufagentd, orcli, orch-server, and ufctl)
     - overwrite "develop" release with new release
     - add binaries to this new release
-- build new "develop" docker image
-    - build new Docker image tagged `underleaf:develop`
-    - push to `ghcr.io` (overwrite existing if any)
+    - build the Orchestrator UI and add it as `underleaf-ui.tar.gz`
 
 On push to SemVer tag:
 - build new release for tag:
     - build new binaries (ufagent, ufagentd, orcli, orch-server, and ufctl)
     - create new "[0-9].[0-9].[0-9]" release
     - overwrite "latest" release with new release
-    - add binaries to these new releases
-- build new "latest", "[0-9]", "[0-9].[0-9]", "[0.9].[0-9][0-9]" docker images
-    - for example, if we push the tag `2.3.40`, we would build:
-        - `underleaf:latest`
-        - `underleaf:2`
-        - `underleaf:2.3`
-        - `underleaf:2.3.40`
-    - push to `ghcr.io` (overwrite existing if any)
+    - add binaries and `underleaf-ui.tar.gz` to these new releases
+

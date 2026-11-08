@@ -23,25 +23,13 @@ import (
 // Agents have no TCP listeners at all; they dial out.
 const (
 	// EnvBindAddr is the interface the local listeners bind. Default 127.0.0.1.
-	// A non-loopback value is accepted only in container mode (below).
+	// Only loopback values are accepted: the Orchestrator runs as a native process
+	// on the host and there is no deployment (container or otherwise) in which an
+	// unauthenticated local listener is allowed to face a network.
 	EnvBindAddr = "UNDERLEAF_BIND_ADDR"
-	// EnvContainerMode is set to "1" by the Underleaf Docker image. It is the one
-	// recorded exception to "local listeners are loopback-only": inside a
-	// container the local listeners must bind the container's interface for
-	// Docker's port publishing to reach them, and the exposure is then decided by
-	// how the host publishes the ports (install.sh publishes them on
-	// 127.0.0.1 only). The setting is honoured only when the process really is
-	// in a container (ContainerMode), so exporting it on a bare host does not
-	// widen anything, and it never applies to the cluster listener, which is
-	// governed by mTLS alone.
-	EnvContainerMode = "UNDERLEAF_CONTAINER"
 
 	defaultBindAddr = "127.0.0.1"
 )
-
-// containerMarkers are files that exist inside a container. A variable so tests
-// can point at temporary files.
-var containerMarkers = []string{"/.dockerenv", "/run/.containerenv"}
 
 // BindAddr returns the interface the local TCP listeners should bind to.
 func BindAddr() string {
@@ -60,38 +48,18 @@ func isLoopbackHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// ContainerMode reports whether this process was started as the Underleaf
-// image's entrypoint: UNDERLEAF_CONTAINER=1 *and* a container marker file. Both
-// are required, so neither a stray environment variable on a bare host nor an
-// unrelated container is enough to widen a bind.
-func ContainerMode() bool {
-	if os.Getenv(EnvContainerMode) != "1" {
-		return false
-	}
-	for _, m := range containerMarkers {
-		if _, err := os.Stat(m); err == nil {
-			return true
-		}
-	}
-	return false
-}
-
 // CheckLocalBind returns an error when host would expose an unauthenticated
-// local listener beyond the local host. Loopback is always fine; anything else
-// (including the empty and wildcard hosts) only in container mode.
+// local listener beyond the local host. Only loopback is accepted; the empty and
+// wildcard hosts are refused.
 func CheckLocalBind(host string) error {
 	if isLoopbackHost(host) {
 		return nil
 	}
-	if ContainerMode() {
-		return nil
-	}
 	return fmt.Errorf(
 		"refusing to bind the unauthenticated local listener to non-loopback address %q: "+
-			"local listeners have no authentication and are loopback-only (%s only widens this "+
-			"inside the Underleaf Docker image). Worker nodes connect through the cluster "+
-			"listener, which requires mTLS: run `orcli nodes add`",
-		host, EnvBindAddr)
+			"local listeners have no authentication and are loopback-only. Worker nodes "+
+			"connect through the cluster listener, which requires mTLS: run `orcli nodes add`",
+		host)
 }
 
 // ListenLocal listens on BindAddr():port after applying CheckLocalBind.

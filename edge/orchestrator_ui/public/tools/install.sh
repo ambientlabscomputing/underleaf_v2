@@ -1,9 +1,14 @@
 #!/bin/sh
 
 # Usage:
-#   install.sh [tag] [http-port] [grpc-port]   install a manager node (single-node cluster)
-#   install.sh join <join-string> [tag]        add this machine to an existing cluster
-#                                              (the string comes from `orcli nodes add`)
+#   install.sh [tag]                      install a manager node (single-node cluster)
+#   install.sh join <join-string> [tag]   add this machine to an existing cluster
+#                                         (the string comes from `orcli nodes add`)
+#
+# Everything runs as native processes under your user account: the Orchestrator
+# (orch-server) and the agent (ufagentd) are launchd agents on macOS and systemd
+# user services on Linux, and orcli is a plain command. Docker is only used by the
+# agent, to run your workloads.
 MODE="install"
 if [ "$1" = "join" ]; then
     MODE="join"
@@ -17,27 +22,22 @@ if [ "$1" = "join" ]; then
 fi
 
 TAG=$1
-HTTP_PORT=$2
-GRPC_PORT=$3
-
+if [ -n "$2" ]; then
+    echo "usage: install.sh [tag]  (the Orchestrator listens on 127.0.0.1:9090 and 127.0.0.1:50100)" >&2
+    exit 1
+fi
 if [ -z "$TAG" ]; then
     TAG="latest"
 fi
-if [ -z "$HTTP_PORT" ]; then
-    HTTP_PORT="9090"
-fi
-if [ -z "$GRPC_PORT" ]; then
-    GRPC_PORT="50100"
-fi
 
 REPO="ambientlabscomputing/underleaf_v2"
-# These can be overridden for a mirror, a private registry or a local test; the
-# defaults are the public release.
-#   UNDERLEAF_RELEASE_BASE  where ufagent/ufagentd/orcli-<os>-<arch> are downloaded from
-#   UNDERLEAF_DOCKER_IMAGE  the Orchestrator image (without the tag)
+HTTP_PORT="9090"
+# These can be overridden for a mirror or a local test; the defaults are the
+# public release.
+#   UNDERLEAF_RELEASE_BASE  where ufagent/ufagentd/orcli/orch-server-<os>-<arch> and
+#                           underleaf-ui.tar.gz are downloaded from
 #   UNDERLEAF_INSTALL_DIR   where the binaries go
-#   UNDERLEAF_SKIP_PULL=1   use the image already present locally
-DOCKER_IMAGE="${UNDERLEAF_DOCKER_IMAGE:-ghcr.io/ambientlabscomputing/underleaf}"
+#   UNDERLEAF_DATA_DIR      where the Orchestrator keeps its state
 INSTALL_DIR="${UNDERLEAF_INSTALL_DIR:-${HOME}/.local/bin}"
 RELEASE_BASE="${UNDERLEAF_RELEASE_BASE:-https://github.com/${REPO}/releases/download/${TAG}}"
 
@@ -63,95 +63,147 @@ case "$ARCH" in
         ;;
 esac
 
-# ── Install binaries ──────────────────────────────────────────────────────────
+# The Orchestrator's state (database with API tokens, cluster CA and its private
+# key, cloud-issued certificates) lives in one directory that only you can read.
+if [ -n "$UNDERLEAF_DATA_DIR" ]; then
+    DATA_DIR="$UNDERLEAF_DATA_DIR"
+elif [ "$GOOS" = "darwin" ]; then
+    DATA_DIR="${HOME}/Library/Application Support/Underleaf"
+else
+    DATA_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/underleaf"
+fi
+UI_DIR="${DATA_DIR}/ui"
+# The agent keeps its local database in its working directory. A launchd agent
+# starts in "/", where it cannot write, so it gets a directory of its own.
+AGENT_DIR="${DATA_DIR}/agent"
+
+mkdir -p "$DATA_DIR"
+chmod 700 "$DATA_DIR"
+
+# ── Download ──────────────────────────────────────────────────────────────────
+# Download to a temporary name and rename into place: overwriting a running
+# executable in place fails on Linux and can get the process killed on macOS.
+fetch() { # fetch <url> <dest> [chmod-mode]
+    TMP_DL="$2.download.$$"
+    if ! curl -fSL "$1" -o "$TMP_DL"; then
+        rm -f "$TMP_DL"
+        echo "Failed to download $1" >&2
+        exit 1
+    fi
+    [ -n "$3" ] && chmod "$3" "$TMP_DL"
+    mv -f "$TMP_DL" "$2"
+}
+
 echo "Installing binaries from release '${TAG}' (${GOOS}/${GOARCH}) to ${INSTALL_DIR} ..."
 mkdir -p "$INSTALL_DIR"
 
-BINS="ufagent ufagentd orcli"
-if [ "$MODE" = "join" ]; then
-    BINS="ufagent ufagentd" # a worker needs no orcli
+BINS="ufagent ufagentd"
+if [ "$MODE" = "install" ]; then
+    BINS="ufagent ufagentd orcli orch-server"
 fi
 for BIN in $BINS; do
-    URL="${RELEASE_BASE}/${BIN}-${GOOS}-${GOARCH}"
     echo "  Downloading ${BIN}..."
-    if ! curl -fSL "$URL" -o "${INSTALL_DIR}/${BIN}"; then
-        echo "Failed to download ${BIN} from ${URL}" >&2
-        exit 1
-    fi
-    chmod +x "${INSTALL_DIR}/${BIN}"
+    fetch "${RELEASE_BASE}/${BIN}-${GOOS}-${GOARCH}" "${INSTALL_DIR}/${BIN}" 755
 done
 
 echo "Binaries installed. Make sure ${INSTALL_DIR} is in your PATH."
 
-# ── Register ufagentd as a daemon ─────────────────────────────────────────────
+# ── Run a binary as a user service ────────────────────────────────────────────
+# install_service <name> <description> [<workdir> <ui-dir>]
+# The binary is ${INSTALL_DIR}/<name>, started as `<name> run`.
 install_service() {
-    UFAGENTD="${INSTALL_DIR}/ufagentd"
+    SVC_NAME="$1"
+    SVC_DESC="$2"
+    SVC_WORKDIR="$3"
+    SVC_UIDIR="$4"
+    SVC_BIN="${INSTALL_DIR}/${SVC_NAME}"
 
     case "$GOOS" in
         linux)
             SERVICE_DIR="${HOME}/.config/systemd/user"
-            SERVICE_FILE="${SERVICE_DIR}/ufagentd.service"
+            SERVICE_FILE="${SERVICE_DIR}/${SVC_NAME}.service"
             mkdir -p "$SERVICE_DIR"
-            cat > "$SERVICE_FILE" << EOF
-[Unit]
-Description=Underleaf Edge Agent Daemon
-After=network.target
-
-[Service]
-ExecStart=${UFAGENTD} run
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
-EOF
+            {
+                echo "[Unit]"
+                echo "Description=${SVC_DESC}"
+                echo "After=network.target"
+                echo ""
+                echo "[Service]"
+                echo "ExecStart=\"${SVC_BIN}\" run"
+                [ -n "$SVC_WORKDIR" ] && echo "WorkingDirectory=${SVC_WORKDIR}"
+                [ -n "$SVC_UIDIR" ] && echo "Environment=\"UNDERLEAF_UI_DIR=${SVC_UIDIR}\""
+                echo "Restart=on-failure"
+                echo "RestartSec=5"
+                echo ""
+                echo "[Install]"
+                echo "WantedBy=default.target"
+            } > "$SERVICE_FILE"
             systemctl --user daemon-reload
-            systemctl --user enable --now ufagentd
+            systemctl --user enable "$SVC_NAME"
+            # restart, not just start: a re-run installs new binaries
+            systemctl --user restart "$SVC_NAME"
             # Allow the service to run without an active login session
             loginctl enable-linger "$USER" 2>/dev/null || true
-            echo "ufagentd installed as a systemd user service."
-            echo "  Status:   systemctl --user status ufagentd"
-            echo "  Logs:     journalctl --user -u ufagentd -f"
-            echo "  Uninstall: systemctl --user disable --now ufagentd && rm ${SERVICE_FILE}"
+            echo "${SVC_NAME} installed as a systemd user service."
+            echo "  Status:   systemctl --user status ${SVC_NAME}"
+            echo "  Logs:     journalctl --user -u ${SVC_NAME} -f"
+            echo "  Uninstall: systemctl --user disable --now ${SVC_NAME} && rm ${SERVICE_FILE}"
             ;;
 
         darwin)
             PLIST_DIR="${HOME}/Library/LaunchAgents"
-            PLIST_FILE="${PLIST_DIR}/com.ambientlabs.ufagentd.plist"
-            LOG_DIR="${HOME}/Library/Logs/ufagentd"
+            PLIST_FILE="${PLIST_DIR}/com.ambientlabs.${SVC_NAME}.plist"
+            LOG_DIR="${HOME}/Library/Logs/${SVC_NAME}"
             mkdir -p "$PLIST_DIR" "$LOG_DIR"
-            cat > "$PLIST_FILE" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.ambientlabs.ufagentd</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>${UFAGENTD}</string>
-        <string>run</string>
-    </array>
-    <key>KeepAlive</key>
-    <true/>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>${LOG_DIR}/stdout.log</string>
-    <key>StandardErrorPath</key>
-    <string>${LOG_DIR}/stderr.log</string>
-</dict>
-</plist>
-EOF
+            {
+                echo '<?xml version="1.0" encoding="UTF-8"?>'
+                echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+                echo '<plist version="1.0">'
+                echo '<dict>'
+                echo '    <key>Label</key>'
+                echo "    <string>com.ambientlabs.${SVC_NAME}</string>"
+                echo '    <key>ProgramArguments</key>'
+                echo '    <array>'
+                echo "        <string>${SVC_BIN}</string>"
+                echo '        <string>run</string>'
+                echo '    </array>'
+                if [ -n "$SVC_WORKDIR" ]; then
+                    echo '    <key>WorkingDirectory</key>'
+                    echo "    <string>${SVC_WORKDIR}</string>"
+                fi
+                if [ -n "$SVC_UIDIR" ]; then
+                    echo '    <key>EnvironmentVariables</key>'
+                    echo '    <dict>'
+                    echo '        <key>UNDERLEAF_UI_DIR</key>'
+                    echo "        <string>${SVC_UIDIR}</string>"
+                    echo '    </dict>'
+                fi
+                echo '    <key>KeepAlive</key>'
+                echo '    <true/>'
+                echo '    <key>RunAtLoad</key>'
+                echo '    <true/>'
+                echo '    <key>StandardOutPath</key>'
+                echo "    <string>${LOG_DIR}/stdout.log</string>"
+                echo '    <key>StandardErrorPath</key>'
+                echo "    <string>${LOG_DIR}/stderr.log</string>"
+                echo '</dict>'
+                echo '</plist>'
+            } > "$PLIST_FILE"
             # Unload any existing instance before reloading
             launchctl unload "$PLIST_FILE" 2>/dev/null || true
             launchctl load -w "$PLIST_FILE"
-            echo "ufagentd installed as a launchd user agent."
-            echo "  Status:   launchctl list | grep ufagentd"
+            echo "${SVC_NAME} installed as a launchd user agent."
+            echo "  Status:   launchctl list | grep ${SVC_NAME}"
             echo "  Logs:     tail -f ${LOG_DIR}/stderr.log"
             echo "  Uninstall: launchctl unload ${PLIST_FILE} && rm ${PLIST_FILE}"
             ;;
     esac
+}
+
+install_agent() {
+    mkdir -p "$AGENT_DIR"
+    chmod 700 "$AGENT_DIR"
+    install_service ufagentd "Underleaf Edge Agent Daemon" "$AGENT_DIR"
 }
 
 # A joining node enrolls before its service starts, so the daemon comes up as a
@@ -162,135 +214,74 @@ if [ "$MODE" = "join" ]; then
         echo "Join failed; no service was installed. Ask for a fresh string with 'orcli nodes add' and try again." >&2
         exit 1
     fi
-fi
-
-install_service
-
-if [ "$MODE" = "join" ]; then
+    install_agent
     echo "Done! This machine is now a worker in the cluster."
     exit 0
 fi
 
-# ── Pull and run the orchestrator via Docker ──────────────────────────────────
-if [ "${UNDERLEAF_SKIP_PULL:-}" = "1" ]; then
-    echo "Using local image ${DOCKER_IMAGE}:${TAG} (UNDERLEAF_SKIP_PULL=1)"
-else
-    echo "Pulling ${DOCKER_IMAGE}:${TAG} ..."
-    docker pull "${DOCKER_IMAGE}:${TAG}"
+# ── Manager: the Orchestrator ─────────────────────────────────────────────────
+# The UI is a set of static files the Orchestrator serves next to its API.
+echo "  Downloading the UI..."
+UI_TMP="${DATA_DIR}/ui.new.$$"
+UI_TAR="${DATA_DIR}/ui.tar.gz.$$"
+fetch "${RELEASE_BASE}/underleaf-ui.tar.gz" "$UI_TAR"
+mkdir -p "$UI_TMP"
+if ! tar -xzf "$UI_TAR" -C "$UI_TMP"; then
+    rm -rf "$UI_TMP" "$UI_TAR"
+    echo "The downloaded UI archive is not valid." >&2
+    exit 1
 fi
+rm -f "$UI_TAR"
+rm -rf "$UI_DIR"
+mv "$UI_TMP" "$UI_DIR"
 
-# The orchestrator gets its own user-defined network. Workloads run on a
-# different one (created by the agent), so a compromised workload cannot reach
-# the orchestrator's ports; the host agent still reaches it through the
-# loopback-published ports below. (RFD 5, step 1)
-ORCH_NETWORK="underleaf-control"
-docker network inspect "$ORCH_NETWORK" >/dev/null 2>&1 || docker network create "$ORCH_NETWORK" >/dev/null
-
-# The orchestrator's state (database, API tokens, cluster CA, certificates) lives
-# in /data inside the container. Keep it in a named volume so it survives
-# recreating the container or upgrading the image.
-DATA_VOLUME="underleaf-data"
-
-# The cluster listener (worker nodes joining over mTLS) is published so that
-# `orcli nodes add` works without recreating the container. Nothing listens on it
-# until the first `orcli nodes add`, and it then accepts mutual-TLS connections
-# only. UNDERLEAF_CLUSTER_PUBLISH picks the host interface ("0.0.0.0" by
-# default, "127.0.0.1" for a single machine, "none" to not publish at all).
-CLUSTER_PORT="${UNDERLEAF_CLUSTER_PORT:-50104}"
-CLUSTER_PUBLISH="${UNDERLEAF_CLUSTER_PUBLISH:-0.0.0.0}"
-
-run_orchestrator() {
-    echo "Starting orchestrator (HTTP :${HTTP_PORT}, gRPC :${GRPC_PORT}) ..."
-    docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1 || docker volume create "$DATA_VOLUME" >/dev/null
-    if [ "$CLUSTER_PUBLISH" = "none" ]; then
-        docker run -d \
-            --network "$ORCH_NETWORK" \
-            -v "${DATA_VOLUME}:/data" \
-            -p "127.0.0.1:${HTTP_PORT}:9090" \
-            -p "127.0.0.1:${GRPC_PORT}:50100" \
-            --restart unless-stopped \
-            --name underleaf "${DOCKER_IMAGE}:${TAG}"
-    else
-        docker run -d \
-            --network "$ORCH_NETWORK" \
-            -v "${DATA_VOLUME}:/data" \
-            -p "127.0.0.1:${HTTP_PORT}:9090" \
-            -p "127.0.0.1:${GRPC_PORT}:50100" \
-            -p "${CLUSTER_PUBLISH}:${CLUSTER_PORT}:50104" \
-            --restart unless-stopped \
-            --name underleaf "${DOCKER_IMAGE}:${TAG}"
-    fi
-}
-
-has_data_volume() {
-    # Only our named volume counts: the image also declares VOLUME /data, so a
-    # container started by hand without -v has an anonymous volume there.
-    [ -n "$(docker inspect -f '{{range .Mounts}}{{if and (eq .Destination "/data") (eq .Name "'"$DATA_VOLUME"'")}}x{{end}}{{end}}' underleaf 2>/dev/null)" ]
-}
-
-if docker inspect underleaf >/dev/null 2>&1; then
-    if has_data_volume; then
-        # Existing install that already keeps its state in the volume: only move
-        # it onto the control network. The restart is required: without it Docker
-        # leaves the published ports bound to the old network endpoint and the
-        # host can no longer reach the container. To upgrade the image, run
-        # `docker rm -f underleaf` and re-run this installer; the volume is kept.
-        docker network connect "$ORCH_NETWORK" underleaf 2>/dev/null || true
-        docker network disconnect bridge underleaf 2>/dev/null || true
-        docker restart underleaf >/dev/null
-        echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'. Its state is in volume '${DATA_VOLUME}'."
-        echo "To switch to ${DOCKER_IMAGE}:${TAG}: docker rm -f underleaf, then re-run this installer (the state is kept)."
-        if [ -z "$(docker port underleaf 50104/tcp 2>/dev/null)" ]; then
-            echo "This container does not publish the cluster port (${CLUSTER_PORT}), so worker nodes cannot join it. A container's published ports cannot change: docker rm -f underleaf and re-run this installer to add it (the state is kept)."
-        fi
-    elif [ "${UNDERLEAF_MIGRATE_STATE:-}" = "1" ]; then
-        # Older container: its state is in the container's own filesystem, which
-        # is lost when the container is removed. Copy it into the volume, keep the
-        # old container (stopped, renamed) as a backup, and start the new one.
-        BACKUP="underleaf-backup-$(date +%Y%m%d%H%M%S)"
-        TMP_STATE="$(mktemp -d)"
-        echo "Stopping 'underleaf' and copying its state into volume '${DATA_VOLUME}' ..."
-        docker stop underleaf >/dev/null
+# Earlier versions ran the Orchestrator in a Docker container named `underleaf`.
+# It cannot run alongside this one (same ports, same state), so move its state
+# here once, and stop it. The container is kept (stopped, renamed) as a backup.
+if command -v docker >/dev/null 2>&1 \
+        && [ "$(docker inspect -f '{{.State.Running}}' underleaf 2>/dev/null)" = "true" ]; then
+    echo "Found the old Docker-based Orchestrator ('underleaf'); moving its state to ${DATA_DIR} ..."
+    docker stop underleaf >/dev/null
+    if [ ! -e "${DATA_DIR}/orchestrator.db" ]; then
         for F in orchestrator.db orchestrator.db-wal orchestrator.db-shm certs cluster-ca; do
-            # Older images keep state in the working directory (/); a container
-            # started by hand from the new image keeps it in /data.
-            docker cp "underleaf:/${F}" "${TMP_STATE}/${F}" >/dev/null 2>&1 \
-                || docker cp "underleaf:/data/${F}" "${TMP_STATE}/${F}" >/dev/null 2>&1 || true
+            # Older images keep state in the working directory (/); newer ones in /data.
+            docker cp "underleaf:/data/${F}" "${DATA_DIR}/${F}" >/dev/null 2>&1 \
+                || docker cp "underleaf:/${F}" "${DATA_DIR}/${F}" >/dev/null 2>&1 || true
         done
-        if [ ! -e "${TMP_STATE}/orchestrator.db" ]; then
-            echo "Could not find orchestrator.db in the old container; leaving it untouched (restarting it)." >&2
+        if [ ! -e "${DATA_DIR}/orchestrator.db" ]; then
+            echo "Could not find orchestrator.db in the old container; restarting it and stopping here." >&2
             docker start underleaf >/dev/null
-            rm -rf "$TMP_STATE"
             exit 1
         fi
-        docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1 || docker volume create "$DATA_VOLUME" >/dev/null
-        if ! docker run --rm --entrypoint sh -v "${DATA_VOLUME}:/data" -v "${TMP_STATE}:/src:ro" \
-                "${DOCKER_IMAGE}:${TAG}" -c 'cp -a /src/. /data/'; then
-            echo "Copying state into the volume failed; restarting the old container unchanged." >&2
-            docker start underleaf >/dev/null
-            rm -rf "$TMP_STATE"
-            exit 1
-        fi
-        rm -rf "$TMP_STATE"
-        docker rename underleaf "$BACKUP"
-        docker update --restart no "$BACKUP" >/dev/null
-        run_orchestrator
-        echo "Old container kept (stopped) as '${BACKUP}'. Remove it once you have checked the new install: docker rm ${BACKUP}"
-    else
-        # Older container whose state is only in its own filesystem. Do not
-        # recreate it on our own: that would discard the state.
-        docker network connect "$ORCH_NETWORK" underleaf 2>/dev/null || true
-        docker network disconnect bridge underleaf 2>/dev/null || true
-        docker restart underleaf >/dev/null
-        echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'."
-        echo "It keeps its current image, and its state is not in the '${DATA_VOLUME}' volume (removing the container could lose it)."
-        echo "To move to ${DOCKER_IMAGE}:${TAG} and keep the state, re-run with: UNDERLEAF_MIGRATE_STATE=1 (the old container is kept as a stopped backup)."
     fi
-else
-    run_orchestrator
+    BACKUP="underleaf-backup-$(date +%Y%m%d%H%M%S)"
+    docker rename underleaf "$BACKUP"
+    docker update --restart no "$BACKUP" >/dev/null
+    chmod -R go-rwx "$DATA_DIR"
+    echo "The old container is kept (stopped) as '${BACKUP}', and its volume 'underleaf-data' is untouched."
+    echo "Once you have checked the new install: docker rm ${BACKUP} && docker volume rm underleaf-data"
 fi
+
+echo "Starting the Orchestrator ..."
+install_service orch-server "Underleaf Orchestrator" "$DATA_DIR" "$UI_DIR"
+
+# Wait until it answers before starting the agent that links to it.
+READY=""
+TRIES=0
+while [ "$TRIES" -lt 30 ]; do
+    if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:${HTTP_PORT}/"; then
+        READY=1
+        break
+    fi
+    TRIES=$((TRIES + 1))
+    sleep 1
+done
+if [ -z "$READY" ]; then
+    echo "The Orchestrator did not answer on 127.0.0.1:${HTTP_PORT} within 30 seconds. Is the port in use? Check the service logs above." >&2
+    exit 1
+fi
+
+install_agent
 
 echo "Done! UI available at http://localhost:${HTTP_PORT}"
-if [ "$CLUSTER_PUBLISH" != "none" ]; then
-    echo "To add a worker node: orcli nodes add --advertise <this-machine's-address>:${CLUSTER_PORT}"
-fi
+echo "To add a worker node: orcli nodes add --advertise <this-machine's-address>:50104"

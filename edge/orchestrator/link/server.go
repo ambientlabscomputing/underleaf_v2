@@ -49,8 +49,7 @@ type NodeLookup interface {
 // listener.
 //
 // A local-listener link is *not* proof of anything: any process that can open
-// a TCP connection to 127.0.0.1 (or, with the Docker image, to the published
-// port) can open one. What the design guarantees instead is the blast radius:
+// a TCP connection to 127.0.0.1 can open one. What the design guarantees instead is the blast radius:
 //
 //   - It can only claim a node whose transport is "local", i.e. the manager's
 //     own agent registered through the local listener. It cannot take over a

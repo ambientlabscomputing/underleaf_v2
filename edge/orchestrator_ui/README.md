@@ -13,7 +13,7 @@ Operator UI for managing a single cluster: containers, nodes, streams, etc. Talk
 | http | UI dev server (proxies `/api` to the Orchestrator) | `http://localhost:5183/` |
 | http | UI as served by the Orchestrator | `http://127.0.0.1:9090/` (same origin as `/api/v1`) |
 
-In production the [Orchestrator](../orchestrator/README.md) serves the built UI (`npm run build` -> `dist/`, found via `UNDERLEAF_UI_DIR`) and the REST API from **one listener on one origin**: no CORS, one port to publish. The Docker image does this; there is no separate web server.
+In production the [Orchestrator](../orchestrator/README.md) serves the built UI (`npm run build` -> `dist/`, found via `UNDERLEAF_UI_DIR`) and the REST API from **one listener on one origin**: no CORS, one port. `install.sh` downloads the built UI next to the Orchestrator and sets `UNDERLEAF_UI_DIR` for it; there is no separate web server.
 
 ## Running locally
 

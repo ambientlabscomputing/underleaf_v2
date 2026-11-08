@@ -7,9 +7,6 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
 
-env:
-  IMAGE_NAME: ghcr.io/ambientlabscomputing/underleaf
-
 jobs:
   # ── Binary builds ──────────────────────────────────────────────────────────
   build-binaries:
@@ -62,10 +59,42 @@ jobs:
           name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
           path: edge/bin/
 
+  # ── Orchestrator UI ────────────────────────────────────────────────────────
+  # The Orchestrator serves these static files next to its API (UNDERLEAF_UI_DIR);
+  # install.sh downloads and unpacks them with the binaries.
+  build-ui:
+    name: Build Orchestrator UI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: edge/orchestrator_ui/package-lock.json
+
+      - name: Build
+        working-directory: edge/orchestrator_ui
+        run: |
+          npm ci
+          npm run build
+
+      - name: Package
+        run: |
+          mkdir -p ui-release
+          tar -czf ui-release/underleaf-ui.tar.gz -C edge/orchestrator_ui/dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui
+          path: ui-release/
+
   # ── development release ────────────────────────────────────────────────────
   publish-development:
     name: Publish development release
-    needs: build-binaries
+    needs: [build-binaries, build-ui]
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
@@ -93,7 +122,7 @@ jobs:
   # ── semver release ─────────────────────────────────────────────────────────
   publish-semver:
     name: Publish semver release
-    needs: build-binaries
+    needs: [build-binaries, build-ui]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
@@ -127,53 +156,3 @@ jobs:
           gh release create latest artifacts/* \
             --title "latest (${{ steps.tag.outputs.name }})" \
             --notes "Latest stable release — ${{ steps.tag.outputs.name }}"
-
-  # ── Docker image ───────────────────────────────────────────────────────────
-  build-push-docker:
-    name: Build & push Docker image
-    needs: build-binaries
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download linux binaries
-        uses: actions/download-artifact@v4
-        with:
-          path: edge/bin
-          merge-multiple: true
-          pattern: binaries-linux-*
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compute image tags
-        id: tags
-        run: |
-          if [[ "${GITHUB_REF}" == refs/heads/develop ]]; then
-            echo "tags=${{ env.IMAGE_NAME }}:develop" >> $GITHUB_OUTPUT
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
-            MAJOR="${TAG%%.*}"
-            MINOR="${TAG%.*}"
-            echo "tags=${{ env.IMAGE_NAME }}:latest,${{ env.IMAGE_NAME }}:${MAJOR},${{ env.IMAGE_NAME }}:${MINOR},${{ env.IMAGE_NAME }}:${TAG}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: edge
-          file: edge/docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

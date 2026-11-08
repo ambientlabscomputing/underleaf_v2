@@ -7,49 +7,24 @@ import (
 	"testing"
 )
 
-// fakeContainer makes ContainerMode's file marker exist (or not) for a test.
-func fakeContainer(t *testing.T, inContainer bool) {
-	t.Helper()
-	old := containerMarkers
-	t.Cleanup(func() { containerMarkers = old })
-	if !inContainer {
-		containerMarkers = []string{filepath.Join(t.TempDir(), "no-such-marker")}
-		return
-	}
-	marker := filepath.Join(t.TempDir(), ".dockerenv")
-	if err := os.WriteFile(marker, nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	containerMarkers = []string{marker}
-}
-
 func TestCheckLocalBind(t *testing.T) {
 	cases := []struct {
-		name         string
-		host         string
-		inContainer  bool
-		containerEnv string
-		wantErr      bool
+		name    string
+		host    string
+		wantErr bool
 	}{
-		{"loopback v4", "127.0.0.1", false, "", false},
-		{"loopback v6", "::1", false, "", false},
-		{"bracketed loopback v6", "[::1]", false, "", false},
-		{"localhost", "localhost", false, "", false},
-		{"wildcard refused", "0.0.0.0", false, "", true},
-		{"v6 wildcard refused", "::", false, "", true},
-		{"empty host refused", "", false, "", true},
-		{"lan refused", "192.168.1.5", false, "", true},
-		{"hostname refused", "manager.example.com", false, "", true},
-		// Container mode needs BOTH the image's env marker and a real container.
-		{"env marker on a bare host does not widen", "0.0.0.0", false, "1", true},
-		{"a container without the marker does not widen", "0.0.0.0", true, "", true},
-		{"marker with a wrong value does not widen", "0.0.0.0", true, "true", true},
-		{"the Docker image (marker + container)", "0.0.0.0", true, "1", false},
+		{"loopback v4", "127.0.0.1", false},
+		{"loopback v6", "::1", false},
+		{"bracketed loopback v6", "[::1]", false},
+		{"localhost", "localhost", false},
+		{"wildcard refused", "0.0.0.0", true},
+		{"v6 wildcard refused", "::", true},
+		{"empty host refused", "", true},
+		{"lan refused", "192.168.1.5", true},
+		{"hostname refused", "manager.example.com", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fakeContainer(t, tc.inContainer)
-			t.Setenv(EnvContainerMode, tc.containerEnv)
 			if err := CheckLocalBind(tc.host); (err != nil) != tc.wantErr {
 				t.Fatalf("CheckLocalBind(%q) err=%v, wantErr=%v", tc.host, err, tc.wantErr)
 			}
@@ -57,26 +32,25 @@ func TestCheckLocalBind(t *testing.T) {
 	}
 }
 
-// The stopgap switches are gone: setting them must not widen anything.
-func TestRetiredStopgapsHaveNoEffect(t *testing.T) {
-	fakeContainer(t, false)
-	t.Setenv(EnvContainerMode, "")
+// Nothing in the environment widens a local bind: not the retired stopgap
+// switches, and not the container-mode variable the Docker image used to set.
+func TestNoEnvironmentVariableWidensALocalBind(t *testing.T) {
+	t.Setenv("UNDERLEAF_CONTAINER", "1")
 	t.Setenv("UNDERLEAF_INSECURE_ALLOW_REMOTE", "1")
 	t.Setenv("UNDERLEAF_CLUSTER_TOKEN", "s3cret")
 	for _, host := range []string{"0.0.0.0", "", "10.0.0.5"} {
 		if err := CheckLocalBind(host); err == nil {
-			t.Errorf("CheckLocalBind(%q) accepted a non-loopback bind because of a retired env var", host)
+			t.Errorf("CheckLocalBind(%q) accepted a non-loopback bind because of an env var", host)
 		}
 	}
 	t.Setenv(EnvBindAddr, "0.0.0.0")
 	if lis, err := ListenLocal("0"); err == nil {
 		lis.Close()
-		t.Fatal("ListenLocal bound a wildcard address because of a retired env var")
+		t.Fatal("ListenLocal bound a wildcard address because of an env var")
 	}
 }
 
 func TestListenLocalDefaultsToLoopback(t *testing.T) {
-	fakeContainer(t, false)
 	t.Setenv(EnvBindAddr, "")
 	lis, err := ListenLocal("0")
 	if err != nil {
@@ -85,30 +59,6 @@ func TestListenLocalDefaultsToLoopback(t *testing.T) {
 	defer lis.Close()
 	if ip := lis.Addr().(*net.TCPAddr).IP; !ip.IsLoopback() {
 		t.Fatalf("bound to %v, want loopback", ip)
-	}
-}
-
-func TestListenLocalRefusesWildcardOutsideTheImage(t *testing.T) {
-	fakeContainer(t, false)
-	t.Setenv(EnvBindAddr, "0.0.0.0")
-	t.Setenv(EnvContainerMode, "1") // set on a bare host: ignored
-	if lis, err := ListenLocal("0"); err == nil {
-		lis.Close()
-		t.Fatal("expected refusal")
-	}
-}
-
-func TestListenLocalInTheImageBindsTheContainerInterface(t *testing.T) {
-	fakeContainer(t, true)
-	t.Setenv(EnvBindAddr, "0.0.0.0")
-	t.Setenv(EnvContainerMode, "1")
-	lis, err := ListenLocal("0")
-	if err != nil {
-		t.Fatalf("the Docker image's local listener must still bind all interfaces: %v", err)
-	}
-	defer lis.Close()
-	if ip := lis.Addr().(*net.TCPAddr).IP; !ip.IsUnspecified() {
-		t.Fatalf("bound to %v, want the wildcard address", ip)
 	}
 }
 

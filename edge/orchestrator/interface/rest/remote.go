@@ -42,8 +42,8 @@ import (
 
 // EnvRemoteAddr is host:port for the remote listener. Unset or empty disables
 // it (the default): no remote access unless the operator turns it on. It shares
-// the local listeners' bind policy (utils.CheckLocalBind): loopback, or the
-// container interface inside the Docker image. Its only client is the agent's
+// the local listeners' bind policy (utils.CheckLocalBind): loopback only.
+// Its only client is the agent's
 // tunnel on the same host, so it has no reason to face a network; and unlike the
 // cluster listener it is plain HTTP authenticated by a bearer-style assertion,
 // so it must not be exposed beyond loopback.

@@ -42,7 +42,7 @@ func (s *OrchestratorGRPCPublicServer) Serve() {
 		agentpb.RegisterAgentLinkServer(grpcServer, s.Link)
 	}
 
-	fmt.Printf("gRPC local listener on %s (unauthenticated; loopback only outside the Docker image)\n", lis.Addr())
+	fmt.Printf("gRPC local listener on %s (unauthenticated; loopback only)\n", lis.Addr())
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(fmt.Sprintf("grpc_public: server failed: %v", err))
 	}

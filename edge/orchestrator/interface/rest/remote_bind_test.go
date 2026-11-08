@@ -7,9 +7,8 @@ import (
 
 // The remote listener is plain HTTP authenticated by an assertion, and its only
 // client is the agent's tunnel on the same host, so it follows the local
-// listeners' bind policy (RFD 5 step 8): loopback, or the container interface
-// inside the Docker image. Nothing else, and none of the retired switches, can
-// widen it.
+// listeners' bind policy (RFD 5 step 8): loopback only. No
+// environment variable, retired switch or otherwise, can widen it.
 func TestRemoteListenerRefusesNonLoopbackBinds(t *testing.T) {
 	e := newRemoteEnv(t, false)
 	t.Setenv("UNDERLEAF_CONTAINER", "")

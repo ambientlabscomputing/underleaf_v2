@@ -51,20 +51,6 @@ install-dev: build-dev
 fmt:
 	go fmt ./...
 
-## docker-build: Build the Docker image
-docker-build:
-	docker build -t underleaf:latest -f docker/Dockerfile .
-
-## docker-run: Build and run the Docker container
-docker-run: docker-build
-	-docker network create underleaf-control
-	docker run --network underleaf-control -v underleaf-data:/data -p 127.0.0.1:9090:9090 -p 127.0.0.1:50100:50100 underleaf:latest
-
-## docker-push: Push the Docker image to GitHub Container Registry
-docker-push:
-	docker tag underleaf:latest ghcr.io/ambientlabscomputing/underleaf:latest
-	docker push ghcr.io/ambientlabscomputing/underleaf:latest
-
 ## install.sh: run the Install script
 install.sh:
 	./orchestrator_ui/public/tools/install.sh
@@ -73,12 +59,13 @@ install.sh:
 install.sh-dev: dev-clean
 	./orchestrator_ui/public/tools/install.sh develop
 
-## dev-clean: Remove ufagentd launchd agent and underleaf Docker container (macOS dev reset)
+## dev-clean: Remove the ufagentd and orch-server launchd agents (macOS dev reset; keeps the Orchestrator's state)
 dev-clean:
 	-launchctl unload $(HOME)/Library/LaunchAgents/com.ambientlabs.ufagentd.plist 2>/dev/null
 	-rm -f $(HOME)/Library/LaunchAgents/com.ambientlabs.ufagentd.plist
-	-docker rm -f underleaf 2>/dev/null
-	@echo "Cleaned up launchd agent and Docker container."
+	-launchctl unload $(HOME)/Library/LaunchAgents/com.ambientlabs.orch-server.plist 2>/dev/null
+	-rm -f $(HOME)/Library/LaunchAgents/com.ambientlabs.orch-server.plist
+	@echo "Cleaned up the launchd agents."
 
 ui-run:
 	cd orchestrator_ui && npm run dev &
