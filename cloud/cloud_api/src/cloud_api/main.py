@@ -16,6 +16,14 @@ cloud_api.app_config = cfg
 
 init_session_maker(cfg)
 
+# How long uvicorn keeps an idle HTTP connection open. It must be longer than
+# any proxy in front of it keeps an idle upstream connection (nginx: 60 s).
+# uvicorn's default is 5 s, which is exactly the interval ufctl and orcli poll
+# the device flows at: nginx then reuses a connection uvicorn is closing at that
+# very moment and answers the client 502 ("upstream prematurely closed
+# connection") on about every other poll.
+KEEP_ALIVE_TIMEOUT_SECONDS = 75
+
 
 if __name__ == "__main__":
     cloud_api.logger.info(
@@ -29,4 +37,5 @@ if __name__ == "__main__":
         host=cfg.api.host,
         port=cfg.api.port,
         reload=cfg.reload,
+        timeout_keep_alive=KEEP_ALIVE_TIMEOUT_SECONDS,
     )
