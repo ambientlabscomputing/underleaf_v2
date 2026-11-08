@@ -31,9 +31,15 @@ if [ -z "$GRPC_PORT" ]; then
 fi
 
 REPO="ambientlabscomputing/underleaf_v2"
-DOCKER_IMAGE="ghcr.io/ambientlabscomputing/underleaf"
-INSTALL_DIR="${HOME}/.local/bin"
-RELEASE_BASE="https://github.com/${REPO}/releases/download/${TAG}"
+# These can be overridden for a mirror, a private registry or a local test; the
+# defaults are the public release.
+#   UNDERLEAF_RELEASE_BASE  where ufagent/ufagentd/orcli-<os>-<arch> are downloaded from
+#   UNDERLEAF_DOCKER_IMAGE  the Orchestrator image (without the tag)
+#   UNDERLEAF_INSTALL_DIR   where the binaries go
+#   UNDERLEAF_SKIP_PULL=1   use the image already present locally
+DOCKER_IMAGE="${UNDERLEAF_DOCKER_IMAGE:-ghcr.io/ambientlabscomputing/underleaf}"
+INSTALL_DIR="${UNDERLEAF_INSTALL_DIR:-${HOME}/.local/bin}"
+RELEASE_BASE="${UNDERLEAF_RELEASE_BASE:-https://github.com/${REPO}/releases/download/${TAG}}"
 
 # ── Detect OS and architecture ────────────────────────────────────────────────
 OS="$(uname -s)"
@@ -166,8 +172,12 @@ if [ "$MODE" = "join" ]; then
 fi
 
 # ── Pull and run the orchestrator via Docker ──────────────────────────────────
-echo "Pulling ${DOCKER_IMAGE}:${TAG} ..."
-docker pull "${DOCKER_IMAGE}:${TAG}"
+if [ "${UNDERLEAF_SKIP_PULL:-}" = "1" ]; then
+    echo "Using local image ${DOCKER_IMAGE}:${TAG} (UNDERLEAF_SKIP_PULL=1)"
+else
+    echo "Pulling ${DOCKER_IMAGE}:${TAG} ..."
+    docker pull "${DOCKER_IMAGE}:${TAG}"
+fi
 
 # The orchestrator gets its own user-defined network. Workloads run on a
 # different one (created by the agent), so a compromised workload cannot reach
@@ -181,16 +191,35 @@ docker network inspect "$ORCH_NETWORK" >/dev/null 2>&1 || docker network create 
 # recreating the container or upgrading the image.
 DATA_VOLUME="underleaf-data"
 
+# The cluster listener (worker nodes joining over mTLS) is published so that
+# `orcli nodes add` works without recreating the container. Nothing listens on it
+# until the first `orcli nodes add`, and it then accepts mutual-TLS connections
+# only. UNDERLEAF_CLUSTER_PUBLISH picks the host interface ("0.0.0.0" by
+# default, "127.0.0.1" for a single machine, "none" to not publish at all).
+CLUSTER_PORT="${UNDERLEAF_CLUSTER_PORT:-50104}"
+CLUSTER_PUBLISH="${UNDERLEAF_CLUSTER_PUBLISH:-0.0.0.0}"
+
 run_orchestrator() {
     echo "Starting orchestrator (HTTP :${HTTP_PORT}, gRPC :${GRPC_PORT}) ..."
     docker volume inspect "$DATA_VOLUME" >/dev/null 2>&1 || docker volume create "$DATA_VOLUME" >/dev/null
-    docker run -d \
-        --network "$ORCH_NETWORK" \
-        -v "${DATA_VOLUME}:/data" \
-        -p "127.0.0.1:${HTTP_PORT}:9090" \
-        -p "127.0.0.1:${GRPC_PORT}:50100" \
-        --restart unless-stopped \
-        --name underleaf "${DOCKER_IMAGE}:${TAG}"
+    if [ "$CLUSTER_PUBLISH" = "none" ]; then
+        docker run -d \
+            --network "$ORCH_NETWORK" \
+            -v "${DATA_VOLUME}:/data" \
+            -p "127.0.0.1:${HTTP_PORT}:9090" \
+            -p "127.0.0.1:${GRPC_PORT}:50100" \
+            --restart unless-stopped \
+            --name underleaf "${DOCKER_IMAGE}:${TAG}"
+    else
+        docker run -d \
+            --network "$ORCH_NETWORK" \
+            -v "${DATA_VOLUME}:/data" \
+            -p "127.0.0.1:${HTTP_PORT}:9090" \
+            -p "127.0.0.1:${GRPC_PORT}:50100" \
+            -p "${CLUSTER_PUBLISH}:${CLUSTER_PORT}:50104" \
+            --restart unless-stopped \
+            --name underleaf "${DOCKER_IMAGE}:${TAG}"
+    fi
 }
 
 has_data_volume() {
@@ -211,6 +240,9 @@ if docker inspect underleaf >/dev/null 2>&1; then
         docker restart underleaf >/dev/null
         echo "Existing 'underleaf' container moved to network '${ORCH_NETWORK}'. Its state is in volume '${DATA_VOLUME}'."
         echo "To switch to ${DOCKER_IMAGE}:${TAG}: docker rm -f underleaf, then re-run this installer (the state is kept)."
+        if [ -z "$(docker port underleaf 50104/tcp 2>/dev/null)" ]; then
+            echo "This container does not publish the cluster port (${CLUSTER_PORT}), so worker nodes cannot join it. A container's published ports cannot change: docker rm -f underleaf and re-run this installer to add it (the state is kept)."
+        fi
     elif [ "${UNDERLEAF_MIGRATE_STATE:-}" = "1" ]; then
         # Older container: its state is in the container's own filesystem, which
         # is lost when the container is removed. Copy it into the volume, keep the
@@ -259,3 +291,6 @@ else
 fi
 
 echo "Done! UI available at http://localhost:${HTTP_PORT}"
+if [ "$CLUSTER_PUBLISH" != "none" ]; then
+    echo "To add a worker node: docker exec underleaf orcli nodes add --advertise <this-machine's-address>:${CLUSTER_PORT}"
+fi

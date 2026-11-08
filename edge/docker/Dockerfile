@@ -23,6 +23,9 @@ RUN apk add --no-cache ca-certificates
 
 COPY --from=uibuilder /app/dist /usr/share/underleaf/ui
 COPY bin/orch-server-linux-${TARGETARCH} /usr/local/bin/orch-server
+# The CLI talks to the Orchestrator over a unix socket inside the container, so
+# it has to live here: `docker exec underleaf orcli nodes add ...`.
+COPY bin/orcli-linux-${TARGETARCH} /usr/local/bin/orcli
 
 # Inside the container the Orchestrator's local listeners (REST, local gRPC) must
 # bind the container's interface for Docker's port publishing to reach them.
