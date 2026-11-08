@@ -1,17 +1,19 @@
+import os
 import pathlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
-from cloud_api import app_config, logger
-from cloud_api.models.api import SignInRequest, SignInResponse
-from cloud_api.repository.user_repository import UserRepository
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 from pydantic import BaseModel, Field
+
+from cloud_api import app_config, logger
+from cloud_api.models.api import SignInRequest, SignInResponse
+from cloud_api.repository.user_repository import UserRepository
 
 _ph = PasswordHasher()
 
@@ -53,19 +55,67 @@ class AuthLib:
         logger.info("Bootstrapping OAuth certificates")
         cert_path = app_config.oauth.root_ca_cert_path
         key_path = app_config.oauth.private_key_path
+        jwt_key_path = app_config.oauth.jwt_private_key_path
         self.__bootstrap_certs(cert_path, key_path)
-        self._load_keys(cert_path, key_path)
+        self.bootstrap_jwt_key(jwt_key_path, key_path)
+        self._load_keys(jwt_key_path, key_path)
 
-    def _load_keys(self, cert_path: str, key_path: str) -> None:
-        with open(key_path, "rb") as f:
+    @staticmethod
+    def bootstrap_jwt_key(jwt_key_path: str, ca_key_path: str) -> bool:
+        """Create the OAuth JWT signing key if it does not exist.
+
+        The JWT key is its own RSA key. It must never be the cluster CA key:
+        the CA key signs device certificates and, if it also signed tokens, a
+        leak of either would compromise both. Returns True if a key was
+        generated. Generating one invalidates every token signed by a previous
+        key, so on an existing deployment (where the CA key used to sign
+        tokens) every user has to sign in again once.
+        """
+        path = pathlib.Path(jwt_key_path)
+        if os.path.abspath(jwt_key_path) == os.path.abspath(ca_key_path):
+            raise RuntimeError(
+                "oauth.jwt_private_key_path must differ from oauth.private_key_path: "
+                "the JWT signing key may not be the cluster CA key"
+            )
+        if path.exists():
+            return False
+        logger.warning(
+            f"No OAuth JWT signing key at {jwt_key_path}: generating a new one. "
+            "Tokens signed by any earlier key (including the old shared CA/JWT "
+            "key) no longer verify, so users sign in again."
+        )
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # 0600 from the first byte, not chmod-after-write.
+        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(
+                key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
+        return True
+
+    def _load_keys(self, jwt_key_path: str, ca_key_path: str | None = None) -> None:
+        with open(jwt_key_path, "rb") as f:
             private_key = serialization.load_pem_private_key(f.read(), password=None)
-            assert isinstance(private_key, RSAPrivateKey), "Expected RSA private key"
-            self._private_key = private_key
-        with open(cert_path, "rb") as f:
-            cert = x509.load_pem_x509_certificate(f.read())
-            public_key = cert.public_key()
-            assert isinstance(public_key, RSAPublicKey), "Expected RSA public key"
-            self._public_key = public_key
+        assert isinstance(private_key, RSAPrivateKey), "Expected RSA private key"
+        if ca_key_path is not None and os.path.exists(ca_key_path):
+            with open(ca_key_path, "rb") as f:
+                ca_key = serialization.load_pem_private_key(f.read(), password=None)
+            if isinstance(ca_key, RSAPrivateKey) and (
+                ca_key.public_key().public_numbers()
+                == private_key.public_key().public_numbers()
+            ):
+                raise RuntimeError(
+                    f"{jwt_key_path} is the same key as the cluster CA key "
+                    f"{ca_key_path}. Delete {jwt_key_path} to have a separate JWT "
+                    "key generated (this signs every user out once)."
+                )
+        self._private_key = private_key
+        self._public_key = private_key.public_key()
 
     def mint_token(self, claims: JWTClaims) -> str:
         return jwt.encode(claims.model_dump(), self._private_key, algorithm="RS256")
@@ -73,7 +123,7 @@ class AuthLib:
     def mint_access_token(self, user_id: str, principal_account_id: str) -> str:
         if not app_config:
             raise RuntimeError("App config not loaded")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         claims = JWTClaims(
             sub=user_id,
             azp=principal_account_id,
@@ -94,7 +144,7 @@ class AuthLib:
     def mint_refresh_token(self, user_id: str) -> str:
         if not app_config:
             raise RuntimeError("App config not loaded")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         claims = JWTClaims(
             sub=user_id,
             iat=int(now.timestamp()),
@@ -158,7 +208,7 @@ class AuthLib:
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
         # Create a self-signed x509 certificate
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         subject = issuer = x509.Name(
             [
                 x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),

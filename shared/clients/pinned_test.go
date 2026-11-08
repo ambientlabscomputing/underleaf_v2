@@ -18,6 +18,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 )
 
 type testCert struct {
@@ -219,5 +221,51 @@ func TestFetchAssertionKeysStatusAndSize(t *testing.T) {
 	}
 	if _, err := c.FetchAssertionKeys(context.Background()); err == nil {
 		t.Fatal("oversized body accepted")
+	}
+}
+
+// The key set is fetched from AssertionKeysBaseURL (the cloud's pinned
+// listener) when configured, over the pinned channel, and falls back to
+// CloudAPIBaseURL otherwise.
+func TestNewPinnedCloudClientUsesAssertionKeysBaseURL(t *testing.T) {
+	ca := newCA(t, "pinned")
+	leaf := issue(t, &x509.Certificate{
+		Subject: pkix.Name{CommonName: "cloud"}, IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}, &ca)
+	var path string
+	pinned := serve(t, leaf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		_, _ = w.Write([]byte(`{"keys":[]}`))
+	}))
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "ca_chain.pem"), ca.pem(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := utils.Config{CertDir: dir, CloudAPIBaseURL: "https://127.0.0.1:1/unused", AssertionKeysBaseURL: pinned.URL + "/api/v2/cloud"}
+	cc, err := NewPinnedCloudClient(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cc.FetchAssertionKeys(context.Background()); err != nil || path != "/api/v2/cloud/assertion-keys" {
+		t.Fatalf("path=%q err=%v", path, err)
+	}
+	// Unset: falls back to the cloud API base URL.
+	cfg.AssertionKeysBaseURL = ""
+	cfg.CloudAPIBaseURL = pinned.URL + "/other"
+	cc, _ = NewPinnedCloudClient(cfg)
+	if _, err := cc.FetchAssertionKeys(context.Background()); err != nil || path != "/other/assertion-keys" {
+		t.Fatalf("fallback path=%q err=%v", path, err)
+	}
+	// A server certificate from another CA on the pinned URL is refused.
+	other := newCA(t, "pinned")
+	imp := issue(t, &x509.Certificate{
+		Subject: pkix.Name{CommonName: "cloud"}, IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}, &other)
+	cfg.AssertionKeysBaseURL = serve(t, imp, ok).URL + "/api/v2/cloud"
+	cc, _ = NewPinnedCloudClient(cfg)
+	if _, err := cc.FetchAssertionKeys(context.Background()); err == nil {
+		t.Fatal("key set fetched over a server certificate from a different CA")
 	}
 }

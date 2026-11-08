@@ -56,14 +56,19 @@ func isLoopbackName(host string) bool {
 	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
-// NewPinnedCloudClient builds a CloudClient for the cluster's cloud API whose
-// connections are authenticated against the CA chain pinned at registration in
-// cfg.CertDir (see PinnedTLSConfig). It needs no client certificate, so it
-// works for public endpoints such as the assertion key set.
+// NewPinnedCloudClient builds a CloudClient for fetching the cloud's assertion
+// key set. Its connections are authenticated against the CA chain pinned at
+// registration in cfg.CertDir (see PinnedTLSConfig). It needs no client
+// certificate. The base URL is cfg.AssertionKeysBaseURL (the cloud's dedicated
+// pinned listener) when set, else cfg.CloudAPIBaseURL.
 func NewPinnedCloudClient(cfg utils.Config) (*CloudClient, error) {
 	hc, err := NewPinnedHTTPClient(cfg.CertDir+"/"+string(types.CertFileNameCAChain), 15*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	return NewCloudClientWithBaseURL(cfg.CloudAPIBaseURL, hc), nil
+	base := cfg.AssertionKeysBaseURL
+	if base == "" {
+		base = cfg.CloudAPIBaseURL
+	}
+	return NewCloudClientWithBaseURL(base, hc), nil
 }

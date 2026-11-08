@@ -140,9 +140,11 @@ def test_constructor_rejects_bad_config(tmp_path, kw):
 @pytest.fixture
 def auth_lib(ca_files):
     """An AuthLib holding the real CA/JWT keypair shape (RSA, from conftest)."""
-    cert_path, key_path = ca_files
+    _cert_path, key_path = ca_files
+    jwt_path = str(pathlib.Path(key_path).with_name("jwt_private_key.pem"))
+    AuthLib.bootstrap_jwt_key(jwt_path, key_path)
     a = AuthLib.__new__(AuthLib)
-    a._load_keys(cert_path, key_path)
+    a._load_keys(jwt_path, key_path)
     return a
 
 
@@ -220,6 +222,7 @@ def test_default_config_keeps_assertion_keys_out_of_the_ca_paths():
     assert str(keys_dir) not in (
         cfg.oauth.private_key_path,
         cfg.oauth.root_ca_cert_path,
+        cfg.oauth.jwt_private_key_path,
     )
 
 

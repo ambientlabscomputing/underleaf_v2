@@ -83,6 +83,11 @@ func (cm *ConnectionManager) handleNewConnection(ctx context.Context, conn net.C
 		return
 	}
 	connID := parseIDFromHost(req.Host, ".connect."+utils.GetConfig(utils.ConnWorkerConfig).Connections.Domain)
+	if connID == "" {
+		utils.Logger.ErrorContext(ctx, "request host is not a connection host", "host", req.Host)
+		conn.Close()
+		return
+	}
 
 	// search for the connection_str in the repository
 	connection_str, err := cm.repository.Get(ctx, connID)

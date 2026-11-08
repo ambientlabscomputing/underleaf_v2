@@ -95,8 +95,14 @@ type Config struct {
 	DBPath                   string             `yaml:"db_path"`
 	ContainerSyncIntervalSec int                `yaml:"container_sync_interval_sec"`
 	CloudAPIBaseURL          string             `yaml:"cloud_api_base_url"`
-	AccountUIBaseURL         string             `yaml:"account_ui_base_url"`
-	CertDir                  string             `yaml:"cert_dir"`
+	// AssertionKeysBaseURL is where the cloud's assertion key set is fetched
+	// from, over a connection pinned to the cluster's CA chain. It is the
+	// cloud's dedicated pinned listener (e.g. https://cloud.example:8443/api/v2/cloud),
+	// which always presents the CA-issued server certificate. Empty means use
+	// CloudAPIBaseURL.
+	AssertionKeysBaseURL string `yaml:"assertion_keys_base_url"`
+	AccountUIBaseURL     string `yaml:"account_ui_base_url"`
+	CertDir              string `yaml:"cert_dir"`
 }
 
 var defaultOrchConfig Config
@@ -238,6 +244,9 @@ func mergeConfig(defaultConfig Config) Config {
 	}
 	if fileConfig.CloudAPIBaseURL != "" {
 		defaultConfig.CloudAPIBaseURL = fileConfig.CloudAPIBaseURL
+	}
+	if fileConfig.AssertionKeysBaseURL != "" {
+		defaultConfig.AssertionKeysBaseURL = fileConfig.AssertionKeysBaseURL
 	}
 	if fileConfig.AccountUIBaseURL != "" {
 		defaultConfig.AccountUIBaseURL = fileConfig.AccountUIBaseURL

@@ -85,6 +85,11 @@ func (gs *GatewayServer) handleConnection(ctx context.Context, conn net.Conn) {
 
 	host := httpReq.Host // <stream_id>.gw.<config.domain>
 	streamID := parseIDFromHost(host, ".gw."+gs.config.Connections.Domain)
+	if streamID == "" {
+		logger.Error("request host is not a gateway host", "host", host)
+		conn.Close()
+		return
+	}
 
 	if err := gs.BindIncomingConnToStream(ctx, StreamID(streamID), conn); err != nil {
 		logger.Error("failed to bind incoming connection to stream", "error", err)

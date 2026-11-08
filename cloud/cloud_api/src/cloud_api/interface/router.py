@@ -25,8 +25,13 @@ from cloud_api.interface.stripe_webhooks.stripe_webhooks import (
 from cloud_api.interface.subscriptions.subscriptions import (
     router as subscriptions_router,
 )
+from cloud_api.lib.tls_lib import ensure_server_cert
 from cloud_api.service.usage_sync_loop import run_usage_sync_loop
-from cloud_api.service_manager import get_assertion_lib, get_auth_service
+from cloud_api.service_manager import (
+    get_assertion_lib,
+    get_auth_service,
+    get_cert_lib,
+)
 
 app = FastAPI()
 if not app_config:
@@ -53,6 +58,11 @@ async def bootstrap_certs_on_startup():
     # Same for the dedicated assertion keys: create them at startup so the
     # first key set fetch never races key generation.
     get_assertion_lib()
+    # nginx's server certificate is issued from the CA here, so nginx never
+    # needs the CA key (see lib/tls_lib.py). Done after AuthLib has created the
+    # CA files.
+    if app_config.tls.enabled:
+        ensure_server_cert(get_cert_lib(), app_config.tls)
 
 
 _usage_sync_task: asyncio.Task | None = None

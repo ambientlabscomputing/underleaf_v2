@@ -96,11 +96,55 @@ class OAuthConfig(BaseModel):
     )
     private_key_path: str = Field(
         default_factory=lambda: _repo_root_cert_path("private_key.pem"),
-        description="File path to the private key for signing OAuth tokens",
+        description="File path to the cluster CA private key. It signs device "
+        "certificates and the server TLS certificate, and nothing else. Keep it "
+        "out of every container that does not sign certificates (nginx).",
+    )
+    jwt_private_key_path: str = Field(
+        default_factory=lambda: _repo_root_cert_path("jwt_private_key.pem"),
+        description="File path to the RSA key that signs OAuth access and "
+        "refresh tokens. Deliberately a different key from the CA key; generated "
+        "on first start if missing.",
     )
     bootstrap_certs: bool = Field(
         default=True,
         description="Whether to generate a new root CA certificate and private key if they don't exist at the specified path",
+    )
+
+
+class TLSConfig(BaseModel):
+    """The server certificate nginx presents (RFD 5). cloud_api issues it from
+    the cluster CA so nginx never needs the CA key."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Issue and renew the server certificate at startup",
+    )
+    dir: str = Field(
+        default_factory=lambda: _repo_root_cert_path("tls"),
+        description="Directory nginx mounts read-only: the public CA certificate "
+        "(client verification and the clusters' pinned trust anchor), the server "
+        "certificate and its key. Must NOT contain the CA key or the JWT key.",
+    )
+    server_names: list[str] = Field(
+        default=[
+            "localhost",
+            "underleafapp.com",
+            "www.underleafapp.com",
+            "*.gw.underleafapp.com",
+        ],
+        description="DNS names (wildcards allowed) placed in the certificate's "
+        "subjectAltName. Clusters verify the host they dial against these.",
+    )
+    server_ips: list[str] = Field(
+        default=["127.0.0.1", "::1"],
+        description="IP addresses placed in the certificate's subjectAltName",
+    )
+    validity_days: int = Field(default=365, description="Server certificate lifetime")
+    renew_before_days: int = Field(
+        default=30,
+        description="A certificate closer to expiry than this is reissued at "
+        "startup (nginx needs a reload to pick it up)",
     )
 
 
@@ -213,6 +257,10 @@ class AppConfig(BaseModel):
     )
     oauth: OAuthConfig = Field(
         default_factory=OAuthConfig, description="OAuth configuration settings"
+    )
+    tls: TLSConfig = Field(
+        default_factory=TLSConfig,
+        description="Server certificate issued for nginx",
     )
     assertion: AssertionConfig = Field(
         default_factory=AssertionConfig,

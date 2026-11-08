@@ -130,6 +130,6 @@ Tracks 2, 3, and 4 don't block each other and can run in parallel. All three are
 ## Open decisions
 
 - What RFD-2 should actually cover, now that "Connection Architecture" content already lives informally in `cloud/conn_worker/README.md` and `cloud/docker/nginx/README.md`.
-- The mTLS CA signing key and the OAuth JWT signing key are the exact same RSA keypair (self-bootstrapped by `cloud_api/lib/auth_lib.py`, reused by `cert_lib.py` for client-cert signing and by nginx for TLS termination — see track 4). Accepted as a local-dev-only shortcut for track 4's scope; compromising one trust domain compromises both, so this needs a dedicated track (splitting the keys) before any non-local deployment. (RFD 5 step 7a added a *separate*, dedicated Ed25519 key for cluster assertions and did **not** split these two; see `RFDs/RFD-5-journal.md`, step 7a open issues.)
+- ~~The mTLS CA signing key and the OAuth JWT signing key are the exact same RSA keypair~~ **Split (RFD 5):** the OAuth JWT key is now its own key (`jwt_private_key.pem`), nginx no longer holds the CA key (it gets a CA-issued server certificate; see `cloud/cloud_api/README.md`, "Keys and certificates"), and the assertion key is a third, Ed25519 key. Upgrading signs every user out once.
 
 Resolved: manifest file format and CLI naming — see [RFDs/RFD-3.md](RFDs/RFD-3.md) and track 2. `ufctl` is a real binary (a thin gateway over `orcli`/`ufagent`, not a separate implementation).

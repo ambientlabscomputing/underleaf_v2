@@ -109,3 +109,9 @@ sequenceDiagram
 ```
 
 *naive: the user's client has no knowledge of the connection infrastructure--the gateway appears as an HTTP server just as any other, the Underleaf infrastructure should be largely invisible
+
+## TLS material
+
+nginx mounts `./certs/tls` only (read-only at `/etc/nginx/certs`): `root_ca_cert.pem` (public CA certificate, used to verify node client certificates), and `server_cert.pem` / `server_key.pem` (a server certificate issued from the CA by cloud_api, with the cloud's names in its subjectAltName). The CA private key and the OAuth JWT key live in `./certs` one level up and are not visible to nginx.
+
+Listeners that present the server certificate: `:443` (UI and API; client certificate optional), the gateway server block (`*.gw.<domain>`), the L4 `:19021` stream listener (client certificate required), and `:8443`, the **pinned listener**. `:8443` serves only `GET /api/v2/cloud/assertion-keys` (everything else is 404, other methods 403) and must keep presenting the CA-issued certificate even if `:443` moves to a publicly trusted one, because Orchestrators fetch the key set there trusting only their pinned CA.
