@@ -29,6 +29,7 @@ build-dev: proto
 
 ## install: Install the orchestrator binaries to  ~/.local/bin/
 install: build
+	mkdir -p $(HOME)/.local/bin
 	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd bin/ufctl
 	cp bin/orcli $(HOME)/.local/bin/orcli
 	cp bin/orch-server $(HOME)/.local/bin/orch-server
@@ -39,6 +40,7 @@ install: build
 
 ## install-dev: Install the dev-mode orchestrator binaries to  ~/.local/bin/
 install-dev: build-dev
+	mkdir -p $(HOME)/.local/bin
 	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd bin/ufctl
 	cp bin/orcli $(HOME)/.local/bin/orcli
 	cp bin/orch-server $(HOME)/.local/bin/orch-server

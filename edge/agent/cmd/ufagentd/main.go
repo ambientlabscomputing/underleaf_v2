@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -52,6 +54,19 @@ func Run() {
 	linkClient := &link.Client{
 		Dial: link.NewDialer(cfg, func() (string, error) {
 			n, err := svc.GetNode()
+			if errors.Is(err, sql.ErrNoRows) {
+				// First start of a single-node install: register with the
+				// local Orchestrator ourselves, so nobody has to run
+				// `ufagent register` by hand. Only reached when this node is not
+				// a cluster member (see link.NewDialer). If the Orchestrator is
+				// not up yet this fails and the link loop retries with backoff.
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				n, err = svc.Orchestrator().RegisterNode(ctx)
+				if err == nil {
+					fmt.Printf("[register] registered with the local Orchestrator as %s\n", n.ID)
+				}
+			}
 			if err != nil {
 				return "", err
 			}
