@@ -103,6 +103,7 @@ Interfaces
 | gRPC | Agent-Orchestrator communication, local listener (single-node, loopback only) | `127.0.0.1:50100` |
 | gRPC (mTLS) | Agent-Orchestrator communication, cluster listener (worker nodes; exists only after `orcli nodes add`) | `:50104` |
 | http | REST API for the Orchestrator UI and integrations; the same listener serves the built UI at `/` (one origin, no CORS) | `http://localhost:9090/api/v1/` |
+| http | Remote listener (Cockpit and `ufctl connect`, via the cloud tunnel): every request needs a cloud-signed assertion; off unless `UNDERLEAF_REMOTE_ADDR` is set (`install.sh` sets it on a manager) | `127.0.0.1:50110` |
 
 #### Orchestrator UI
 
@@ -157,6 +158,7 @@ Interfaces
 | -------- | ------- | -------- |
 | http | REST API, internal (behind nginx) | `http://cloud_api:8080/api/v2/cloud/` (`http://localhost:8080/...` outside Docker) |
 | https | REST API, external (via nginx, Bearer token or mTLS) | `https://underleafapp.com/api/v2/cloud/` |
+| https | Remote access to a cluster's Orchestrator (`ufctl connect`, Cockpit): nginx authenticates with cloud_api, then relays down the cluster's tunnel | `https://underleafapp.com/api/v2/cloud/clusters/<cluster_id>/remote/` |
 
 #### Conn Worker
 
