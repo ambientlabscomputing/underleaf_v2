@@ -65,6 +65,20 @@ func (r *ContainerRepository) ReplaceContainersForNode(nodeID string, containers
 	return tx.Commit()
 }
 
+// GetContainerByDockerID returns the container with the given docker id
+// (sql.ErrNoRows if unknown).
+func (r *ContainerRepository) GetContainerByDockerID(dockerID string) (*types.Container, error) {
+	var c types.Container
+	var nodeID string
+	err := r.db.QueryRow(`SELECT id, docker_id, node_id, image, status, uptime, name FROM containers WHERE docker_id = ?`, dockerID).
+		Scan(&c.ID, &c.DockerID, &nodeID, &c.Image, &c.Status, &c.Uptime, &c.Name)
+	if err != nil {
+		return nil, err
+	}
+	c.NodeID = types.ForeignKey(nodeID)
+	return &c, nil
+}
+
 // ListContainers returns all containers known to the orchestrator.
 func (r *ContainerRepository) ListContainers() ([]*types.Container, error) {
 	rows, err := r.db.Query(`SELECT id, docker_id, node_id, image, status, uptime, name FROM containers`)

@@ -15,11 +15,14 @@ Usage in a router:
 
 from functools import lru_cache
 
+from cloud_api.lib.assertion_lib import AssertionLib
 from cloud_api.lib.auth_lib import AuthLib
 from cloud_api.lib.conn_worker_client import ConnWorkerClient
 from cloud_api.repository.billing_account_repository import BillingAccountRepository
 from cloud_api.repository.cluster_repository import ClusterRepository
 from cloud_api.repository.connection_repository import ConnectionRepository
+from cloud_api.repository.device_key_repository import DeviceKeyRepository
+from cloud_api.repository.device_login_repository import DeviceLoginRepository
 from cloud_api.repository.entitlements_bucket_repository import (
     EntitlementsBucketRepository,
 )
@@ -40,14 +43,18 @@ from cloud_api.repository.usage_alert_repository import UsageAlertRepository
 from cloud_api.repository.usage_event_repository import UsageEventRepository
 from cloud_api.repository.user_repository import UserRepository
 from cloud_api.service.account_service import AccountService
+from cloud_api.service.assertion_service import AssertionService
 from cloud_api.service.auth_service import AuthService
 from cloud_api.service.billing_account_service import BillingAccountService
 from cloud_api.service.cluster_service import ClusterService
 from cloud_api.service.connection_service import ConnectionService
+from cloud_api.service.device_key_service import DeviceKeyService
+from cloud_api.service.device_login_service import DeviceLoginService
 from cloud_api.service.entitlements_bucket_service import EntitlementsBucketService
 from cloud_api.service.invoice_service import InvoiceService
 from cloud_api.service.plan_service import PlanService
 from cloud_api.service.registration_service import RegistrationService
+from cloud_api.service.remote_auth_service import RemoteAuthService
 from cloud_api.service.stream_service import StreamService
 from cloud_api.service.stripe_checkout_service import StripeCheckoutService
 from cloud_api.service.stripe_webhook_service import StripeWebhookService
@@ -133,6 +140,23 @@ def get_stripe_webhook_event_repo() -> StripeWebhookEventRepository:
 def get_auth_lib() -> AuthLib:
     """AuthLib is expensive to construct (RSA cert load/generate). One instance."""
     return AuthLib(get_user_repo())
+
+
+@lru_cache
+def get_assertion_lib() -> AssertionLib:
+    """Dedicated assertion signing keys. Independent of AuthLib's CA/JWT key."""
+    from cloud_api import app_config
+
+    if not app_config:
+        raise RuntimeError("App config not loaded")
+    cfg = app_config.assertion
+    return AssertionLib(
+        cfg.keys_dir,
+        issuer=cfg.issuer,
+        ttl_seconds=cfg.ttl_seconds,
+        rotate_after_days=cfg.rotate_after_days,
+        overlap_hours=cfg.overlap_hours,
+    )
 
 
 @lru_cache
@@ -343,6 +367,46 @@ def get_registration_service() -> RegistrationService:
         registration_repo=get_registration_repo(),
         cluster_repo=get_cluster_repo(),
         cert_lib=get_cert_lib(),
+    )
+
+
+@lru_cache
+def get_assertion_service() -> AssertionService:
+    return AssertionService(
+        assertion_lib=get_assertion_lib(), cluster_repo=get_cluster_repo()
+    )
+
+
+@lru_cache
+def get_device_key_repo() -> DeviceKeyRepository:
+    return DeviceKeyRepository()
+
+
+@lru_cache
+def get_device_login_repo() -> DeviceLoginRepository:
+    return DeviceLoginRepository()
+
+
+@lru_cache
+def get_device_key_service() -> DeviceKeyService:
+    return DeviceKeyService(device_key_repo=get_device_key_repo())
+
+
+@lru_cache
+def get_device_login_service() -> DeviceLoginService:
+    return DeviceLoginService(
+        device_login_repo=get_device_login_repo(),
+        device_key_service=get_device_key_service(),
+    )
+
+
+@lru_cache
+def get_remote_auth_service() -> RemoteAuthService:
+    return RemoteAuthService(
+        auth_lib=get_auth_lib(),
+        device_key_service=get_device_key_service(),
+        assertion_service=get_assertion_service(),
+        conn_repo=get_conn_repo(),
     )
 
 

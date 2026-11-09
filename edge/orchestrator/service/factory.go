@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"os"
 
+	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/link"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/clients"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -18,10 +20,9 @@ func NewService(config utils.Config) Service {
 		panic("Failed to start repository: " + err.Error())
 	}
 
-	peer, err := clients.NewAgentClient()
-	if err != nil {
-		panic("orchestrator: failed to create agent gRPC client: " + err.Error())
-	}
+	// Agents dial the Orchestrator and keep a link open; the hub is the set of
+	// live links and the only way commands reach an agent (RFD 5, step 5).
+	hub := link.NewHub()
 
 	// check if certs have been provisioned, if so, use mTLS client
 	var cloudClient *clients.CloudClient
@@ -35,22 +36,41 @@ func NewService(config utils.Config) Service {
 	} else {
 		cloudClient = clients.NewCloudClient()
 	}
-	agentClient, err := clients.NewAgentClient()
-	if err != nil {
-		panic("orchestrator: failed to create agent gRPC client: " + err.Error())
-	}
+	nodes := NewNodeService(repo)
+
+	// The standing remote-access connection: when a manager-local agent links
+	// in, make sure the cloud has a "remote-access" connection for its node and
+	// tell the agent to hold it. Does nothing unless the remote listener is
+	// enabled and the cluster is registered with the cloud.
+	remoteConn := NewRemoteConnectionEnsurer(context.Background(), RemoteConnectionConfig{
+		Enabled: RemoteAccessEnabled,
+		Cloud:   CloudConnectionsFromCerts(config),
+		Nodes: func() ([]types.Node, error) {
+			rows, _, err := repo.Nodes.ListNodes(types.QueryNodesRequest{})
+			nodes := make([]types.Node, 0, len(rows))
+			for _, n := range rows {
+				nodes = append(nodes, *n)
+			}
+			return nodes, err
+		},
+		Agents: hub,
+		Linked: hub.Linked,
+	})
+	hub.OnLinked(remoteConn.NodeLinked)
 
 	return &AppService{
 		Repository:   repo,
-		nodes:        NewNodeService(repo),
-		health:       &HealthService{peer: peer},
+		nodes:        nodes,
+		health:       &HealthService{agents: hub},
 		containers:   &ContainerService{Repository: repo},
-		logs:         &LogService{peer: peer},
-		registration: NewRegistrationService(repo.Registration, cloudClient, agentClient),
-		connections:  NewConnectionService(cloudClient, agentClient),
+		logs:         &LogService{repo: repo, agents: hub},
+		registration: NewRegistrationService(repo.Registration, cloudClient, nodes.ManagerNode),
+		connections:  NewConnectionService(cloudClient, hub),
 		deployments:  &DeploymentService{Repository: repo},
 		manifests:    NewManifestService(),
-		reconciler:   &ReconcilerService{Repository: repo, AgentClient: agentClient},
+		reconciler:   &ReconcilerService{Repository: repo, Agents: hub},
+		links:        hub,
+		cluster:      NewClusterService(repo, utils.ClusterStateDir(config, "ca"), utils.OrchestratorClusterPort()),
 	}
 }
 

@@ -10,6 +10,9 @@ from cloud_api.models.api import (
 from cloud_api.models.sql import SQLCluster, SQLConnection, SQLNode
 from cloud_api.repository.base_repository import BaseRepository
 
+# Name of the cluster-level connection the agent opens for remote access.
+REMOTE_ACCESS_CONNECTION_NAME = "remote-access"
+
 
 class ConnectionRepository(BaseRepository):
     async def create_connection(self, conn: Connection) -> Connection:
@@ -56,6 +59,28 @@ class ConnectionRepository(BaseRepository):
                 .join(SQLCluster, SQLNode.cluster_id == SQLCluster.id)
                 .where(SQLNode.id == node_id)
             )
+
+    async def get_standing_remote_connection(
+        self, cluster_id: str
+    ) -> Connection | None:
+        """The newest running connection named `remote-access` on any node of
+        the cluster (RFD 5 step 7b), or None. Joins through the node, so a
+        connection of another cluster can never be returned."""
+        async with self.get_session() as session:
+            row = (
+                await session.scalars(
+                    select(SQLConnection)
+                    .join(SQLNode, SQLConnection.node_id == SQLNode.id)
+                    .where(
+                        SQLNode.cluster_id == cluster_id,
+                        SQLConnection.name == REMOTE_ACCESS_CONNECTION_NAME,
+                        SQLConnection.state == "running",
+                    )
+                    .order_by(SQLConnection.created_at.desc())
+                    .limit(1)
+                )
+            ).first()
+            return Connection.model_validate(row) if row is not None else None
 
     async def query_connections(self, req: QueryConnectionRequest) -> list[Connection]:
         async with self.get_session() as session:

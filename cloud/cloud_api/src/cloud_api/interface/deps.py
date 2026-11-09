@@ -128,8 +128,19 @@ async def fetch_data_for_node_or_cluster(
     return node, cluster
 
 
+def _is_internal_path(path: str) -> bool:
+    """Routes under <base_path>/internal/ are called by nginx's auth_request,
+    not by clients. They never get a token minted from X-Subject-Id: they
+    authenticate the credential they are given and reject X-Subject-Id. Any
+    path with an `internal` segment counts, whatever the base path, so a
+    mis-set base_path can only make this check broader, never narrower."""
+    return "internal" in path.split("/")
+
+
 async def x_subject_id_token_middleware_(request: Request, call_next):
-    if "X-Subject-Id" not in request.headers:
+    if _is_internal_path(request.scope.get("path", "")):
+        logger.debug("Internal route, never minting a token from X-Subject-Id")
+    elif "X-Subject-Id" not in request.headers:
         # skip this helper if the header is not present
         logger.debug("X-Subject-Id header not present, skipping token minting")
     elif request.headers.get("Authorization"):

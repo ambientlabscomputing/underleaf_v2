@@ -1,6 +1,8 @@
 gateway:
     gateway_port: 9020
     node_connections_port: 9021
+    # Internal remote-access relay (nginx -> conn_worker). Plain HTTP: never publish this port.
+    remote_relay_port: 9071
     read_timeout: "5s"
     write_timeout: "10s"
     idle_timeout: "15s"

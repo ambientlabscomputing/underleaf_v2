@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package orchestrator.private.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private";
+
+// OrchestratorTokens manages scoped API tokens. It is served on the same
+// owner-only unix socket as OrchestratorPrivate (the OS user is the credential
+// that may mint tokens); it is deliberately not reachable over REST or TCP.
+service OrchestratorTokens {
+  rpc CreateToken(CreateTokenRequest) returns (CreateTokenResponse);
+  rpc ListTokens(ListTokensRequest) returns (ListTokensResponse);
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+}
+
+message CreateTokenRequest {
+  string name = 1;
+  string scope = 2;       // read | deploy | admin
+  int64 ttl_seconds = 3;  // required; tokens always expire
+}
+
+message CreateTokenResponse {
+  // The bearer token. Returned only here, once; the orchestrator stores a hash.
+  string token = 1;
+  TokenInfo info = 2;
+}
+
+message TokenInfo {
+  string id = 1;
+  string name = 2;
+  string scope = 3;
+  string status = 4;            // active | expired | revoked
+  int64 created_at_unix = 5;
+  int64 expires_at_unix = 6;
+  int64 revoked_at_unix = 7;    // 0 if not revoked
+  int64 last_used_at_unix = 8;  // 0 if never used
+}
+
+message ListTokensRequest {}
+
+message ListTokensResponse {
+  repeated TokenInfo tokens = 1;
+}
+
+message RevokeTokenRequest {
+  string id = 1;
+}
+
+message RevokeTokenResponse {}

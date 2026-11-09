@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"net"
+	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/cloud/conn_worker/repository"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -33,7 +34,10 @@ type AppService struct {
 	Repository    *repository.Repository
 	ConnManager   *ConnectionManager
 	GatewayServer *GatewayServer
-	config        utils.Config
+	// RemoteRelay is the internal HTTP relay nginx proxies remote-access
+	// requests to (see remote_relay.go).
+	RemoteRelay *RemoteRelay
+	config      utils.Config
 }
 
 func NewService(config utils.Config) Service {
@@ -45,10 +49,15 @@ func NewService(config utils.Config) Service {
 		return nil
 	}
 	gwServer := NewGatewayServer(gwReqChan)
+	relayPort := utils.ConnWorkerRemoteRelayPort
+	if config.Connections != nil && config.Connections.RemoteRelayPort != 0 {
+		relayPort = config.Connections.RemoteRelayPort
+	}
 	return &AppService{
 		Repository:    repository,
 		ConnManager:   connManager,
 		GatewayServer: gwServer,
+		RemoteRelay:   NewRemoteRelay(connManager, relayPort),
 		config:        config,
 	}
 }
@@ -65,6 +74,10 @@ func (s *AppService) NewConnection(ctx context.Context, req types.CreateConnecti
 func (s *AppService) Start(ctx context.Context) error {
 	go s.ConnManager.Serve(ctx)
 	go s.GatewayServer.Serve()
+	if err := s.RemoteRelay.Start(); err != nil {
+		utils.Logger.ErrorContext(ctx, "failed to start remote relay", "error", err)
+		return err
+	}
 
 	router := gin.Default()
 	v1 := router.Group(s.config.Http.BasePath.String())
@@ -84,15 +97,21 @@ func (s *AppService) Start(ctx context.Context) error {
 }
 
 func (s *AppService) Stop(ctx context.Context) error {
-	if err := s.ConnManager.listener.Close(); err != nil {
-		utils.Logger.ErrorContext(ctx, "failed to stop connection manager: "+err.Error())
-		return err
+	var firstErr error
+	note := func(what string, err error) {
+		if err != nil {
+			utils.Logger.ErrorContext(ctx, "failed to stop "+what+": "+err.Error())
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
 	}
-	if err := s.GatewayServer.listener.Close(); err != nil {
-		utils.Logger.ErrorContext(ctx, "failed to stop gateway server: "+err.Error())
-		return err
-	}
-	return nil
+	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	note("remote relay", s.RemoteRelay.Shutdown(shutdownCtx))
+	note("connection manager", s.ConnManager.listener.Close())
+	note("gateway server", s.GatewayServer.Close())
+	return firstErr
 }
 
 func (s *AppService) GetConnection(ctx context.Context, id string) (*types.Connection, error) {

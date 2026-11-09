@@ -30,7 +30,7 @@ const (
 	containerStabilityWait  = 3 * time.Second
 	containerStabilityTailN = "20"
 	maxBuildArchiveBytes    = 500 * 1024 * 1024
-	buildDownloadTimeout      = 5 * time.Minute
+	buildDownloadTimeout    = 5 * time.Minute
 )
 
 // DockerService ingests the local node's Docker containers into the agent repository
@@ -40,6 +40,10 @@ type DockerService struct {
 	repository *repository.Repository
 	orchClient *clients.OrchestratorClient
 	logs       *LogCollector
+
+	// networks is the Docker network API; nil means use s.docker. A seam for tests.
+	networks   networkAPI
+	workloadNW workloadNet
 }
 
 // IngestContainers reads running (and stopped) containers from the local Docker daemon,
@@ -197,6 +201,13 @@ func (s *DockerService) CreateContainer(ctx context.Context, opts ContainerCreat
 		return "", fmt.Errorf("docker: parse ports %v: %w", opts.Ports, err)
 	}
 
+	// Workloads never share the Orchestrator's network or Docker's default
+	// bridge (RFD 5): put them on their own user-defined network.
+	networkName, err := s.workloadNW.ensure(ctx, s.networkAPI())
+	if err != nil {
+		return "", err
+	}
+
 	// Idempotent redeploy: drop any prior container occupying this name.
 	_ = s.docker.ContainerRemove(ctx, opts.Name, dockertypes.RemoveOptions{Force: true})
 
@@ -207,18 +218,20 @@ func (s *DockerService) CreateContainer(ctx context.Context, opts ContainerCreat
 			ExposedPorts: exposedPorts,
 			Labels:       opts.Labels,
 		},
-		&dockertypes.HostConfig{
-			Binds:         opts.Volumes,
-			PortBindings:  portBindings,
-			RestartPolicy: dockertypes.RestartPolicy{Name: dockertypes.RestartPolicyUnlessStopped},
-			Tmpfs:         map[string]string{"/tmp": "rw,noexec,nosuid,size=64m"},
-		},
+		workloadHostConfig(opts.Volumes, portBindings, networkName),
 		nil, nil, opts.Name,
 	)
 	if err != nil {
 		return "", fmt.Errorf("docker: create container %s: %w", opts.Name, err)
 	}
 	return resp.ID, nil
+}
+
+func (s *DockerService) networkAPI() networkAPI {
+	if s.networks != nil {
+		return s.networks
+	}
+	return s.docker
 }
 
 func (s *DockerService) pullImage(ctx context.Context, image string) error {

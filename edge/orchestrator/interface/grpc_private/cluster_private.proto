@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package orchestrator.private.v1;
+
+option go_package = "github.com/ambientlabscomputing/underleaf_v2/edge/orchestrator/interface/grpc_private";
+
+// ClusterPrivate is the CLI-facing cluster-membership service, served on the
+// same unix socket as OrchestratorPrivate (0600, owner-checked by the CLI).
+// It lives in its own file so membership changes do not collide with the
+// generated code of the larger OrchestratorPrivate service.
+service ClusterPrivate {
+  // AddNode mints a single-use join string and, the first time, enables the
+  // cluster listener.
+  rpc AddNode(AddNodeRequest) returns (AddNodeResponse);
+  // RemoveNode revokes a node's certificates and forgets the node.
+  rpc RemoveNode(RemoveNodeRequest) returns (RemoveNodeResponse);
+  // ListClusterNodes lists every node with its certificate expiry and link state.
+  rpc ListClusterNodes(ListClusterNodesRequest) returns (ListClusterNodesResponse);
+}
+
+message AddNodeRequest {
+  // host[:port] nodes should dial. Empty = the stored value, else this
+  // machine's primary address with the cluster port.
+  string advertise = 1;
+}
+
+message AddNodeResponse {
+  string join_string    = 1;
+  string advertise      = 2;
+  string ca_fingerprint = 3; // "sha256:ab:cd:..." for humans to compare
+  int64  expires_at_unix = 4;
+}
+
+message RemoveNodeRequest {
+  string node_id = 1;
+}
+
+message RemoveNodeResponse {
+  int32 revoked_certificates = 1;
+}
+
+message ListClusterNodesRequest {}
+
+message ClusterNode {
+  string id         = 1;
+  string name       = 2;
+  string ip_address = 3;
+  string os         = 4;
+  string arch       = 5;
+  string transport  = 6; // "local" | "cluster"
+  int64  cert_not_after_unix = 7; // 0 for local nodes
+  bool   cert_expiring = 8;       // within 30 days (or already expired)
+  bool   cert_expired  = 9;
+  bool   linked        = 10;      // an agent link is currently up
+}
+
+message ListClusterNodesResponse {
+  repeated ClusterNode nodes = 1;
+}

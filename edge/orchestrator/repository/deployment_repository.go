@@ -100,6 +100,22 @@ func (r *DeploymentRepository) DeleteDeployment(id string) error {
 	return err
 }
 
+// GetNodeID returns the node a deployment was placed on ("" if not placed yet).
+func (r *DeploymentRepository) GetNodeID(id string) (string, error) {
+	var nodeID string
+	err := r.db.QueryRow(`SELECT node_id FROM deployments WHERE id = ?`, id).Scan(&nodeID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrDeploymentNotFound
+	}
+	return nodeID, err
+}
+
+// SetNodeID records the node a deployment is placed on.
+func (r *DeploymentRepository) SetNodeID(id, nodeID string) error {
+	_, err := r.db.Exec(`UPDATE deployments SET node_id = ? WHERE id = ?`, nodeID, id)
+	return err
+}
+
 // GetLastApplied returns the last-applied resource snapshot for a deployment,
 // as raw JSON. Returns an empty (nil) snapshot if none has been recorded yet.
 func (r *DeploymentRepository) GetLastApplied(id string) ([]byte, error) {

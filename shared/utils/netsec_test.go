@@ -1,69 +1,64 @@
 package utils
 
 import (
-	"context"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/health"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/status"
 )
 
-func TestCheckBind(t *testing.T) {
+func TestCheckLocalBind(t *testing.T) {
 	cases := []struct {
-		name      string
-		host      string
-		protected bool
-		token     string
-		allow     string
-		wantErr   bool
+		name    string
+		host    string
+		wantErr bool
 	}{
-		{"loopback v4", "127.0.0.1", false, "", "", false},
-		{"loopback v6", "::1", false, "", "", false},
-		{"localhost", "localhost", false, "", "", false},
-		{"wildcard refused", "0.0.0.0", false, "", "", true},
-		{"empty host refused", "", false, "", "", true},
-		{"lan refused", "192.168.1.5", true, "", "", true},
-		{"token does not cover unprotected listener", "0.0.0.0", false, "secret", "", true},
-		{"token covers protected listener", "0.0.0.0", true, "secret", "", false},
-		{"explicit opt-in", "0.0.0.0", false, "", "1", false},
+		{"loopback v4", "127.0.0.1", false},
+		{"loopback v6", "::1", false},
+		{"bracketed loopback v6", "[::1]", false},
+		{"localhost", "localhost", false},
+		{"wildcard refused", "0.0.0.0", true},
+		{"v6 wildcard refused", "::", true},
+		{"empty host refused", "", true},
+		{"lan refused", "192.168.1.5", true},
+		{"hostname refused", "manager.example.com", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(EnvClusterToken, tc.token)
-			t.Setenv(EnvInsecureAllowRemote, tc.allow)
-			if err := CheckBind(tc.host, tc.protected); (err != nil) != tc.wantErr {
-				t.Fatalf("CheckBind(%q) err=%v, wantErr=%v", tc.host, err, tc.wantErr)
+			if err := CheckLocalBind(tc.host); (err != nil) != tc.wantErr {
+				t.Fatalf("CheckLocalBind(%q) err=%v, wantErr=%v", tc.host, err, tc.wantErr)
 			}
 		})
 	}
 }
 
-func TestListenTCPDefaultsToLoopback(t *testing.T) {
+// Nothing in the environment widens a local bind: not the retired stopgap
+// switches, and not the container-mode variable the Docker image used to set.
+func TestNoEnvironmentVariableWidensALocalBind(t *testing.T) {
+	t.Setenv("UNDERLEAF_CONTAINER", "1")
+	t.Setenv("UNDERLEAF_INSECURE_ALLOW_REMOTE", "1")
+	t.Setenv("UNDERLEAF_CLUSTER_TOKEN", "s3cret")
+	for _, host := range []string{"0.0.0.0", "", "10.0.0.5"} {
+		if err := CheckLocalBind(host); err == nil {
+			t.Errorf("CheckLocalBind(%q) accepted a non-loopback bind because of an env var", host)
+		}
+	}
+	t.Setenv(EnvBindAddr, "0.0.0.0")
+	if lis, err := ListenLocal("0"); err == nil {
+		lis.Close()
+		t.Fatal("ListenLocal bound a wildcard address because of an env var")
+	}
+}
+
+func TestListenLocalDefaultsToLoopback(t *testing.T) {
 	t.Setenv(EnvBindAddr, "")
-	lis, err := ListenTCP("0", false)
+	lis, err := ListenLocal("0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer lis.Close()
 	if ip := lis.Addr().(*net.TCPAddr).IP; !ip.IsLoopback() {
 		t.Fatalf("bound to %v, want loopback", ip)
-	}
-}
-
-func TestListenTCPRefusesUnprotectedWildcard(t *testing.T) {
-	t.Setenv(EnvBindAddr, "0.0.0.0")
-	t.Setenv(EnvClusterToken, "")
-	t.Setenv(EnvInsecureAllowRemote, "")
-	if lis, err := ListenTCP("0", true); err == nil {
-		lis.Close()
-		t.Fatal("expected refusal")
 	}
 }
 
@@ -116,74 +111,5 @@ func TestListenUnixPrivateRefusesNonSocket(t *testing.T) {
 	}
 	if err := VerifyOwnSocket(path); err == nil {
 		t.Fatal("VerifyOwnSocket accepted a regular file")
-	}
-}
-
-func startHealthServer(t *testing.T) string {
-	t.Helper()
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	srv := grpc.NewServer(ClusterAuthServerOptions()...)
-	healthpb.RegisterHealthServer(srv, health.NewServer())
-	go srv.Serve(lis)
-	t.Cleanup(srv.Stop)
-	return lis.Addr().String()
-}
-
-func dial(t *testing.T, addr string, extra ...grpc.DialOption) healthpb.HealthClient {
-	t.Helper()
-	opts := append([]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}, extra...)
-	conn, err := grpc.NewClient(addr, opts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { conn.Close() })
-	return healthpb.NewHealthClient(conn)
-}
-
-func TestClusterTokenEnforced(t *testing.T) {
-	t.Setenv(EnvClusterToken, "s3cret")
-	addr := startHealthServer(t)
-	ctx := context.Background()
-
-	// No token.
-	_, err := dial(t, addr).Check(ctx, &healthpb.HealthCheckRequest{})
-	if status.Code(err) != codes.Unauthenticated {
-		t.Fatalf("no token: got %v, want Unauthenticated", err)
-	}
-
-	// Wrong token.
-	t.Setenv(EnvClusterToken, "wrong")
-	_, err = dial(t, addr, ClusterAuthDialOptions()...).Check(ctx, &healthpb.HealthCheckRequest{})
-	if status.Code(err) != codes.Unauthenticated {
-		t.Fatalf("wrong token: got %v, want Unauthenticated", err)
-	}
-
-	// Streaming RPCs are gated too.
-	stream, err := dial(t, addr).Watch(ctx, &healthpb.HealthCheckRequest{})
-	if err == nil {
-		_, err = stream.Recv()
-	}
-	if status.Code(err) != codes.Unauthenticated {
-		t.Fatalf("stream without token: got %v, want Unauthenticated", err)
-	}
-
-	// Correct token.
-	t.Setenv(EnvClusterToken, "s3cret")
-	if _, err := dial(t, addr, ClusterAuthDialOptions()...).Check(ctx, &healthpb.HealthCheckRequest{}); err != nil {
-		t.Fatalf("correct token rejected: %v", err)
-	}
-}
-
-func TestNoTokenConfiguredLeavesServerOpen(t *testing.T) {
-	t.Setenv(EnvClusterToken, "")
-	if ClusterAuthServerOptions() != nil || ClusterAuthDialOptions() != nil {
-		t.Fatal("expected no auth options when no token is configured")
-	}
-	addr := startHealthServer(t)
-	if _, err := dial(t, addr).Check(context.Background(), &healthpb.HealthCheckRequest{}); err != nil {
-		t.Fatal(err)
 	}
 }

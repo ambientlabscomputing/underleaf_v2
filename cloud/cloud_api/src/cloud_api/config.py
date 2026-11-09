@@ -96,11 +96,80 @@ class OAuthConfig(BaseModel):
     )
     private_key_path: str = Field(
         default_factory=lambda: _repo_root_cert_path("private_key.pem"),
-        description="File path to the private key for signing OAuth tokens",
+        description="File path to the cluster CA private key. It signs device "
+        "certificates and the server TLS certificate, and nothing else. Keep it "
+        "out of every container that does not sign certificates (nginx).",
+    )
+    jwt_private_key_path: str = Field(
+        default_factory=lambda: _repo_root_cert_path("jwt_private_key.pem"),
+        description="File path to the RSA key that signs OAuth access and "
+        "refresh tokens. Deliberately a different key from the CA key; generated "
+        "on first start if missing.",
     )
     bootstrap_certs: bool = Field(
         default=True,
         description="Whether to generate a new root CA certificate and private key if they don't exist at the specified path",
+    )
+
+
+class TLSConfig(BaseModel):
+    """The server certificate nginx presents (RFD 5). cloud_api issues it from
+    the cluster CA so nginx never needs the CA key."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Issue and renew the server certificate at startup",
+    )
+    dir: str = Field(
+        default_factory=lambda: _repo_root_cert_path("tls"),
+        description="Directory nginx mounts read-only: the public CA certificate "
+        "(client verification and the clusters' pinned trust anchor), the server "
+        "certificate and its key. Must NOT contain the CA key or the JWT key.",
+    )
+    server_names: list[str] = Field(
+        default=[
+            "localhost",
+            "underleafapp.com",
+            "www.underleafapp.com",
+            "*.gw.underleafapp.com",
+        ],
+        description="DNS names (wildcards allowed) placed in the certificate's "
+        "subjectAltName. Clusters verify the host they dial against these.",
+    )
+    server_ips: list[str] = Field(
+        default=["127.0.0.1", "::1"],
+        description="IP addresses placed in the certificate's subjectAltName",
+    )
+    validity_days: int = Field(default=365, description="Server certificate lifetime")
+    renew_before_days: int = Field(
+        default=30,
+        description="A certificate closer to expiry than this is reissued at "
+        "startup (nginx needs a reload to pick it up)",
+    )
+
+
+class AssertionConfig(BaseModel):
+    """Dedicated signing keys for cluster assertions (RFD 5). Deliberately
+    separate from OAuthConfig: these keys must never be the root CA / JWT key."""
+
+    keys_dir: str = Field(
+        default_factory=lambda: _repo_root_cert_path("assertion_keys"),
+        description="Directory holding the assertion signing keys (<kid>.pem + "
+        "<kid>.json). Created 0700 if missing. Do not point this at a directory "
+        "mounted into nginx or any other container that does not sign assertions.",
+    )
+    issuer: str = Field(
+        default="underleaf-cloud", description="`iss` placed in every assertion"
+    )
+    ttl_seconds: int = Field(default=60, description="Assertion lifetime (max 300)")
+    rotate_after_days: int = Field(
+        default=90,
+        description="A signing key older than this is replaced by a new one",
+    )
+    overlap_hours: int = Field(
+        default=168,
+        description="How long a replaced key stays published after rotation. Must "
+        "exceed the verifiers' key set refresh interval plus the assertion TTL.",
     )
 
 
@@ -188,6 +257,14 @@ class AppConfig(BaseModel):
     )
     oauth: OAuthConfig = Field(
         default_factory=OAuthConfig, description="OAuth configuration settings"
+    )
+    tls: TLSConfig = Field(
+        default_factory=TLSConfig,
+        description="Server certificate issued for nginx",
+    )
+    assertion: AssertionConfig = Field(
+        default_factory=AssertionConfig,
+        description="Cluster assertion signing key settings",
     )
     cors: CORSConfig = Field(
         default_factory=CORSConfig, description="CORS configuration settings"

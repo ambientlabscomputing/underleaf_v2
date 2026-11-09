@@ -431,3 +431,55 @@ class SQLClusterCandidate(SQLBase):
     last_polled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class SQLDeviceLogin(SQLBase):
+    """A pending `ufctl login` (RFC 8628 device authorization grant). Mirrors
+    cluster_candidates: the device_code is only ever stored as a hash, the row
+    is short lived and single use."""
+
+    __tablename__ = "device_login_requests"
+    __table_args__: ClassVar[dict[str, str]] = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.DEVICE_LOGIN)
+    )
+    # Short human code the owner confirms in the account UI (XXXX-XXXX).
+    user_code: Mapped[str] = mapped_column(unique=True)
+    # SHA-256 hex digest of the plaintext device_code (never stored in clear).
+    device_code_hash: Mapped[str] = mapped_column(unique=True)
+    # pending | approved | denied | consumed
+    status: Mapped[str] = mapped_column(default="pending")
+    device_name: Mapped[str]
+    # Filled in when an owner approves the request.
+    principal_account_id: Mapped[str | None] = mapped_column(
+        ForeignKey("underleaf.principal_accounts.id"), nullable=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    poll_interval: Mapped[int] = mapped_column(default=5)
+    last_polled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class SQLDeviceKey(SQLBase):
+    """A `ufctl` device key: an opaque bearer secret bound to one account.
+    Only the SHA-256 of the secret is stored."""
+
+    __tablename__ = "device_keys"
+    __table_args__: ClassVar[dict[str, str]] = {"schema": "underleaf"}
+
+    id: Mapped[str] = mapped_column(
+        primary_key=True, default=lambda: generate_id(IDPrefix.DEVICE_KEY)
+    )
+    principal_account_id: Mapped[str] = mapped_column(
+        ForeignKey("underleaf.principal_accounts.id"), index=True
+    )
+    name: Mapped[str]
+    key_hash: Mapped[str] = mapped_column(unique=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

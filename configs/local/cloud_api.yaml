@@ -3,7 +3,18 @@ db:
     host: postgres:5432
 oauth:
     root_ca_cert_path: /var/lib/underleaf/certs/root_ca_cert.pem
+    # The cluster CA key: signs device certs and nginx's server cert only.
     private_key_path: /var/lib/underleaf/certs/private_key.pem
+    # The OAuth token signing key: its own key, not the CA key.
+    jwt_private_key_path: /var/lib/underleaf/certs/jwt_private_key.pem
+tls:
+    # What nginx mounts (./certs/tls on the host). No CA or JWT key in here.
+    dir: /var/lib/underleaf/certs/tls
+    server_names: [localhost, underleafapp.com, www.underleafapp.com, "*.gw.underleafapp.com"]
+    server_ips: [127.0.0.1, "::1"]
+assertion:
+    # Dedicated volume (see docker-compose.yaml); not shared with nginx.
+    keys_dir: /var/lib/underleaf/assertion_keys
 conn_worker:
     grpc_target: conn_worker:50102
 stripe:

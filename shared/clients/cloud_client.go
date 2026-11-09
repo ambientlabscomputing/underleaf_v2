@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -236,6 +237,29 @@ func (c *CloudClient) ListConnections(ctx context.Context, query types.QueryConn
 		}
 	}
 	return conns, nil
+}
+
+// SyncNodes calls POST /clusters/{id}/nodes/sync: the cloud replaces the
+// cluster's node set with nodes (replace-reconcile). The cloud only knows the
+// nodes of a cluster because the Orchestrator tells it: a connection can be
+// created for a node only once the cloud has the node.
+func (c *CloudClient) SyncNodes(ctx context.Context, clusterID string, nodes []types.Node) error {
+	type syncNode struct {
+		ID        string `json:"id"`
+		Name      string `json:"name"`
+		ClusterID string `json:"cluster_id"`
+	}
+	req := struct {
+		Nodes []syncNode `json:"nodes"`
+	}{Nodes: make([]syncNode, 0, len(nodes))}
+	for _, n := range nodes {
+		req.Nodes = append(req.Nodes, syncNode{ID: n.ID, Name: n.Name, ClusterID: clusterID})
+	}
+	var resp json.RawMessage
+	if err := c.post(ctx, "/clusters/"+url.PathEscape(clusterID)+"/nodes/sync", req, &resp); err != nil {
+		return fmt.Errorf("cloud: sync nodes: %w", err)
+	}
+	return nil
 }
 
 func (c *CloudClient) NewStream(ctx context.Context, req types.NewStreamRequest) (*types.Stream, error) {

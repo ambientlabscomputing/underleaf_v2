@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from cloud_api import app_config
 from cloud_api.interface.accounts.accounts import router as accounts_router
+from cloud_api.interface.assertion.assertion import router as assertion_router
 from cloud_api.interface.billing_accounts.billing_accounts import (
     router as billing_accounts_router,
 )
@@ -13,6 +14,7 @@ from cloud_api.interface.connections.connections import router as connections_ro
 from cloud_api.interface.deps import (
     x_subject_id_token_middleware_,
 )
+from cloud_api.interface.internal.remote_auth import router as remote_auth_router
 from cloud_api.interface.oauth.oauth import router as oauth_router
 from cloud_api.interface.plan_prices.plan_prices import router as plan_prices_router
 from cloud_api.interface.plans.plans import router as plans_router
@@ -24,8 +26,14 @@ from cloud_api.interface.stripe_webhooks.stripe_webhooks import (
 from cloud_api.interface.subscriptions.subscriptions import (
     router as subscriptions_router,
 )
+from cloud_api.interface.ufctl.ufctl import router as ufctl_router
+from cloud_api.lib.tls_lib import ensure_server_cert
 from cloud_api.service.usage_sync_loop import run_usage_sync_loop
-from cloud_api.service_manager import get_auth_service
+from cloud_api.service_manager import (
+    get_assertion_lib,
+    get_auth_service,
+    get_cert_lib,
+)
 
 app = FastAPI()
 if not app_config:
@@ -49,6 +57,14 @@ async def bootstrap_certs_on_startup():
     # as soon as this container is up (nginx and other consumers mount the
     # same volume and need those files present immediately).
     get_auth_service()
+    # Same for the dedicated assertion keys: create them at startup so the
+    # first key set fetch never races key generation.
+    get_assertion_lib()
+    # nginx's server certificate is issued from the CA here, so nginx never
+    # needs the CA key (see lib/tls_lib.py). Done after AuthLib has created the
+    # CA files.
+    if app_config.tls.enabled:
+        ensure_server_cert(get_cert_lib(), app_config.tls)
 
 
 _usage_sync_task: asyncio.Task | None = None
@@ -80,6 +96,9 @@ router.include_router(connections_router)
 router.include_router(stream_router)
 router.include_router(registration_router)
 router.include_router(oauth_router)
+router.include_router(assertion_router)
+router.include_router(ufctl_router)
+router.include_router(remote_auth_router)
 router.include_router(stripe_webhooks_router)
 
 

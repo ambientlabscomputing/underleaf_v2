@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 )
 
 func TestRequestCertificate_SendsExpectedRequest(t *testing.T) {
@@ -72,5 +74,45 @@ func TestRequestCertificate_PropagatesServerError(t *testing.T) {
 	_, err := c.RequestCertificate(context.Background(), "bad-token", "csr", "node_123")
 	if err == nil {
 		t.Fatal("expected an error for a non-2xx response, got nil")
+	}
+}
+
+func TestSyncNodes_PostsTheWholeNodeSetUnderTheClusterID(t *testing.T) {
+	var gotPath, gotMethod string
+	var gotBody struct {
+		Nodes []struct {
+			ID        string `json:"id"`
+			Name      string `json:"name"`
+			ClusterID string `json:"cluster_id"`
+		} `json:"nodes"`
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotMethod = r.URL.Path, r.Method
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		_, _ = w.Write([]byte(`{"id":"cluster_1","name":"c","principal_account_id":"p"}`))
+	}))
+	defer srv.Close()
+	c := &CloudClient{baseURL: srv.URL, httpClient: srv.Client()}
+
+	err := c.SyncNodes(context.Background(), "cluster_1", []types.Node{{ID: "node_a", Name: "a"}, {ID: "node_b", Name: "b"}})
+	if err != nil {
+		t.Fatalf("SyncNodes: %v", err)
+	}
+	if gotMethod != http.MethodPost || gotPath != "/clusters/cluster_1/nodes/sync" {
+		t.Errorf("%s %s", gotMethod, gotPath)
+	}
+	if len(gotBody.Nodes) != 2 || gotBody.Nodes[1].ID != "node_b" || gotBody.Nodes[0].ClusterID != "cluster_1" {
+		t.Errorf("body = %+v", gotBody)
+	}
+}
+
+func TestSyncNodes_ReportsAnError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"detail":"Cluster not found"}`, http.StatusNotFound)
+	}))
+	defer srv.Close()
+	c := &CloudClient{baseURL: srv.URL, httpClient: srv.Client()}
+	if err := c.SyncNodes(context.Background(), "cluster_1", nil); err == nil {
+		t.Fatal("expected an error")
 	}
 }

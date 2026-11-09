@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
@@ -19,6 +20,7 @@ type GatewayStreams map[StreamID]net.Conn
 // GatewayServer is a TCP server that listens for incoming connections and routes them to the appropriate stream based on the stream ID.
 // listens for incoming connections on a specified port and routes them to the appropriate stream based on host.
 type GatewayServer struct {
+	mu       sync.RWMutex // guards streams
 	streams  GatewayStreams
 	config   utils.Config
 	listener net.Listener
@@ -43,13 +45,15 @@ func (gs *GatewayServer) Serve() error {
 		utils.Logger.Error("failed to start gateway server", "error", err)
 		return err
 	}
+	gs.mu.Lock()
 	gs.listener = listener
-	defer gs.listener.Close()
+	gs.mu.Unlock()
+	defer listener.Close()
 
 	utils.Logger.Info("Gateway server started on port " + gs.config.Connections.GatewayPort.String())
 
 	for {
-		conn, err := gs.listener.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
 				return nil
@@ -64,6 +68,18 @@ func (gs *GatewayServer) Serve() error {
 		ctx = utils.ContextWithLogger(ctx, utils.Logger, &reqID)
 		go gs.handleConnection(ctx, conn)
 	}
+}
+
+// Close stops accepting gateway connections. It is a no-op before Serve has
+// bound its listener.
+func (gs *GatewayServer) Close() error {
+	gs.mu.RLock()
+	ln := gs.listener
+	gs.mu.RUnlock()
+	if ln == nil {
+		return nil
+	}
+	return ln.Close()
 }
 
 func (gs *GatewayServer) HandleConnectionReqs() {
@@ -85,6 +101,11 @@ func (gs *GatewayServer) handleConnection(ctx context.Context, conn net.Conn) {
 
 	host := httpReq.Host // <stream_id>.gw.<config.domain>
 	streamID := parseIDFromHost(host, ".gw."+gs.config.Connections.Domain)
+	if streamID == "" {
+		logger.Error("request host is not a gateway host", "host", host)
+		conn.Close()
+		return
+	}
 
 	if err := gs.BindIncomingConnToStream(ctx, StreamID(streamID), conn); err != nil {
 		logger.Error("failed to bind incoming connection to stream", "error", err)
@@ -96,22 +117,31 @@ func (gs *GatewayServer) handleConnection(ctx context.Context, conn net.Conn) {
 }
 
 func (gs *GatewayServer) AddStream(streamID StreamID, conn net.Conn) {
+	gs.mu.Lock()
 	gs.streams[streamID] = conn
+	gs.mu.Unlock()
 }
 
 func (gs *GatewayServer) RemoveStream(streamID StreamID) {
-	if conn, exists := gs.streams[streamID]; exists {
+	gs.mu.Lock()
+	conn, exists := gs.streams[streamID]
+	delete(gs.streams, streamID)
+	gs.mu.Unlock()
+	if exists {
 		conn.Close()
-		delete(gs.streams, streamID)
 	}
 }
 
 func (gs *GatewayServer) GetStream(streamID StreamID) (net.Conn, bool) {
+	gs.mu.RLock()
+	defer gs.mu.RUnlock()
 	conn, exists := gs.streams[streamID]
 	return conn, exists
 }
 
 func (gs *GatewayServer) ListStreams() []StreamID {
+	gs.mu.RLock()
+	defer gs.mu.RUnlock()
 	streamIDs := make([]StreamID, 0, len(gs.streams))
 	for streamID := range gs.streams {
 		streamIDs = append(streamIDs, streamID)
@@ -120,6 +150,8 @@ func (gs *GatewayServer) ListStreams() []StreamID {
 }
 
 func (gs *GatewayServer) CloseAllStreams() {
+	gs.mu.Lock()
+	defer gs.mu.Unlock()
 	for streamID, conn := range gs.streams {
 		conn.Close()
 		delete(gs.streams, streamID)
@@ -128,7 +160,7 @@ func (gs *GatewayServer) CloseAllStreams() {
 
 func (gs *GatewayServer) BindIncomingConnToStream(ctx context.Context, streamID StreamID, incomingConn net.Conn) error {
 	logger := utils.LoggerFromContext(ctx)
-	streamConn, exists := gs.streams[streamID]
+	streamConn, exists := gs.GetStream(streamID)
 	if !exists {
 		logger.Error("stream not found for streamID: " + string(streamID))
 		return fmt.Errorf("stream not found for streamID: %s", streamID)

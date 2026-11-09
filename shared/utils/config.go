@@ -29,12 +29,14 @@ const (
 	ConnWorkerGRPCPort     NamedPort = 50102
 	ConnectionsGatewayPort NamedPort = 9020
 	ConnectionsNodePort    NamedPort = 9021
+	// ConnWorkerRemoteRelayPort is the conn_worker's internal remote-access
+	// relay (RFD 5 step 7b). Plain HTTP, reachable by nginx only: it must never
+	// be published or load-balanced to the internet.
+	ConnWorkerRemoteRelayPort NamedPort = 9071
 
-	// Edge
+	// Edge. The agent listens on no TCP port: it dials out to the Orchestrator
+	// (RFD 5). The Orchestrator's gRPC ports are in endpoints.go.
 	OrchestratorHttpPort NamedPort = 9090
-	AgentHttpPort        NamedPort = 9091
-	OrchestratorGRPCPort NamedPort = 50101
-	AgentGRPCPort        NamedPort = 50103
 )
 
 type BasePath string
@@ -51,7 +53,6 @@ const (
 
 	// edge components do not share a reverse proxy or domain, so these paths only need to be unique within the component
 	OrchestratorBasePath BasePath = "/api/v1/"
-	AgentBasePath        BasePath = "/api/v1/"
 )
 
 type HttpConfig struct {
@@ -69,6 +70,9 @@ type ConnectionsConfig struct {
 	WriteTimeout        string    `yaml:"write_timeout"`
 	IdleTimeout         string    `yaml:"idle_timeout"`
 	Domain              string    `yaml:"domain"` // Domain for the gateway server (e.g., "underleafapp.com")
+	// RemoteRelayPort is the internal listener nginx proxies remote-access
+	// requests to (default 9071). Internal only: do not publish it.
+	RemoteRelayPort NamedPort `yaml:"remote_relay_port"`
 }
 
 type RedisConfig struct {
@@ -98,8 +102,14 @@ type Config struct {
 	DBPath                   string             `yaml:"db_path"`
 	ContainerSyncIntervalSec int                `yaml:"container_sync_interval_sec"`
 	CloudAPIBaseURL          string             `yaml:"cloud_api_base_url"`
-	AccountUIBaseURL         string             `yaml:"account_ui_base_url"`
-	CertDir                  string             `yaml:"cert_dir"`
+	// AssertionKeysBaseURL is where the cloud's assertion key set is fetched
+	// from, over a connection pinned to the cluster's CA chain. It is the
+	// cloud's dedicated pinned listener (e.g. https://cloud.example:8443/api/v2/cloud),
+	// which always presents the CA-issued server certificate. Empty means use
+	// CloudAPIBaseURL.
+	AssertionKeysBaseURL string `yaml:"assertion_keys_base_url"`
+	AccountUIBaseURL     string `yaml:"account_ui_base_url"`
+	CertDir              string `yaml:"cert_dir"`
 }
 
 var defaultOrchConfig Config
@@ -128,13 +138,6 @@ func init() {
 			Host: "localhost",
 			Port: ConnectionsNodePort,
 		},
-		Http: HttpConfig{
-			Port:         AgentHttpPort,
-			ReadTimeout:  "5s",
-			WriteTimeout: "10s",
-			IdleTimeout:  "15s",
-			BasePath:     AgentBasePath,
-		},
 		DBPath:                   "agent.db",
 		ContainerSyncIntervalSec: 60,
 	}
@@ -150,6 +153,7 @@ func init() {
 		Connections: &ConnectionsConfig{
 			NodeConnectionsPort: ConnectionsNodePort,
 			GatewayPort:         ConnectionsGatewayPort,
+			RemoteRelayPort:     ConnWorkerRemoteRelayPort,
 			ReadTimeout:         "5s",
 			WriteTimeout:        "10s",
 			IdleTimeout:         "15s",
@@ -229,6 +233,10 @@ func mergeConfig(defaultConfig Config) Config {
 		defaultConfig.Http.BasePath = fileConfig.Http.BasePath
 	}
 	if fileConfig.Connections != nil {
+		// A file written before a field existed must not zero it out.
+		if fileConfig.Connections.RemoteRelayPort == 0 && defaultConfig.Connections != nil {
+			fileConfig.Connections.RemoteRelayPort = defaultConfig.Connections.RemoteRelayPort
+		}
 		defaultConfig.Connections = fileConfig.Connections
 	}
 	if fileConfig.ConnectionsClient != nil {
@@ -248,6 +256,9 @@ func mergeConfig(defaultConfig Config) Config {
 	}
 	if fileConfig.CloudAPIBaseURL != "" {
 		defaultConfig.CloudAPIBaseURL = fileConfig.CloudAPIBaseURL
+	}
+	if fileConfig.AssertionKeysBaseURL != "" {
+		defaultConfig.AssertionKeysBaseURL = fileConfig.AssertionKeysBaseURL
 	}
 	if fileConfig.AccountUIBaseURL != "" {
 		defaultConfig.AccountUIBaseURL = fileConfig.AccountUIBaseURL

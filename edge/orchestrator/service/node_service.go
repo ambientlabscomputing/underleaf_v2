@@ -62,6 +62,25 @@ func (s *NodeService) CreateNode(req types.CreateNodeRequest) (*types.Node, erro
 	return node, nil
 }
 
+// ManagerNode returns the manager's own node: the local-transport node (the
+// agent beside the Orchestrator), else the first node. Cloud registration names
+// its certificates after it.
+func (s *NodeService) ManagerNode() (*types.Node, error) {
+	nodes, _, err := s.Repository.Nodes.ListNodes(types.QueryNodesRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("list nodes: %w", err)
+	}
+	if len(nodes) == 0 {
+		return nil, fmt.Errorf("no node is registered with the Orchestrator yet (run `ufagent register` on the manager)")
+	}
+	for _, n := range nodes {
+		if n.Transport == types.TransportLocal {
+			return n, nil
+		}
+	}
+	return nodes[0], nil
+}
+
 func (s *NodeService) DeleteNode(id string) error {
 	return s.Repository.Nodes.DeleteNode(id)
 }

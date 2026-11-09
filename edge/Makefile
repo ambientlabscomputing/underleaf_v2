@@ -29,6 +29,7 @@ build-dev: proto
 
 ## install: Install the orchestrator binaries to  ~/.local/bin/
 install: build
+	mkdir -p $(HOME)/.local/bin
 	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd bin/ufctl
 	cp bin/orcli $(HOME)/.local/bin/orcli
 	cp bin/orch-server $(HOME)/.local/bin/orch-server
@@ -39,6 +40,7 @@ install: build
 
 ## install-dev: Install the dev-mode orchestrator binaries to  ~/.local/bin/
 install-dev: build-dev
+	mkdir -p $(HOME)/.local/bin
 	chmod +x bin/orcli bin/orch-server bin/migrate bin/ufagent bin/ufagentd bin/ufctl
 	cp bin/orcli $(HOME)/.local/bin/orcli
 	cp bin/orch-server $(HOME)/.local/bin/orch-server
@@ -51,38 +53,26 @@ install-dev: build-dev
 fmt:
 	go fmt ./...
 
-## docker-build: Build the Docker image
-docker-build:
-	docker build -t underleaf:latest -f docker/Dockerfile .
-
-## docker-run: Build and run the Docker container
-docker-run: docker-build
-	docker run -p 127.0.0.1:9090:80 -p 127.0.0.1:50100:50100 underleaf:latest
-
-## docker-push: Push the Docker image to GitHub Container Registry
-docker-push:
-	docker tag underleaf:latest ghcr.io/ambientlabscomputing/underleaf:latest
-	docker push ghcr.io/ambientlabscomputing/underleaf:latest
-
 ## install.sh: run the Install script
 install.sh:
 	./orchestrator_ui/public/tools/install.sh
 
-## install.sh-dev: run the Install script in development mode
+## install.sh-dev: run the Install script in development mode (it enables remote access on loopback, like a normal manager install)
 install.sh-dev: dev-clean
 	./orchestrator_ui/public/tools/install.sh develop
 
-## dev-clean: Remove ufagentd launchd agent and underleaf Docker container (macOS dev reset)
+## dev-clean: Remove the ufagentd and orch-server launchd agents (macOS dev reset; keeps the Orchestrator's state)
 dev-clean:
 	-launchctl unload $(HOME)/Library/LaunchAgents/com.ambientlabs.ufagentd.plist 2>/dev/null
 	-rm -f $(HOME)/Library/LaunchAgents/com.ambientlabs.ufagentd.plist
-	-docker rm -f underleaf 2>/dev/null
-	@echo "Cleaned up launchd agent and Docker container."
+	-launchctl unload $(HOME)/Library/LaunchAgents/com.ambientlabs.orch-server.plist 2>/dev/null
+	-rm -f $(HOME)/Library/LaunchAgents/com.ambientlabs.orch-server.plist
+	@echo "Cleaned up the launchd agents."
 
 ui-run:
 	cd orchestrator_ui && npm run dev &
 
-## run: Run all services via overmind (ui→5183)
+## run: Run all services via overmind (ui→5183); the Procfile also turns on remote access on loopback (UNDERLEAF_REMOTE_ADDR / UNDERLEAF_REMOTE_TARGET = 127.0.0.1:50110)
 run: stop install-dev
 	overmind start
 
@@ -90,8 +80,10 @@ run: stop install-dev
 stop:
 	-overmind kill
 
+## clean-db: Delete the dev Orchestrator/agent databases and the dev cluster CA and node credentials
 clean-db:
-	rm -f orchestrator.db
+	rm -rf cluster-ca cluster-agent certs
+	rm -f orchestrator.db orchestrator.db-shm orchestrator.db-wal
 	rm -f agent.db
 	rm -f agent.db-shm
 	rm -f agent.db-wal

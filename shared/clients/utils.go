@@ -3,9 +3,12 @@ package clients
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/shared/types"
@@ -57,4 +60,28 @@ func HttpClientWithCert(cfg utils.Config) (*http.Client, error) {
 		},
 	}
 	return hc, nil
+}
+
+// ClusterIDFromCertDir returns this cluster's id: the subject common name of
+// the cloud-issued cluster certificate in certDir (cloud_api signs it with
+// CN = the cluster id, and the cloud uses that same id as the assertion
+// audience and as the id of the cluster's rows). An unregistered cluster has no
+// such file and so no identity.
+func ClusterIDFromCertDir(certDir string) (string, error) {
+	raw, err := os.ReadFile(filepath.Join(certDir, string(types.CertFileNameClusterCert)))
+	if err != nil {
+		return "", fmt.Errorf("read cluster certificate: %w", err)
+	}
+	block, _ := pem.Decode(raw)
+	if block == nil {
+		return "", errors.New("cluster certificate is not PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("parse cluster certificate: %w", err)
+	}
+	if cert.Subject.CommonName == "" {
+		return "", errors.New("cluster certificate has no common name")
+	}
+	return cert.Subject.CommonName, nil
 }

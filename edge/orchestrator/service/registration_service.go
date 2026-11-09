@@ -30,18 +30,21 @@ type RegistrationState struct {
 type RegistrationService struct {
 	repo        *repository.RegistrationRepository
 	cloudClient *clients.CloudClient
-	agentClient *clients.AgentClient
+	// managerNode returns the manager's own node (the one cloud registration
+	// names its certificates after). It reads the node registry; it does not
+	// need a live agent link, so registration works while the agent is down.
+	managerNode func() (*types.Node, error)
 }
 
 func NewRegistrationService(
 	repo *repository.RegistrationRepository,
 	cloudClient *clients.CloudClient,
-	agentClient *clients.AgentClient,
+	managerNode func() (*types.Node, error),
 ) *RegistrationService {
 	return &RegistrationService{
 		repo:        repo,
 		cloudClient: cloudClient,
-		agentClient: agentClient,
+		managerNode: managerNode,
 	}
 }
 
@@ -81,15 +84,15 @@ func (s *RegistrationService) InitiateRegistration(ctx context.Context, clusterN
 	}
 
 	// Start background poll loop
-	node, err := s.agentClient.GetNode(ctx)
+	node, err := s.managerNode()
 	if err != nil {
 		logger.Error("registration: get node failure", "error", err)
 		return nil, fmt.Errorf("registration: get node: %w", err)
 	}
-	logger = logger.With("node_id", node.Id, "node_name", node.Name, "node_ip", node.IpAddress)
+	logger = logger.With("node_id", node.ID, "node_name", node.Name, "node_ip", node.IPAddr)
 	logger.Info("registration: starting poll loop")
 	ctx = utils.ContextWithLogger(ctx, logger, nil)
-	go s.pollLoop(ctx, resp.DeviceCode, interval, node.Id)
+	go s.pollLoop(ctx, resp.DeviceCode, interval, node.ID)
 
 	return &RegistrationState{
 		UserCode:                resp.UserCode,
@@ -279,7 +282,7 @@ func (s *RegistrationService) CheckAndRenewCertificate(ctx context.Context, cert
 	}
 	logger.Info("registration: certificate renewal due", "not_after", cert.NotAfter)
 
-	node, err := s.agentClient.GetNode(ctx)
+	node, err := s.managerNode()
 	if err != nil {
 		return fmt.Errorf("get node: %w", err)
 	}
@@ -289,7 +292,7 @@ func (s *RegistrationService) CheckAndRenewCertificate(ctx context.Context, cert
 		return err
 	}
 
-	resp, err := s.cloudClient.RenewCertificate(ctx, csrPEM, node.Id)
+	resp, err := s.cloudClient.RenewCertificate(ctx, csrPEM, node.ID)
 	if err != nil {
 		return fmt.Errorf("renew certificate: %w", err)
 	}

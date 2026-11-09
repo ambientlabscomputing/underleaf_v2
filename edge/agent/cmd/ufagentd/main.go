@@ -2,15 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_private"
-	grpc_public_server "github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/grpc_public/server"
-	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/interface/rest"
+	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/link"
 	_ "github.com/ambientlabscomputing/underleaf_v2/edge/agent/repository/migrations"
 	"github.com/ambientlabscomputing/underleaf_v2/edge/agent/service"
 	"github.com/ambientlabscomputing/underleaf_v2/shared/cli/ui"
+	"github.com/ambientlabscomputing/underleaf_v2/shared/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -31,20 +34,52 @@ func init() {
 	RootCmd.AddCommand(RunCmd)
 }
 
+// Version is reported to the Orchestrator in the link hello.
+var Version = "dev"
+
 func Run() {
 	svc := service.NewService().(*service.AppService)
 
-	// Initialize and start the gRPC public server (orchestrator communication)
-	grpcPublicServer := grpc_public_server.AgentGRPCPublicServer{Service: svc}
-	go grpcPublicServer.Serve()
-
-	// Initialize and start the gRPC private server (CLI access via unix socket)
+	// The agent listens on nothing reachable from the network (RFD 5, decision
+	// 5). Its only inbound surface is the owner-only unix socket for the local
+	// CLI; everything the Orchestrator asks of it arrives down the agent link,
+	// which the agent dials out.
 	grpcPrivateServer := grpc_private.AgentGRPCPrivateServer{Service: svc}
 	go grpcPrivateServer.Serve()
 
-	// Initialize and start the REST server
-	restServer := rest.AgentRESTServer{Service: svc}
-	go restServer.Serve()
+	// The agent link: dial out to the Orchestrator (cluster listener over mTLS
+	// if this node joined a cluster, else the local listener), keep one stream
+	// open, run the commands that arrive on it, reconnect forever on a drop.
+	cfg := utils.GetConfig(utils.AgentConfig)
+	linkClient := &link.Client{
+		Dial: link.NewDialer(cfg, func() (string, error) {
+			n, err := svc.GetNode()
+			if errors.Is(err, sql.ErrNoRows) {
+				// First start of a single-node install: register with the
+				// local Orchestrator ourselves, so nobody has to run
+				// `ufagent register` by hand. Only reached when this node is not
+				// a cluster member (see link.NewDialer). If the Orchestrator is
+				// not up yet this fails and the link loop retries with backoff.
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				n, err = svc.Orchestrator().RegisterNode(ctx)
+				if err == nil {
+					fmt.Printf("[register] registered with the local Orchestrator as %s\n", n.ID)
+				}
+			}
+			if err != nil {
+				return "", err
+			}
+			return n.ID, nil
+		}),
+		Handler: &link.Dispatcher{Service: svc},
+		Version: Version,
+		// Tell the Orchestrator whether this agent can serve remote access
+		// (a worker's cannot: its loopback has no remote listener).
+		RemoteTarget: func() bool { return utils.RemoteTargetFromEnv() != "" },
+		Logf:         func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+	}
+	go linkClient.Run(context.Background())
 
 	ui.Printf("Edge agent started successfully\n")
 
@@ -69,5 +104,9 @@ func Run() {
 }
 
 func main() {
-	RootCmd.Execute()
+	if err := RootCmd.Execute(); err != nil {
+		// cobra has already printed the error; scripts (install.sh's join flow)
+		// need a non-zero status.
+		os.Exit(1)
+	}
 }

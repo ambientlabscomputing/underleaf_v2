@@ -17,7 +17,7 @@ func init() {
 	// Search queries
 	NewCmd.Flags().StringP("node-id", "i", "", "target Node for the new connection")
 	NewCmd.Flags().StringP("type", "t", "", "target type for the new connection")
-	NewCmd.Flags().StringP("port", "p", "", "target port for the new connection")
+	NewCmd.Flags().IntP("port", "p", 0, "target port for the new connection")
 }
 
 func NewRun(cmd *cobra.Command, args []string) {

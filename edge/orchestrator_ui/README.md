@@ -10,9 +10,10 @@ Operator UI for managing a single cluster: containers, nodes, streams, etc. Talk
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI dev server | `http://localhost:5183/` |
+| http | UI dev server (proxies `/api` to the Orchestrator) | `http://localhost:5183/` |
+| http | UI as served by the Orchestrator | `http://127.0.0.1:9090/` (same origin as `/api/v1`) |
 
-This is a standalone Vite dev server/SPA build — the Orchestrator does not serve it; there's no production static-hosting path wired up for it yet (unlike Account UI, which nginx serves in production).
+In production the [Orchestrator](../orchestrator/README.md) serves the built UI (`npm run build` -> `dist/`, found via `UNDERLEAF_UI_DIR`) and the REST API from **one listener on one origin**: no CORS, one port. `install.sh` downloads the built UI next to the Orchestrator and sets `UNDERLEAF_UI_DIR` for it; there is no separate web server.
 
 ## Running locally
 
@@ -21,7 +22,7 @@ npm install
 npm run dev      # port 5183 (fixed via vite.config.ts, strictPort)
 ```
 
-Talks to the Orchestrator REST API at `http://localhost:9090/api/v1` by default (override with `VITE_API_URL`; see `src/api/client.ts`). Normally run as part of the edge process group (`cd edge && make run`) alongside the Orchestrator — see the [root README](../../README.md#development).
+The dev server is same-origin too: `vite.config.ts` proxies `/api` (including the log WebSockets) to the Orchestrator at `http://127.0.0.1:9090`; override with `ORCHESTRATOR_URL=http://127.0.0.1:<port> npm run dev`. The API base is relative (`/api/v1`); `VITE_API_URL` overrides it (then the target must allow your origin via `UNDERLEAF_ALLOWED_ORIGINS`, since there is no CORS). Normally run as part of the edge process group (`cd edge && make run`) alongside the Orchestrator — see the [root README](../../README.md#development).
 
 ## Structure
 

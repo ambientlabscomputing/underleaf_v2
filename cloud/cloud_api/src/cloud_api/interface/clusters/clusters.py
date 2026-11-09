@@ -20,6 +20,27 @@ class SyncNodesRequest(BaseModel):
     nodes: list[Node]
 
 
+def _not_found() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
+    )
+
+
+async def _require_owned(
+    cluster_id: str, claims: AccessTokenClaims, service: ClusterService
+) -> None:
+    """404 unless the caller's tenant owns the cluster. A foreign cluster is
+    reported exactly like a missing one, so ids cannot be probed. (Without this,
+    any signed-in account could read, rename, delete or rewrite the nodes of any
+    cluster whose id it knew.)"""
+    try:
+        cluster = await service.get_cluster(cluster_id)
+    except ClusterNotFoundError:
+        raise _not_found()
+    if cluster.principal_account_id != claims.azp:
+        raise _not_found()
+
+
 @router.post(
     "",
     response_model=Cluster,
@@ -59,6 +80,7 @@ async def get_cluster(
     claims: AccessTokenClaims = Depends(get_access_claims),
     cluster_service: ClusterService = Depends(get_cluster_service),
 ) -> Cluster:
+    await _require_owned(cluster_id, claims, cluster_service)
     try:
         return await cluster_service.get_cluster(cluster_id)
     except ClusterNotFoundError:
@@ -78,6 +100,7 @@ async def patch_cluster(
     claims: AccessTokenClaims = Depends(get_access_claims),
     cluster_service: ClusterService = Depends(get_cluster_service),
 ) -> Cluster:
+    await _require_owned(cluster_id, claims, cluster_service)
     try:
         return await cluster_service.patch_cluster(cluster_id, req)
     except ClusterNotFoundError:
@@ -97,6 +120,7 @@ async def sync_nodes(
     claims: AccessTokenClaims = Depends(get_access_claims),
     cluster_service: ClusterService = Depends(get_cluster_service),
 ) -> Cluster:
+    await _require_owned(cluster_id, claims, cluster_service)
     try:
         return await cluster_service.sync_nodes(cluster_id, req.nodes)
     except ClusterNotFoundError:
@@ -115,6 +139,7 @@ async def delete_cluster(
     claims: AccessTokenClaims = Depends(get_access_claims),
     cluster_service: ClusterService = Depends(get_cluster_service),
 ) -> None:
+    await _require_owned(cluster_id, claims, cluster_service)
     try:
         await cluster_service.delete_cluster(cluster_id)
     except ClusterNotFoundError:

@@ -20,7 +20,9 @@ export function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      const from = (location.state as { from?: Location })?.from?.pathname ?? '/billing-accounts';
+      // Keep the query string: /ufctl/activate?user_code=... must survive the sign-in.
+      const prev = (location.state as { from?: Location })?.from;
+      const from = prev ? `${prev.pathname}${prev.search ?? ''}` : '/billing-accounts';
       navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

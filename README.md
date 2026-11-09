@@ -100,12 +100,14 @@ Interfaces
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
 | gRPC | Unix socket management API for CLI | `unix:/tmp/undf-orch.sock` |
-| gRPC | Agent-Orchestrator communication | `:50100` |
-| http | REST API for the Orchestrator UI and integrations (JSON only, no static assets served) | `http://localhost:9090/api/v1/` |
+| gRPC | Agent-Orchestrator communication, local listener (single-node, loopback only) | `127.0.0.1:50100` |
+| gRPC (mTLS) | Agent-Orchestrator communication, cluster listener (worker nodes; exists only after `orcli nodes add`) | `:50104` |
+| http | REST API for the Orchestrator UI and integrations; the same listener serves the built UI at `/` (one origin, no CORS) | `http://localhost:9090/api/v1/` |
+| http | Remote listener (Cockpit and `ufctl connect`, via the cloud tunnel): every request needs a cloud-signed assertion; off unless `UNDERLEAF_REMOTE_ADDR` is set (`install.sh` sets it on a manager) | `127.0.0.1:50110` |
 
 #### Orchestrator UI
 
-Operator UI for managing your cluster. A standalone Vite dev server/SPA build — it is **not** served by the orchestrator process itself, it just calls the REST API above.
+Operator UI for managing your cluster. The orchestrator process serves the built UI and the REST API from one listener (`UNDERLEAF_UI_DIR`; `install.sh` sets it), so the browser sees a single origin. In development, a Vite dev server proxies `/api` to the orchestrator.
 
 | Info | Value |
 | ---- | ----- |
@@ -117,9 +119,9 @@ Interfaces
 
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
-| http | UI dev server (`npm run dev`) | `http://localhost:5183/` |
+| http | UI dev server (`npm run dev`, proxies `/api` to the orchestrator) | `http://localhost:5183/` |
+| http | UI as served by the orchestrator | `http://localhost:9090/` |
 
-No production static-hosting path is wired up for this UI yet (unlike Account UI, which nginx serves — see below); it's dev-server-only today.
 
 ### All Nodes
 
@@ -136,8 +138,7 @@ Interfaces
 | Protocol | Purpose | Location |
 | -------- | ------- | -------- |
 | gRPC | Unix socket management API for CLI | `unix:/tmp/undf-agent.sock` |
-| gRPC | Agent-Orchestrator + Agent-Agent communication | `:50101` |
-| http | Local REST API (currently just `/health`) | `http://localhost:9091/api/v1/` |
+| gRPC (outbound) | Agent link: the agent dials the Orchestrator and keeps one bidirectional stream open for commands. **The agent listens on no TCP port.** | to the Orchestrator's local listener (`127.0.0.1:50100`) or cluster listener (mTLS) |
 
 
 ### Underleaf Cloud
@@ -157,6 +158,7 @@ Interfaces
 | -------- | ------- | -------- |
 | http | REST API, internal (behind nginx) | `http://cloud_api:8080/api/v2/cloud/` (`http://localhost:8080/...` outside Docker) |
 | https | REST API, external (via nginx, Bearer token or mTLS) | `https://underleafapp.com/api/v2/cloud/` |
+| https | Remote access to a cluster's Orchestrator (`ufctl connect`, Cockpit): nginx authenticates with cloud_api, then relays down the cluster's tunnel | `https://underleafapp.com/api/v2/cloud/clusters/<cluster_id>/remote/` |
 
 #### Conn Worker
 
@@ -267,20 +269,12 @@ On push to develop:
     - build new binaries (ufagent, ufagentd, orcli, orch-server, and ufctl)
     - overwrite "develop" release with new release
     - add binaries to this new release
-- build new "develop" docker image
-    - build new Docker image tagged `underleaf:develop`
-    - push to `ghcr.io` (overwrite existing if any)
+    - build the Orchestrator UI and add it as `underleaf-ui.tar.gz`
 
 On push to SemVer tag:
 - build new release for tag:
     - build new binaries (ufagent, ufagentd, orcli, orch-server, and ufctl)
     - create new "[0-9].[0-9].[0-9]" release
     - overwrite "latest" release with new release
-    - add binaries to these new releases
-- build new "latest", "[0-9]", "[0-9].[0-9]", "[0.9].[0-9][0-9]" docker images
-    - for example, if we push the tag `2.3.40`, we would build:
-        - `underleaf:latest`
-        - `underleaf:2`
-        - `underleaf:2.3`
-        - `underleaf:2.3.40`
-    - push to `ghcr.io` (overwrite existing if any)
+    - add binaries and `underleaf-ui.tar.gz` to these new releases
+
